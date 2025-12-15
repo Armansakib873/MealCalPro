@@ -1131,6 +1131,71 @@ td[onclick]:hover .cell-split {
     transform: translateY(-1px);
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
+
+
+/* --- TOAST NOTIFICATIONS --- */
+#toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 3000; /* Higher than modals (2000) */
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none; /* Let clicks pass through empty space */
+}
+
+.toast {
+    min-width: 280px;
+    max-width: 350px;
+    background-color: var(--card-bg);
+    color: var(--text-primary);
+    padding: 12px 16px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    border-left: 4px solid var(--primary-color);
+    pointer-events: auto; /* Re-enable clicks on the toast itself */
+    opacity: 0;
+    transform: translateX(100%);
+    animation: slideIn 0.3s forwards ease-out;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+/* Animations */
+@keyframes slideIn {
+    to { opacity: 1; transform: translateX(0); }
+}
+
+.toast.hide {
+    opacity: 0;
+    transform: translateX(100%);
+}
+
+/* Toast Variants */
+.toast.success { border-left-color: var(--success-color); }
+.toast.error   { border-left-color: var(--danger-color); }
+.toast.warning { border-left-color: var(--warning-color); }
+.toast.info    { border-left-color: var(--primary-color); }
+
+/* Icon styling inside toast */
+.toast-icon { font-size: 18px; }
+.toast-msg { flex: 1; font-weight: 500; }
+
+/* Mobile Adjustment */
+@media (max-width: 768px) {
+    #toast-container {
+        top: 10px;
+        right: 10px;
+        left: 10px; /* Full width on mobile top */
+        align-items: center;
+    }
+    .toast { width: 100%; max-width: 100%; }
+}
 /* Mobile Visibility (Optional: If you want it visible on mobile, remove this) */
 /* Currently keeping it inside .header-clock which is hidden on mobile in your code */
     </style>
@@ -1151,10 +1216,18 @@ td[onclick]:hover .cell-split {
         <input type="text" id="authUsername" class="form-input" placeholder="e.g. mess_hero_01">
     </div>
 
-    <div class="form-group">
-        <label class="form-label" id="emailLabel">Email or Username</label>
-        <input type="text" id="authEmail" class="form-input" placeholder="Enter email or username" required>
+<div class="form-group">
+    <label class="form-label" id="emailLabel">Email or Username</label>
+    <div style="display: flex; gap: 5px;">
+        <!-- The text input (takes up available space) -->
+        <input type="text" id="authEmail" class="form-input" placeholder="Type or select..." required style="flex: 1;">
+        
+        <!-- The dropdown (takes up necessary space) -->
+        <select id="authUserDropdown" class="form-select" style="width: auto; max-width: 40%; font-size: 12px; cursor: pointer;">
+            <option value="">Select User ▼</option>
+        </select>
     </div>
+</div>
     
     <div class="form-group">
         <label class="form-label">Password</label>
@@ -1759,6 +1832,10 @@ td[onclick]:hover .cell-split {
 </div>
 
 
+<!-- Toast Notification Container -->
+<div id="toast-container"></div>
+
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
@@ -1965,6 +2042,46 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
     // onAuthStateChange will handle the UI update
 });
 
+
+
+// Function to populate the login dropdown
+async function loadLoginUserDropdown() {
+    const dropdown = document.getElementById('authUserDropdown');
+    
+    // We fetch from 'members' because it's usually public/readable even before login
+    // assuming member names match usernames as per your logic
+    try {
+        const { data, error } = await supabase
+            .from('members')
+            .select('name')
+            .order('name');
+
+        if (error) throw error;
+
+        // Clear and repopulate
+        dropdown.innerHTML = '<option value="">Select User ▼</option>';
+        
+        data.forEach(member => {
+            const option = document.createElement('option');
+            option.value = member.name;
+            option.textContent = member.name;
+            dropdown.appendChild(option);
+        });
+
+        // Add listener to auto-fill the input
+        dropdown.addEventListener('change', (e) => {
+            if (e.target.value) {
+                document.getElementById('authEmail').value = e.target.value;
+            }
+        });
+
+    } catch (err) {
+        console.error("Error loading user dropdown:", err);
+        // If error (e.g., RLS policy prevents reading), just hide the dropdown
+        dropdown.style.display = 'none';
+    }
+}
+
     // ============================================
     // UTILITY FUNCTIONS
     // ============================================
@@ -1986,9 +2103,45 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
         return date.toLocaleDateString('en-GB');
     }
 
-    function showNotification(message, type = 'info') {
-        alert(message); // In production, use a proper notification library
-    }
+  function showNotification(message, type = 'info') {
+    const container = document.getElementById('toast-container');
+    
+    // Create Toast Element
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    
+    // Determine Icon
+    let icon = 'ℹ️';
+    if (type === 'success') icon = '✅';
+    if (type === 'error') icon = '❌';
+    if (type === 'warning') icon = '⚠️';
+
+    // Set Content
+    toast.innerHTML = `
+        <div class="toast-icon">${icon}</div>
+        <div class="toast-msg">${message}</div>
+    `;
+
+    // Add to DOM
+    container.appendChild(toast);
+
+    // Click to dismiss immediately
+    toast.addEventListener('click', () => {
+        removeToast(toast);
+    });
+
+    // Auto dismiss after 3 seconds
+    setTimeout(() => {
+        removeToast(toast);
+    }, 2000);
+}
+function removeToast(toastElement) {
+    toastElement.classList.add('hide');
+    // Force removal after CSS transition time (300ms)
+    setTimeout(() => {
+        if (toastElement.parentNode) toastElement.remove();
+    }, 300);
+}
 
     // ============================================
     // AUTHENTICATION
@@ -2024,11 +2177,14 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
     }
 
     // Check for saved session
+// Check for saved session & Load Dropdown
 window.addEventListener('DOMContentLoaded', () => {
     // Start the new Auth System
     initAuth();
+    
+    // NEW: Load the users into the login dropdown
+    loadLoginUserDropdown(); 
 });
-
 // ==========================================
 // EXPENSE APPROVAL HANDLER (GLOBAL)
 // ==========================================
@@ -2090,15 +2246,59 @@ async function initializeApp() {
     await loadCycles();
     await loadAppConfig();
     await loadMembers();
+    
     initHeader();
     initNotifications();
     
-    // NEW: Check status
+    // 1. Background Listener (Listen for OTHERS)
+    setupRobustRealtime(); 
+
+    // 2. Active Listener (Listen for YOU)
+    setupInteractionRefresh(); // <--- NEW CALL
+
     updateEntryStatusIndicator();
-    // Set Interval to check every 60 seconds
     setInterval(updateEntryStatusIndicator, 60000); 
 
     navigateToPage('dashboard');
+}
+
+    // ============================================
+    // INTERACTION-BASED REFRESH LOGIC
+    // ============================================
+
+// Global Cooldown Variable
+let lastRefreshTime = 0;
+const REFRESH_COOLDOWN = 5000; // 5 Seconds (Prevents server spamming)
+
+function setupInteractionRefresh() {
+    console.log("👆 Interaction Sync Activated");
+
+    // List of interactions to watch
+    const interactions = ['click', 'touchstart', 'change', 'submit'];
+
+    const handleInteraction = () => {
+        const now = Date.now();
+        
+        // CHECK: Has it been more than 5 seconds since last refresh?
+        if (now - lastRefreshTime > REFRESH_COOLDOWN) {
+            
+            // UPDATE TIMESTAMP
+            lastRefreshTime = now;
+            
+            console.log("👆 User Active: Syncing Data...");
+            
+            // 1. Refresh whatever page is open
+            refreshCurrentPage();
+            
+            // 2. Refresh Notifications (Badge & List)
+            loadNotifications();
+        }
+    };
+
+    // Attach listener to the whole document
+    interactions.forEach(eventType => {
+        document.addEventListener(eventType, handleInteraction, { passive: true });
+    });
 }
 
     function loadPageData(pageName) {
@@ -2151,13 +2351,19 @@ document.getElementById('adminSettingsForm').addEventListener('submit', async (e
 
 // Centralized Logic for "Active Session Date"
 // Ensures consistency across Profile, Summary, and Dashboard
+// Centralized Logic for "Active Session Date" (Timezone Safe)
 async function getActiveSessionDate() {
-    // 1. Get Local Date (Browser Time)
     const today = new Date();
-    const todayStr = today.toLocaleDateString('en-CA'); // "YYYY-MM-DD"
+    
+    // FORCE LOCAL DATE STRING (YYYY-MM-DD)
+    // using components avoids UTC conversion issues at midnight
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    const todayStr = `${year}-${month}-${day}`; // "2025-12-16" strictly local
 
     try {
-        // 2. Check System Log for TODAY
+        // Check System Log for LOCALLY calculated Today
         const { data: log } = await supabase
             .from('system_logs')
             .select('id')
@@ -2166,11 +2372,9 @@ async function getActiveSessionDate() {
 
         let sessionDate = new Date(today);
 
-        // 3. Apply Shift Logic
-        // If today's auto-entry is DONE, we target TOMORROW.
-        // If today's auto-entry is PENDING, we target TODAY.
-        // NOTE: At midnight, "today" becomes the next day, and "log" becomes null,
-        // so the result stabilizes on the same date.
+        // Logic:
+        // If log found for Today -> Today is done -> Target Tomorrow
+        // If no log for Today -> Today is active -> Target Today
         if (log) {
             sessionDate.setDate(today.getDate() + 1);
         }
@@ -2178,10 +2382,9 @@ async function getActiveSessionDate() {
         return sessionDate;
     } catch (err) {
         console.error("Date Logic Error", err);
-        return new Date(); // Fallback to today
+        return new Date(); 
     }
 }
-
 
 // Global Config
 let appConfig = {
@@ -2685,10 +2888,29 @@ function initNotifications() {
     closeBtn.parentNode.replaceChild(newClose, closeBtn);
 
     // Re-attach listeners
+// Inside initNotifications() ...
+
     document.getElementById('notifBellBtn').addEventListener('click', (e) => {
-        e.stopPropagation(); // Stop click from closing the panel immediately
+        e.stopPropagation(); // Stop click from bubbling
+
+        // 1. LOG & FORCE REFRESH (Bypassing Cooldown)
+        console.log("🔄 Refreshing view: NOTIFICATIONS");
+        
+        // Show loading state briefly in the list if you want, or just fetch
+        const container = document.getElementById('notifListContainer');
+        if(container.innerHTML.trim() === '') container.innerHTML = '<div class="loading">Syncing...</div>';
+        
+        loadNotifications().then(() => {
+            console.log("✅ Notifications Synced");
+        });
+
+        // 2. TOGGLE UI
         document.getElementById('notifPanel').classList.toggle('active');
+        
+        // 3. CLEAR BADGE
         document.getElementById('notifBadge').classList.add('hidden');
+        // Reset badge count logic if you track it in a variable
+        document.getElementById('notifBadge').textContent = '0';
     });
 
     document.getElementById('closeNotifPanel').addEventListener('click', () => {
@@ -2716,7 +2938,6 @@ function initNotifications() {
 
     // 4. Start Loading
     loadNotifications();
-    setupRealtimeNotifications();
 }
 
 async function loadNotifications() {
@@ -2795,34 +3016,7 @@ function renderNotifications() {
 }
 
 
-function setupRealtimeNotifications() {
-    supabase
-        .channel('public:notifications')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, async payload => {
-            const newNotifRaw = payload.new;
-            
-            if (newNotifRaw.cycle_id === currentCycleId) {
-                // CHANGED: Added 'role' here too
-                const { data: fullNotif } = await supabase
-                    .from('notifications')
-                    .select('*, members(name, role)') 
-                    .eq('id', newNotifRaw.id)
-                    .single();
 
-                if (fullNotif) {
-                    allNotifications.unshift(fullNotif);
-                    renderNotifications();
-                    updateDashboardActivity(allNotifications);
-                    
-                    const badge = document.getElementById('notifBadge');
-                    const currentCount = parseInt(badge.textContent || '0');
-                    badge.textContent = currentCount + 1;
-                    badge.classList.remove('hidden');
-                }
-            }
-        })
-        .subscribe();
-}
 
 // Updated Log Activity (Uses member_id)
 async function logActivity(message, type = 'info') {
@@ -3004,14 +3198,23 @@ function updateDashboardActivity(data) {
     }
 
 
-    function refreshCurrentPage() {
-        const activePage = document.querySelector('.page-content:not(.hidden)');
-        if (activePage) {
-            const pageName = activePage.id.replace('Page', '');
-            loadPageData(pageName);
+function refreshCurrentPage() {
+    // Find which page is active (has no 'hidden' class)
+    const activePage = document.querySelector('.page-content:not(.hidden)');
+    
+    if (activePage) {
+        const pageId = activePage.id.replace('Page', '');
+        console.log(`🔄 Refreshing view: ${pageId}`);
+        loadPageData(pageId);
+        
+        // Always refresh dashboard stats if on dashboard
+        // (Because dashboard has multiple sub-components)
+        if (pageId === 'dashboard') {
+            loadDashboard();
+            loadSystemStatus();
         }
     }
-
+}
     // Setup navigation
     document.querySelectorAll('.nav-link, .bottom-nav-link').forEach(link => {
         link.addEventListener('click', (e) => {
@@ -3182,8 +3385,7 @@ if (log) {
             balanceEl.textContent = formatCurrency(balance);
             balanceEl.className = balance >= 0 ? 'stat-value balance-positive' : 'stat-value balance-negative';
 
-            // Load today's meal status
-            await loadTodayMealStatus();
+ 
 
             // Load deposit history
             await loadProfileDepositHistory();
@@ -4448,51 +4650,36 @@ async function triggerManualAutoEntry() {
 // ==========================================
 
 async function updateEntryStatusIndicator() {
-    // 1. Get Today's Date (in BD Time ideally, or Local)
-    // Since JS runs on client, we construct the local date string
-    const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
-    
-    // Calculate Tomorrow's Date for display
-    const tomorrow = new Date(now);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowStr = tomorrow.toISOString().split('T')[0];
-    
-    // Formatting Helpers
-    const format = (d) => d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-
     try {
-        // 2. Check Database for Today's Log
-        const { data, error } = await supabase
-            .from('system_logs')
-            .select('id')
-            .eq('log_date', todayStr)
-            .maybeSingle(); // Use maybeSingle to avoid 406 error if 0 rows
+        // 1. Get the Calculated Active Date (Timezone Safe)
+        const sessionDate = await getActiveSessionDate();
+        
+        // 2. Format for Display (e.g., "16 DEC")
+        const dateLabel = sessionDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }).toUpperCase();
+        
+        // 3. Compare with Real Calendar Today to decide Color/Status
+        const today = new Date();
+        const isToday = sessionDate.getDate() === today.getDate();
 
         const badge = document.getElementById('entryStatusBadge');
         
-        if (data) {
-            // CASE: Log Found -> Auto Entry is DONE
-            // Show Tomorrow's Date (Targeting next)
-          badge.innerHTML =
-  '<span style="color:#555;font-weight:600">Target:</span> ' +
-  '<span style="color:#e63946;font-weight:bold">' + format(tomorrow) + '</span>' +
-  '<span style="color:#1d3557"> Bazar</span>';
-
-            badge.className = 'entry-status-badge status-done';
-            badge.title = "Today's entry is finalized. System is targeting tomorrow.";
+        if (isToday) {
+            // If Session Date is TODAY, it means auto-entry hasn't run yet.
+            badge.textContent = `TARGET: ${dateLabel} BAZAR`;
+            badge.className = 'entry-status-badge status-pending'; // Orange/Active
+            badge.title = "Waiting for auto-entry tonight.";
         } else {
-            // CASE: No Log -> Auto Entry is PENDING
-            // Show Today's Date (Active)
-            badge.textContent = `Active: ${format(now)}`;
-            badge.className = 'entry-status-badge status-pending';
-            badge.title = "Waiting for Auto-Entry time.";
+            // If Session Date is TOMORROW, it means Today is done.
+            badge.textContent = `TARGET: ${dateLabel} BAZAR`;
+            badge.className = 'entry-status-badge status-done'; // Green/Done
+            badge.title = "Today's entry is complete. Next target is shown.";
         }
 
     } catch (err) {
         console.error("Status Check Error", err);
     }
 }
+
 
 
 async function loadSystemStatus() {
@@ -4564,6 +4751,71 @@ async function loadSystemStatus() {
         container.innerHTML = '<div style="color:red; font-size:12px;">Failed to load status.</div>';
     }
 }
+function setupRobustRealtime() {
+    console.log("🚀 Starting Robust Realtime Engine...");
+
+    const channel = supabase.channel('system-sync-' + Date.now());
+
+    channel
+        // 1. NOTIFICATIONS: Listen for ANY change
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
+            console.log("🔔 Signal: Notification Table Changed. Reloading list...");
+            
+            // Reload the list (Populates Panel & Dashboard Activity)
+            loadNotifications().then(() => {
+                // Manually trigger badge increment visual since we just reloaded
+                const badge = document.getElementById('notifBadge');
+                badge.classList.remove('hidden');
+                
+                // Show a generic toast that something happened
+                // We fetch the very last notification to show text
+                if (allNotifications.length > 0) {
+                     showNotification(allNotifications[0].message, 'info');
+                }
+            });
+        })
+
+        // 2. DATA TABLES: Listen for changes in core data
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'meals' }, () => handleDataSignal('meals'))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'meal_plans' }, () => handleDataSignal('plans'))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, () => handleDataSignal('expenses'))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'deposits' }, () => handleDataSignal('deposits'))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'app_config' }, () => {
+             console.log("⚙️ Config changed. Reloading...");
+             loadAppConfig();
+             // If on profile, reload scheduler to reflect lock status
+             if (!document.getElementById('profilePage').classList.contains('hidden')) {
+                 loadScheduler();
+             }
+        })
+        
+        .subscribe((status) => {
+            console.log(`📡 Realtime Status: ${status}`);
+            if (status === 'SUBSCRIBED') {
+                showNotification("Live Sync Connected", "success");
+            }
+        });
+}
+
+// Helper: Debounce refreshing to prevent flickering if multiple updates come at once
+let refreshTimeout;
+function handleDataSignal(source) {
+    console.log(`⚡ Signal: ${source} updated. Scheduling refresh...`);
+    
+    // Clear existing timer (Debounce)
+    if (refreshTimeout) clearTimeout(refreshTimeout);
+
+    // Wait 300ms, then refresh the ACTIVE page only
+    refreshTimeout = setTimeout(() => {
+        refreshCurrentPage();
+        
+        // If we are on Dashboard, always reload stats too
+        if (!document.getElementById('dashboardPage').classList.contains('hidden')) {
+            loadDashboard();
+        }
+    }, 300);
+}
+
 
 </script>
 </body>
