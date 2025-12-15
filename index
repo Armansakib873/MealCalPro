@@ -2029,7 +2029,58 @@ window.addEventListener('DOMContentLoaded', () => {
     initAuth();
 });
 
+// ==========================================
+// EXPENSE APPROVAL HANDLER (GLOBAL)
+// ==========================================
 
+// Explicitly attach to 'window' to ensure HTML buttons can find it
+window.handleExpenseApproval = async function(expenseId, newStatus) {
+    console.log("Click triggered:", expenseId, newStatus); // Debugging check
+
+    // Visual feedback on the button immediately
+    const btn = event.target;
+    const originalText = btn.textContent;
+    btn.textContent = "...";
+    btn.disabled = true;
+
+    try {
+        // 1. Update Database
+        const { error } = await supabase
+            .from('expenses')
+            .update({ status: newStatus })
+            .eq('id', expenseId);
+
+        if (error) throw error;
+
+        // 2. Fetch details for Logging (Optional, but good for history)
+        const { data: expense } = await supabase
+            .from('expenses')
+            .select('description, amount, members(name)')
+            .eq('id', expenseId)
+            .single();
+
+        // 3. Log Activity
+        const actor = currentUser.members ? currentUser.members.name : "Admin";
+        const actionLabel = newStatus === 'approved' ? 'APPROVED' : 'REJECTED';
+        
+        await logActivity(
+            `Expense ${actionLabel}: ${expense.description} (${formatCurrency(expense.amount)}) - Action by ${actor}`, 
+            'expense'
+        );
+
+        // 4. Refresh List
+        await loadExpenses();
+        showNotification(`Expense ${newStatus} successfully`, 'success');
+
+    } catch (err) {
+        console.error('Approval Error:', err);
+        showNotification(`Failed to ${newStatus} expense: ${err.message}`, 'error');
+        
+        // Revert button state on error
+        btn.textContent = originalText;
+        btn.disabled = false;
+    }
+};
 
     // ============================================
     // APP INITIALIZATION
@@ -2892,21 +2943,15 @@ function updateDashboardActivity(data) {
         }
     }
 
-   function populateMemberSelects() {
-    const selects = [
-        'trackerMemberSelect',
-        'expenseMember',
-        'depositMember',
-        'depositLogFilter' // <--- ADD THIS NEW ID
-    ];
+ function populateMemberSelects() {
+    const selects = ['trackerMemberSelect', 'expenseMember', 'depositMember', 'depositLogFilter'];
 
     selects.forEach(selectId => {
         const select = document.getElementById(selectId);
         if (!select) return;
         
-        // Keep the first option (e.g., "Select member..." or "All Members")
         const firstOption = select.options[0];
-        const currentValue = select.value;
+        const currentValue = select.value; // Preserve value if reloading
         
         select.innerHTML = '';
         select.appendChild(firstOption);
@@ -2918,13 +2963,17 @@ function updateDashboardActivity(data) {
             select.appendChild(option);
         });
 
-        // Restore selection if it existed and is valid
-        if (currentValue) {
+        // --- NEW LOGIC FOR USER CONVENIENCE ---
+        // If this is the Expense form and I am a regular user, auto-select ME
+        if (selectId === 'expenseMember' && currentUser.role === 'user' && currentUser.member_id) {
+             select.value = currentUser.member_id;
+             // Optional: Disable it so they can't change it
+             // select.disabled = true; 
+        } else if (currentValue) {
             select.value = currentValue;
         }
     });
 }
-
     // ============================================
     // NAVIGATION
     // ============================================
@@ -3755,51 +3804,97 @@ async function quickToggleSummaryMeal(memberId, dateStr, type, currentVal) {
     // EXPENSES PAGE
     // ============================================
     
-    async function loadExpenses() {
-        // Show/hide form based on role
-        if (currentUser.role === 'user') {
-            document.getElementById('addExpenseCard').style.display = 'none';
-        } else {
-            document.getElementById('addExpenseCard').style.display = 'block';
+  async function loadExpenses() {
+    // 1. UI: ALWAYS SHOW the Add Expense Card (Changed from previous logic)
+    document.getElementById('addExpenseCard').style.display = 'block';
+    
+    // Check role for button logic later
+    const isUser = currentUser.role === 'user';
+
+    if (!currentCycleId) return;
+
+    try {
+        // 2. Fetch Data
+        const { data, error } = await supabase
+            .from('expenses')
+            .select('*, members(name)')
+            .eq('cycle_id', currentCycleId)
+            .order('expense_date', { ascending: false });
+
+        if (error) throw error;
+
+        const expenseListContainer = document.getElementById('expenseList');
+
+        if (!data || data.length === 0) {
+            expenseListContainer.innerHTML = '<div class="loading">No expenses yet</div>';
+            return;
         }
 
-        if (!currentCycleId) return;
+        // 3. Separate Data
+        const pendingItems = data.filter(e => e.status === 'pending');
+        const historyItems = data.filter(e => e.status !== 'pending'); // Approved or Rejected
 
-        try {
-            const { data, error } = await supabase
-                .from('expenses')
-                .select('*, members(name)')
-                .eq('cycle_id', currentCycleId)
-                .order('expense_date', { ascending: false });
+        // 4. Helper to Render Row
+        const renderRow = (expense, showButtons) => {
+            let statusBadge = '';
+            if (expense.status === 'pending') statusBadge = '<span class="entry-status-badge status-pending" style="margin-left: 5px;">PENDING</span>';
+            if (expense.status === 'approved') statusBadge = '<span class="entry-status-badge status-done" style="margin-left: 5px;">APPROVED</span>';
+            if (expense.status === 'rejected') statusBadge = '<span class="entry-status-badge status-pending" style="background:#FEE2E2; color:#B91C1C; border:1px solid #FECACA; margin-left: 5px;">REJECTED</span>';
 
-            if (error) throw error;
-
-            const container = document.getElementById('expenseList');
-
-            if (!data || data.length === 0) {
-                container.innerHTML = '<div class="loading">No expenses yet</div>';
-                return;
+            let buttonsHTML = '';
+            if (showButtons) {
+                buttonsHTML = `
+                <div style="display:flex; gap:5px; margin-top:5px; justify-content:flex-end;">
+                    <button class="btn btn-success btn-sm" onclick="handleExpenseApproval('${expense.id}', 'approved')">✓</button>
+                    <button class="btn btn-danger btn-sm" onclick="handleExpenseApproval('${expense.id}', 'rejected')">✕</button>
+                </div>`;
             }
 
-            container.innerHTML = data.map(expense => `
-                <div class="list-item">
-                    <div class="list-item-info">
-                        <div class="list-item-title">${expense.description || 'Expense'}</div>
-
-                        <div class="list-item-subtitle">
-                                ${formatDate(expense.expense_date)} • ${expense.members?.name || 'Unknown'}
-                            </div>
-                        </div>
-                        <div class="list-item-amount">${formatCurrency(expense.amount)}</div>
+            return `
+            <div class="list-item" style="${expense.status === 'pending' ? 'background-color:#fff7ed;' : ''}"> 
+                <div class="list-item-info">
+                    <div class="list-item-title">${expense.description || 'Expense'}</div>
+                    <div class="list-item-subtitle">
+                        ${formatDate(expense.expense_date)} • ${expense.members?.name || 'Unknown'}
+                        ${statusBadge}
                     </div>
-                `).join('');
+                </div>
+                <div style="display:flex; flex-direction:column; align-items:flex-end;">
+                    <div class="list-item-amount">${formatCurrency(expense.amount)}</div>
+                    ${buttonsHTML}
+                </div>
+            </div>`;
+        };
 
-                } catch (err) {
-            console.error('Error loading expenses:', err);
+        // 5. Build HTML
+        let finalHTML = '';
+
+        // Pending Section (Visible to ALL, Buttons for Admin Only)
+        if (pendingItems.length > 0) {
+            finalHTML += `<div style="font-size:12px; font-weight:700; color:var(--warning-color); margin-bottom:10px; text-transform:uppercase; letter-spacing:1px;">⚠️ Pending Approval</div>`;
+            pendingItems.forEach(item => {
+                finalHTML += renderRow(item, !isUser); 
+            });
+            finalHTML += `<div style="border-bottom: 2px dashed var(--border-color); margin: 15px 0;"></div>`;
         }
-    }
 
-   document.getElementById('expenseForm').addEventListener('submit', async (e) => {
+        // History Section
+        if (historyItems.length > 0) {
+            finalHTML += `<div style="font-size:12px; font-weight:700; color:var(--text-secondary); margin-bottom:10px; text-transform:uppercase; letter-spacing:1px;">History</div>`;
+            historyItems.forEach(item => {
+                finalHTML += renderRow(item, false); 
+            });
+        }
+
+        expenseListContainer.innerHTML = finalHTML;
+
+    } catch (err) {
+        console.error('Error loading expenses:', err);
+    }
+}
+
+
+ document.getElementById('expenseForm').addEventListener('submit', async (e) => {
     e.preventDefault();
 
     const date = document.getElementById('expenseDate').value;
@@ -3807,38 +3902,46 @@ async function quickToggleSummaryMeal(memberId, dateStr, type, currentVal) {
     const description = document.getElementById('expenseDescription').value;
     const amount = parseFloat(document.getElementById('expenseAmount').value);
 
+    // LOGIC: If Admin/Manager -> 'approved', If User -> 'pending'
+    const isAdmin = (currentUser.role === 'admin' || currentUser.role === 'manager');
+    const initialStatus = isAdmin ? 'approved' : 'pending';
+    
+    // Notification Message Customization
+    const msg = isAdmin ? 'Expense added and approved' : 'Expense submitted for approval';
+
     try {
-        await supabase
+        const { error } = await supabase
             .from('expenses')
             .insert({
                 cycle_id: currentCycleId,
                 member_id: memberId,
                 expense_date: date,
                 description: description,
-                amount: amount
+                amount: amount,
+                status: initialStatus
             });
 
+        if (error) throw error;
+
+        // Log Activity
         const member = allMembers.find(m => m.id === memberId);
-        
-        // --- CRUCIAL UPDATE HERE ---
         await logActivity(
-            `Expense: ${formatCurrency(amount)} (${description}) by ${member?.name}`, 
+            `${msg}: ${formatCurrency(amount)} by ${member?.name}`, 
             'expense'
         );
-        // ---------------------------
 
+        // Reset and Reload
         document.getElementById('expenseForm').reset();
         document.getElementById('expenseDate').value = new Date().toISOString().split('T')[0];
         
         await loadExpenses();
-        showNotification('Expense added successfully', 'success');
+        showNotification(msg, 'success');
 
     } catch (err) {
         console.error('Error adding expense:', err);
         showNotification('Failed to add expense', 'error');
     }
 });
-
     // ============================================
     // DEPOSITS PAGE
     // ============================================
