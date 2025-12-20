@@ -1524,24 +1524,32 @@ window.handleExpenseApproval = async function(expenseId, newStatus) {
 };
 
 async function initializeApp() {
-    await loadCycles();
-    await loadAppConfig();
-    await loadMembers();
-    
-    initHeader();
-    initNotifications();
-    
-    // 1. Background Listener (Listen for OTHERS & DB Changes)
-    setupRobustRealtime(); 
+    try {
+        // 1. Load Essential Global Data first
+        await Promise.all([
+            loadCycles(),
+            loadAppConfig(),
+            loadMembers()
+        ]);
 
-    // (Interaction Listener Removed)
+        // 2. Setup UI
+        initHeader();
+        initNotifications();
+        setupRobustRealtime(); 
 
-    updateEntryStatusIndicator();
-    setInterval(updateEntryStatusIndicator, 60000); 
+        // 3. Status Indicators
+        updateEntryStatusIndicator();
+        setInterval(updateEntryStatusIndicator, 60000); 
 
-    navigateToPage('dashboard');
+        // 4. Navigate (This now only runs once globals are ready)
+        navigateToPage('dashboard');
+    } catch (err) {
+        console.error("Critical Init Error:", err);
+        showNotification("Failed to connect to database", "error");
+        // Clear loading states across the app so it doesn't look "frozen"
+        document.querySelectorAll('.loading').forEach(el => el.textContent = "Connection Error. Please reload.");
+    }
 }
-   
 
     function loadPageData(pageName) {
         switch(pageName) {
@@ -2353,10 +2361,21 @@ function updateDashboardActivity(data) {
                 currentCycleId = allCycles[0].id;
             }
 
-            cycleSelect.addEventListener('change', (e) => {
-                currentCycleId = parseInt(e.target.value);
-                refreshCurrentPage();
-            });
+          cycleSelect.addEventListener('change', async (e) => {
+    const newId = e.target.value;
+    if (!newId) return;
+    
+    currentCycleId = newId;
+    
+    // Show loading indicators immediately on the active page
+    const activePage = document.querySelector('.page-content:not(.hidden)');
+    if (activePage) {
+        activePage.querySelectorAll('.loading').forEach(l => l.style.display = 'block');
+    }
+    
+    // Re-run the page data loader
+    refreshCurrentPage();
+});
 
         } catch (err) {
             console.error('Error loading cycles:', err);
@@ -4031,12 +4050,16 @@ function setupRobustRealtime() {
              }
         })
         
-        .subscribe((status) => {
-            console.log(`📡 Realtime Status: ${status}`);
-            if (status === 'SUBSCRIBED') {
-                showNotification("Live Sync Connected", "success");
-            }
-        });
+.subscribe((status) => {
+    console.log(`📡 Realtime Status: ${status}`);
+    if (status === 'SUBSCRIBED') {
+        showNotification("Live Sync Connected", "success");
+    }
+    if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+        console.log("Realtime disconnected. Retrying...");
+        setTimeout(setupRobustRealtime, 5000); // Re-init after 5 seconds
+    }
+});
 }
 
 // Helper: Debounce refreshing to prevent flickering if multiple updates come at once
