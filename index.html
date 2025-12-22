@@ -408,6 +408,89 @@
         .defaults-container { background: var(--bg-color); padding: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;}
         .def-btn { padding: 4px 8px; font-size: 10px; border: 1px solid var(--border-color); background: var(--card-bg); border-radius: 4px; cursor: pointer; }
         .def-btn.active { background: var(--primary-color); color: white; }
+
+
+
+        /* Due Settlement Styles */
+.due-item {
+    padding: 12px;
+    background: var(--bg-color);
+    border-radius: 8px;
+    margin-bottom: 10px;
+    border-left: 4px solid transparent;
+}
+
+.due-item.debtor {
+    border-left-color: var(--danger-color);
+}
+
+.due-item.creditor {
+    border-left-color: var(--success-color);
+}
+
+.due-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.due-item-name {
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.due-item-amount {
+    font-weight: 700;
+    font-size: 16px;
+}
+
+.due-progress-bar {
+    width: 100%;
+    height: 6px;
+    background: var(--border-color);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 8px;
+}
+
+.due-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--success-color), var(--primary-color));
+    transition: width 0.3s ease;
+}
+
+.due-status-badge {
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 8px;
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
+.due-status-pending {
+    background: #FEE2E2;
+    color: #B91C1C;
+}
+
+.due-status-settling {
+    background: #FEF3C7;
+    color: #92400E;
+}
+
+.due-status-settled {
+    background: #D1FAE5;
+    color: #065F46;
+}
+
+/* Mobile responsive for due cards */
+@media (max-width: 768px) {
+    #dueSettlementCard > div[style*="grid"] {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+
     /* =========================================
            7. MOBILE RESPONSIVENESS (CRITICAL)
            ========================================= */
@@ -456,6 +539,71 @@
             /* 5. INPUT FIX */
             .form-input, .form-select { font-size: 16px; } /* Prevents zoom */
         }
+
+
+        /* Enhanced Transaction Log Styles */
+.log-item {
+    padding: 15px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background 0.2s;
+}
+
+.log-item:hover { background-color: rgba(0,0,0,0.02); }
+
+.log-main { display: flex; align-items: center; gap: 15px; }
+
+.log-icon {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+}
+
+.log-icon.deposit { background: #EEF2FF; color: #4F46E5; }
+.log-icon.settlement { background: #F3F4F6; color: #6B7280; }
+.log-icon.charge { background: #FEF2F2; color: #EF4444; }
+
+.log-details { display: flex; flex-direction: column; }
+
+.log-member { 
+    font-weight: 800; 
+    font-size: 15px; 
+    color: var(--text-primary); 
+    display: flex; 
+    align-items: center; 
+    gap: 8px;
+}
+
+.log-type-tag {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.tag-deposit { background: #DBEAFE; color: #1E40AF; }
+.tag-settle { background: #F3F4F6; color: #374151; }
+
+.log-meta { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+
+.log-amount-area { text-align: right; }
+
+.log-amount { font-family: 'Courier New', monospace; font-weight: 900; font-size: 16px; }
+
+/* Arrow indicator for settlements */
+.transfer-info {
+    font-size: 11px;
+    color: var(--primary-color);
+    background: #F5F3FF;
+    padding: 2px 8px;
+    border-radius: 12px;
+    margin-top: 4px;
+    display: inline-block;
+}
     </style>
 
       <script>
@@ -490,12 +638,12 @@
     
     <!-- Username Field (Hidden by default, shown for Sign Up) -->
     <div class="form-group hidden" id="usernameField">
-        <label class="form-label">Username (Unique)</label>
+       <label for="authUsername" class="form-label">Username (Unique)</label>
         <input type="text" id="authUsername" class="form-input" placeholder="e.g. mess_hero_01">
     </div>
 
 <div class="form-group">
-    <label class="form-label" id="emailLabel">Email or Username</label>
+   <label for="authEmail" class="form-label">Email or Username</label>
     <div style="display: flex; gap: 5px;">
         <!-- The text input (takes up available space) -->
         <input type="text" id="authEmail" class="form-input" placeholder="Type or select..." required style="flex: 1;">
@@ -508,7 +656,7 @@
 </div>
     
     <div class="form-group">
-        <label class="form-label">Password</label>
+     <label for="authPassword" class="form-label">Password</label>
         <input type="password" id="authPassword" class="form-input" placeholder="Enter password" required>
     </div>
 
@@ -778,35 +926,70 @@
     </div>
 </div>
 
-            <!-- Summary Page -->
-            <div id="summaryPage" class="page-content hidden">
-                <h2 style="margin-bottom: 20px;">Summary Report</h2>
-                
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">Member Summary</h3>
-                        <button class="btn btn-primary btn-sm" id="exportSummaryBtn">Export</button>
-                    </div>
-                    <div class="table-container">
-                        <table class="table" id="summaryTable">
-                            <thead>
-                                <tr>
-                                    <th>Name</th>
-                                    <th>Day Meals</th>
-                                    <th>Night Meals</th>
-                                    <th>Total Meals</th>
-                                    <th>Total Cost</th>
-                                    <th>Deposits</th>
-                                    <th>Balance</th>
-                                </tr>
-                            </thead>
-                            <tbody id="summaryTableBody">
-                                <tr><td colspan="7" class="loading">Loading summary...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
+   <!-- Summary Page -->
+<div id="summaryPage" class="page-content hidden">
+    <h2 style="margin-bottom: 20px;">Summary Report</h2>
+    
+    <!-- Main Summary Table -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Member Summary</h3>
+            <button class="btn btn-primary btn-sm" id="exportSummaryBtn">Export</button>
+        </div>
+        <div class="table-container">
+            <table class="table" id="summaryTable">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Day Meals</th>
+                        <th>Night Meals</th>
+                        <th>Total Meals</th>
+                        <th>Total Cost</th>
+                        <th>Deposits</th>
+                        <th>Balance</th>
+                    </tr>
+                </thead>
+                <tbody id="summaryTableBody">
+                    <tr><td colspan="7" class="loading">Loading summary...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- NEW: Due Settlement Card -->
+    <div class="card" id="dueSettlementCard" style="display: none;">
+        <div class="card-header">
+            <h3 class="card-title">💳 Cycle Due Settlement Tracker</h3>
+            <button class="btn btn-sm btn-secondary" onclick="loadDueSettlement()">🔄 Refresh</button>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px;">
+            <!-- Left: Debtors -->
+            <div>
+                <h4 style="font-size: 14px; color: var(--danger-color); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px;">
+                    📉 Outstanding Debts
+                </h4>
+                <div id="debtorsList" style="max-height: 400px; overflow-y: auto;">
+                    <div class="loading">Loading debtors...</div>
                 </div>
             </div>
+
+            <!-- Right: Creditors -->
+            <div>
+                <h4 style="font-size: 14px; color: var(--success-color); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px;">
+                    📈 Awaiting Settlement
+                </h4>
+                <div id="creditorsList" style="max-height: 400px; overflow-y: auto;">
+                    <div class="loading">Loading creditors...</div>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top: 20px; padding: 15px; background: var(--bg-color); border-radius: 8px; font-size: 12px; color: var(--text-secondary);">
+            <strong>How it works:</strong> When a debtor deposits money, it automatically settles with creditors in order. Progress bars show settlement status.
+        </div>
+    </div>
+</div>
 
             <!-- Expenses Page -->
             <div id="expensesPage" class="page-content hidden">
@@ -934,6 +1117,8 @@
                     <div class="card-header">
                         <h3 class="card-title">Cycle Management</h3>
                     </div>
+
+
                     <form id="createCycleForm">
                         <div class="form-group">
                             <label class="form-label">Cycle Name</label>
@@ -948,8 +1133,23 @@
                             <input type="date" id="cycleEndDate" class="form-input" required>
                         </div>
                         <button type="submit" class="btn btn-primary">Create Cycle</button>
-                        <button type="button" class="btn btn-danger" id="closeMonthBtn">Close Current Month</button>
                     </form>
+
+                    <!-- Inside Admin Page, replace closeMonthBtn div -->
+<div class="form-group" style="margin-top: 20px; padding-top: 20px; border-top: 2px solid var(--border-color);">
+    <label class="form-label" style="color: var(--danger-color); font-size: 16px;">
+        ⚠️ Danger Zone: Close Current Cycle
+    </label>
+    <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 10px;">
+        This will finalize the current cycle, calculate balances, and create a new cycle with automatic due forwarding.
+    </p>
+    <button type="button" class="btn btn-danger" id="closeMonthBtn" style="width: 100%;">
+        🔒 Close Current Cycle & Create New
+    </button>
+</div>
+
+
+
                 </div>
 
                 <div class="card">
@@ -980,7 +1180,7 @@
             <label class="form-label">Restricted Bazar Range (Lock Time)</label>
             <div style="display: flex; gap: 10px; align-items: center;">
                 <div style="flex:1">
-                    <label style="font-size: 11px;">Start Time</label>
+                    <label for="settingLockTime" style="font-size: 11px;">Start Time</label>
                     <input type="time" id="settingLockTime" class="form-input" required>
                 </div>
                 <div style="font-weight:bold;">-</div>
@@ -1179,7 +1379,7 @@ async function handleUserSession(user) {
             .from('members')
             .select('*')
             .eq('user_id', user.id)
-            .single();
+             .maybeSingle();  
 
         if (member) {
             // Success: User is linked to a Member
@@ -1269,7 +1469,7 @@ document.getElementById('authForm').addEventListener('submit', async (e) => {
                     .from('members')
                     .select('email')
                     .eq('name', emailOrUser)
-                    .single();
+                    .maybeSingle();
 
                 if (error || !data || !data.email) {
                     throw new Error("Username not found. Please sign up or check spelling.");
@@ -1498,7 +1698,7 @@ window.handleExpenseApproval = async function(expenseId, newStatus) {
             .from('expenses')
             .select('description, amount, members(name)')
             .eq('id', expenseId)
-            .single();
+            .maybeSingle();
 
         // 3. Log Activity
         const actor = currentUser.members ? currentUser.members.name : "Admin";
@@ -1790,7 +1990,7 @@ async function loadScheduler() {
             .from('members')
             .select('*')
             .eq('id', currentUser.member_id)
-            .single();
+            .maybeSingle();
 
         if (memberData) updateDefaultButtons(memberData);
         
@@ -1936,7 +2136,7 @@ async function toggleSchedulerPlan(date, type, btnElement) {
             .select('*')
             .eq('member_id', currentUser.member_id)
             .eq('plan_date', date)
-            .single();
+            .maybeSingle();
 
         let updateData = {
             member_id: currentUser.member_id,
@@ -1975,10 +2175,10 @@ async function toggleSchedulerPlan(date, type, btnElement) {
     tableBody.innerHTML = '<tr><td colspan="100" class="loading">Loading session matrix...</td></tr>';
 
     try {
-        const cycle = allCycles.find(c => c.id === currentCycleId);
+        const cycle = allCycles.find(c => c.id == currentCycleId);
         if (!cycle) return;
 
-        // 1. Fetch ALL meals 
+        // Fetch meals for this cycle
         const { data: meals } = await supabase
             .from('meals')
             .select('*')
@@ -1992,7 +2192,7 @@ async function toggleSchedulerPlan(date, type, btnElement) {
             });
         }
 
-        // 2. Build Header
+        // Build Header
         let headerHTML = '<tr><th style="min-width: 90px; z-index:20;">Session<br>Date</th>';
         allMembers.forEach(m => {
             headerHTML += `<th>${m.name.split(' ')[0]}</th>`; 
@@ -2000,42 +2200,37 @@ async function toggleSchedulerPlan(date, type, btnElement) {
         headerHTML += '</tr>';
         tableHead.innerHTML = headerHTML;
 
-        // 3. Build Body Rows
+        // Loop dates carefully (Timezone safe approach)
         let bodyHTML = '';
-        const start = new Date(cycle.start_date);
-        const end = new Date(cycle.end_date);
+        let currentIter = new Date(cycle.start_date + 'T00:00:00'); // Force local start
+        let endIter = new Date(cycle.end_date + 'T00:00:00');     // Force local end
         const todayStr = new Date().toISOString().split('T')[0];
 
-        // Loop dates
-        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-            const dateSessionStr = d.toISOString().split('T')[0];
+        while (currentIter <= endIter) {
+            const dateSessionStr = currentIter.toISOString().split('T')[0];
             
-            // Calculate Next Date for the Day Meal side
-            const dNext = new Date(d);
-            dNext.setDate(d.getDate() + 1);
+            const dNext = new Date(currentIter);
+            dNext.setDate(currentIter.getDate() + 1);
             const dateNextStr = dNext.toISOString().split('T')[0];
 
-            const dateLabel = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
-            
+            const dateLabel = currentIter.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
             const isToday = (dateSessionStr === todayStr);
             const rowStyle = isToday ? 'style="background: rgba(79, 70, 229, 0.08); border-left: 3px solid var(--primary-color);"' : '';
 
             bodyHTML += `<tr ${rowStyle}>
                 <td style="font-weight:600; font-size:11px;">
-                    ${dateLabel}<br><span style="color:var(--text-secondary); font-weight:400; font-size:9px;">Night + Next Day</span>
+                    ${dateLabel}<br><span style="color:var(--text-secondary); font-weight:400; font-size:9px;">Nights + Next Day</span>
                 </td>`;
 
-    allMembers.forEach(m => {
-                // Get Night Data (From Session Date)
+            allMembers.forEach(m => {
                 const sessionData = (matrixData[dateSessionStr] && matrixData[dateSessionStr][m.id]) 
                                     ? matrixData[dateSessionStr][m.id] : { d:0, n: 0 };
                 
-                // Get Day Data (From Next Date)
                 const nextData = (matrixData[dateNextStr] && matrixData[dateNextStr][m.id]) 
                                     ? matrixData[dateNextStr][m.id] : { d: 0, n:0 };
 
-                const nVal = parseFloat(sessionData.n); 
-                const dVal = parseFloat(nextData.d);   
+                const nVal = parseFloat(sessionData.n) || 0;
+                const dVal = parseFloat(nextData.d) || 0;   
 
                 const nTxt = nVal > 0 ? nVal : '-';
                 const dTxt = dVal > 0 ? dVal : '-';
@@ -2043,42 +2238,31 @@ async function toggleSchedulerPlan(date, type, btnElement) {
                 const dClass = dVal > 0 ? 'active' : 'zero';
 
                 const isAdmin = (currentUser.role === 'admin' || currentUser.role === 'manager');
-                
-                // --- KEY UPDATE: Unified Click Action ---
-                // Both clicks now send: (MemberID, SessionDate, NightValue, NextDayValue)
-                // Note: We pass 'nextData.d' as the Day Value
-                const clickAction = isAdmin 
-                    ? `onclick="openMealModal('${m.id}', '${dateSessionStr}', ${nVal}, ${dVal})"`
-                    : '';
-
-                const cursorStyle = isAdmin ? 'pointer' : 'default';
+                const clickAction = isAdmin ? `onclick="openMealModal('${m.id}', '${dateSessionStr}', ${nVal}, ${dVal})"` : '';
 
                 bodyHTML += `
                     <td>
                         <div class="cell-split">
-                            <div class="cell-val night-col ${nClass}" title="Night (${dateLabel})" 
-                                 ${clickAction} style="cursor:${cursorStyle}">
+                            <div class="cell-val night-col ${nClass}" ${clickAction} style="cursor:${isAdmin ? 'pointer':'default'}">
                                 ${nTxt}
                             </div>
-                            <div class="cell-val day-col ${dClass}" title="Day (Next Morning)" 
-                                 ${clickAction} style="cursor:${cursorStyle}">
+                            <div class="cell-val day-col ${dClass}" ${clickAction} style="cursor:${isAdmin ? 'pointer':'default'}">
                                 ${dTxt}
                             </div>
                         </div>
-                    </td>
-                `;
+                    </td>`;
             });
 
             bodyHTML += '</tr>';
+            currentIter.setDate(currentIter.getDate() + 1); // Increment the loop
         }
         tableBody.innerHTML = bodyHTML;
 
     } catch (err) {
         console.error("Matrix Error", err);
-        tableBody.innerHTML = '<tr><td colspan="100">Error loading data.</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="100">Error loading cycle data.</td></tr>';
     }
 }
-
     function initHeader() {
     // 1. Set User Info
     if (currentUser) {
@@ -2194,22 +2378,36 @@ async function loadNotifications() {
     if (!currentCycleId) return;
 
     try {
-        // CHANGED: Added 'role' to the select query
+        const targetCycleId = parseInt(currentCycleId);
+        console.log("🔔 Fetching notifications for cycle:", targetCycleId);
+
         const { data, error } = await supabase
             .from('notifications')
-            .select('*, members(name, role)') 
-            .eq('cycle_id', currentCycleId)
+            .select(`
+                id, 
+                message, 
+                type, 
+                created_at, 
+                member_id,
+                members (
+                    name, 
+                    role
+                )
+            `)
+            .eq('cycle_id', targetCycleId)
             .order('created_at', { ascending: false })
             .limit(50);
 
         if (error) throw error;
 
         allNotifications = data || [];
+        console.log("✅ Notifications loaded:", allNotifications.length);
         renderNotifications();
-        updateDashboardActivity(data);
-
+        
     } catch (err) {
-        console.error('Error loading notifications:', err);
+        console.error('❌ Notification Fetch Error:', err);
+        const container = document.getElementById('notifListContainer');
+        if(container) container.innerHTML = `<div class="loading" style="color:red">Failed to load history.</div>`;
     }
 }
 
@@ -2217,14 +2415,15 @@ function renderNotifications() {
     const container = document.getElementById('notifListContainer');
     if (!container) return;
 
+    // Filter logic
     const filtered = allNotifications.filter(n => {
         if (currentNotifFilter === 'all') return true;
-        if (currentNotifFilter === 'meal') return n.type.includes('meal');
+        if (currentNotifFilter === 'meal') return n.type && n.type.includes('meal');
         return n.type === currentNotifFilter;
     });
 
     if (filtered.length === 0) {
-        container.innerHTML = '<div style="text-align:center; padding:20px; color:#aaa;">No notifications found</div>';
+        container.innerHTML = '<div style="text-align:center; padding:40px 20px; color:#aaa;">No history found for this cycle.</div>';
         return;
     }
 
@@ -2233,38 +2432,39 @@ function renderNotifications() {
         let icon = '⚙️';
         if (notif.type === 'deposit') { typeClass = 'type-deposit'; icon = '💰'; }
         if (notif.type === 'expense') { typeClass = 'type-expense'; icon = '🛒'; }
-        if (notif.type.includes('meal')) { typeClass = 'type-meal'; icon = '🍽️'; }
+        if (notif.type && notif.type.includes('meal')) { typeClass = 'type-meal'; icon = '🍽️'; }
 
         const dateObj = new Date(notif.created_at);
         const displayTime = dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + 
-                          ', ' + dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                          ' • ' + dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
-        // --- NEW LOGIC START ---
-        let author = 'System';
+        // AUTHOR LOGIC: Handle NULL members (System logs)
+        let authorMarkup = '<span style="color:var(--text-secondary)">System</span>';
+        
         if (notif.members) {
-            // Check if the actor is an Admin
-            if (notif.members.role === 'admin') {
-                author = '<span style="color:var(--primary-color); font-weight:800;">Admin</span>';
+            if (notif.members.role === 'admin' || notif.members.role === 'manager') {
+                authorMarkup = `<span style="color:var(--primary-color); font-weight:800;">Admin</span>`;
             } else {
-                author = notif.members.name;
+                authorMarkup = `<span style="font-weight:600;">${notif.members.name}</span>`;
             }
         }
-        // --- NEW LOGIC END ---
 
         return `
         <div class="notif-item ${typeClass}" onclick="handleNotifClick('${notif.type}')">
-            <div class="notif-content">
-                <strong>${icon}</strong> ${notif.message}
-            </div>
-            <div class="notif-meta" style="display: flex; justify-content: space-between; margin-top: 5px;">
-                <span style="opacity: 0.8;">${displayTime}</span>
-                <span style="font-weight: 600;">By: ${author}</span>
+            <div style="display:flex; gap:10px; align-items:flex-start;">
+                <div style="font-size:18px;">${icon}</div>
+                <div style="flex:1;">
+                    <div style="font-size:13px; color:var(--text-primary); line-height:1.4;">${notif.message}</div>
+                    <div style="display:flex; justify-content:space-between; margin-top:6px; font-size:10px; color:var(--text-secondary);">
+                        <span>${displayTime}</span>
+                        <span>By: ${authorMarkup}</span>
+                    </div>
+                </div>
             </div>
         </div>
         `;
     }).join('');
 }
-
 
 
 
@@ -2329,59 +2529,54 @@ function updateDashboardActivity(data) {
 
 
     async function loadCycles() {
-        try {
-            const { data, error } = await supabase
-                .from('cycles')
-                .select('*')
-                .order('start_date', { ascending: false });
+    try {
+        const { data, error } = await supabase
+            .from('cycles')
+            .select('*')
+            .order('start_date', { ascending: false });
 
-            if (error) throw error;
+        if (error) throw error;
 
-            allCycles = data || [];
-            const cycleSelect = document.getElementById('cycleSelect');
-            cycleSelect.innerHTML = '';
+        allCycles = data || [];
+        const cycleSelect = document.getElementById('cycleSelect');
+        cycleSelect.innerHTML = '';
 
-            if (allCycles.length === 0) {
-                cycleSelect.innerHTML = '<option value="">No cycles available</option>';
-                return;
-            }
+        if (allCycles.length === 0) {
+            cycleSelect.innerHTML = '<option value="">No cycles available</option>';
+            return;
+        }
 
-            allCycles.forEach(cycle => {
-                const option = document.createElement('option');
-                option.value = cycle.id;
-                option.textContent = cycle.name;
-                if (cycle.is_active) {
-                    option.selected = true;
-                    currentCycleId = cycle.id;
-                }
-                cycleSelect.appendChild(option);
-            });
-
-            if (!currentCycleId && allCycles.length > 0) {
-                currentCycleId = allCycles[0].id;
-            }
-
-          cycleSelect.addEventListener('change', async (e) => {
-    const newId = e.target.value;
-    if (!newId) return;
+        // Locate this in your initialization or loadCycles
+document.getElementById('cycleSelect').addEventListener('change', (e) => {
+    currentCycleId = e.target.value;
+    const selectedOption = e.target.options[e.target.selectedIndex];
+    document.getElementById('headerCycleName').textContent = selectedOption.text;
     
-    currentCycleId = newId;
-    
-    // Show loading indicators immediately on the active page
-    const activePage = document.querySelector('.page-content:not(.hidden)');
-    if (activePage) {
-        activePage.querySelectorAll('.loading').forEach(l => l.style.display = 'block');
-    }
-    
-    // Re-run the page data loader
-    refreshCurrentPage();
+    // This triggers the specific refresh logic for whatever page you are currently on
+    refreshCurrentPage(); 
 });
 
-        } catch (err) {
-            console.error('Error loading cycles:', err);
-        }
-    }
+        // FIND THE ACTIVE ONE OR FALLBACK TO THE NEWEST
+        const activeCycle = allCycles.find(c => c.is_active === true) || allCycles[0];
+        currentCycleId = activeCycle.id;
 
+        allCycles.forEach(cycle => {
+            const option = document.createElement('option');
+            option.value = cycle.id;
+            option.textContent = cycle.name;
+            if (cycle.id === currentCycleId) {
+                option.selected = true;
+            }
+            cycleSelect.appendChild(option);
+        });
+
+        // Update the header badge
+        document.getElementById('headerCycleName').textContent = activeCycle.name;
+
+    } catch (err) {
+        console.error('Error loading cycles:', err);
+    }
+}
     async function loadMembers() {
         try {
             const { data, error } = await supabase
@@ -2511,7 +2706,7 @@ function refreshCurrentPage() {
     .from('system_logs')
     .select('*')
     .eq('log_date', new Date().toISOString().split('T')[0])
-    .single();
+     .maybeSingle();  
 
 if (log) {
     // Optional: Show a small badge somewhere
@@ -2530,11 +2725,12 @@ if (log) {
             document.getElementById('statTotalMeals').textContent = totalMeals.toFixed(1);
             document.getElementById('statTotalExpense').textContent = formatCurrency(totalExpense);
 
-            // Get deposits
-            const { data: deposits } = await supabase
-                .from('deposits')
-                .select('amount')
-                .eq('cycle_id', currentCycleId);
+          // Inside loadSummary or loadDashboard
+const { data: deposits } = await supabase
+    .from('deposits')
+    .select('*')
+    .eq('cycle_id', currentCycleId)
+    .neq('label', 'Auto-Settlement'); // <--- CRITICAL: Filter out transfers
 
             const totalDeposit = deposits?.reduce((sum, d) => sum + parseFloat(d.amount), 0) || 0;
             document.getElementById('statTotalDeposit').textContent = formatCurrency(totalDeposit);
@@ -2666,7 +2862,7 @@ if (log) {
                 .select('*')
                 .eq('member_id', currentUser.member_id)
                 .eq('meal_date', today)
-                .single();
+                .maybeSingle();
 
             const dayCount = data?.day_count || 0;
             const nightCount = data?.night_count || 0;
@@ -2817,7 +3013,7 @@ function updateDefaultButtons(member) {
             .select('*')
             .eq('member_id', currentUser.member_id)
             .eq('meal_date', today)
-            .single();
+            .maybeSingle();
 
         let dayCount = existing?.day_count || 0;
         let nightCount = existing?.night_count || 0;
@@ -3150,6 +3346,15 @@ async function loadSummary() {
             };
         });
 
+        // Store original loadSummary function reference
+const _originalLoadSummary = loadSummary;
+
+// Override with enhanced version
+loadSummary = async function() {
+    await _originalLoadSummary();
+    await loadDueSettlement();
+};
+
         // 6. Header
         const realTodayStr = new Date().toLocaleDateString('en-CA');
         const isTargetingTomorrow = (nightDateStr !== realTodayStr);
@@ -3408,67 +3613,78 @@ async function quickToggleSummaryMeal(memberId, dateStr, type, currentVal) {
     // ============================================
     // DEPOSITS PAGE
     // ============================================
-  async function loadDeposits() {
-    // 1. UI Logic (Show/Hide Split View based on role)
-    const isUser = currentUser.role === 'user';
-    if (isUser) {
-        document.getElementById('depositSplitView').style.display = 'none';
-    } else {
-        document.getElementById('depositSplitView').style.display = 'grid';
-    }
-
+ async function loadDeposits() {
+    const filterId = document.getElementById('depositLogFilter').value;
     if (!currentCycleId) return;
 
-    // 2. Get Filter Value
-    const filterId = document.getElementById('depositLogFilter').value;
-
     try {
-        // 3. Build Query
         let query = supabase
             .from('deposits')
             .select('*, members(name)')
             .eq('cycle_id', currentCycleId)
             .order('created_at', { ascending: false });
 
-        // 4. Apply Filter if selected
-        if (filterId) {
-            query = query.eq('member_id', filterId);
-        }
+        if (filterId) query = query.eq('member_id', filterId);
 
         const { data, error } = await query;
-
         if (error) throw error;
 
         const container = document.getElementById('depositList');
-
         if (!data || data.length === 0) {
             container.innerHTML = '<div class="loading">No transactions found</div>';
             return;
         }
 
-        // 5. Render List
-        container.innerHTML = data.map(deposit => {
-            const isNegative = deposit.amount < 0;
-            const colorClass = isNegative ? 'balance-negative' : 'balance-positive';
+        container.innerHTML = data.map(t => {
+            const isSettlement = t.label === 'Auto-Settlement' || t.label === 'Reduction';
+            const isNegative = t.amount < 0;
             
+            // Icon Logic
+            let icon = '💰';
+            let iconClass = 'deposit';
+            let tagClass = 'tag-deposit';
+            let typeLabel = 'Deposit';
+
+            if (t.label === 'Auto-Settlement') {
+                icon = '🔄';
+                iconClass = 'settlement';
+                tagClass = 'tag-settle';
+                typeLabel = 'Settlement';
+            } else if (isNegative) {
+                icon = '🔻';
+                iconClass = 'charge';
+                tagClass = 'tag-settle';
+                typeLabel = 'Charge';
+            }
+
+            const dateStr = new Date(t.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+
             return `
-            <div class="list-item">
-                <div class="list-item-info">
-                    <div class="list-item-title">${deposit.label || (isNegative ? 'Charge' : 'Deposit')}</div>
-                    <div class="list-item-subtitle">
-                        ${formatDate(deposit.created_at)} • ${deposit.members?.name || 'Unknown'}
-                        ${deposit.notes ? `<br>${deposit.notes}` : ''}
+            <div class="log-item">
+                <div class="log-main">
+                    <div class="log-icon ${iconClass}">${icon}</div>
+                    <div class="log-details">
+                        <div class="log-member">
+                            ${t.members?.name || 'Unknown'}
+                            <span class="log-type-tag ${tagClass}">${typeLabel}</span>
+                        </div>
+                        <div class="log-meta">
+                            ${dateStr} ${t.notes ? `• ${t.notes}` : ''}
+                        </div>
+                        ${isSettlement && t.notes ? `<div class="transfer-info">📌 ${t.notes}</div>` : ''}
                     </div>
                 </div>
-                <div style="text-align: right;">
-                    <div class="list-item-amount ${colorClass}">${formatCurrency(deposit.amount)}</div>
+                <div class="log-amount-area">
+                    <div class="log-amount ${isNegative ? 'balance-negative' : 'balance-positive'}">
+                        ${isNegative ? '-' : '+'}${formatCurrency(Math.abs(t.amount))}
+                    </div>
                 </div>
             </div>
             `;
         }).join('');
 
     } catch (err) {
-        console.error('Error loading deposits:', err);
+        console.error('Error:', err);
     }
 }
 
@@ -3541,6 +3757,111 @@ async function loadSelectedMemberHistory(memberId) {
     }
 }
 
+// Add this NEW function BEFORE the depositForm handler
+async function processDepositWithClientSideSettlement(memberId, cycleId, amount, label, notes) {
+    try {
+        const targetCycleId = parseInt(cycleId); // Ensure integer
+
+        // 1. Insert the REAL cash deposit
+        const { data: mainDeposit, error: depError } = await supabase
+            .from('deposits')
+            .insert({
+                cycle_id: targetCycleId,
+                member_id: memberId,
+                amount: amount,
+                label: label,
+                notes: notes
+            })
+            .select().single();
+
+        if (depError) throw depError;
+
+        // LOG THE INITIAL CASH DEPOSIT
+        const memberObj = allMembers.find(m => m.id == memberId);
+        await logActivity(`Cash Deposit: ${formatCurrency(amount)} added for ${memberObj?.name}`, 'deposit');
+
+        if (amount <= 0) return { settled: false, deposit_id: mainDeposit.id };
+
+        // 2. Find Debtor Due
+        const { data: debtorDue } = await supabase
+            .from('cycle_dues')
+            .select('*')
+            .eq('member_id', memberId)
+            .eq('to_cycle_id', targetCycleId)
+            .in('status', ['pending', 'settling'])
+            .lt('due_amount', 0)
+            .maybeSingle();
+
+        if (!debtorDue) return { settled: false, deposit_id: mainDeposit.id };
+
+        // 3. Find Creditors
+        const { data: creditors } = await supabase
+            .from('cycle_dues')
+            .select('*, members(name)')
+            .eq('to_cycle_id', targetCycleId)
+            .in('status', ['pending', 'settling'])
+            .gt('due_amount', 0)
+            .order('created_at', { ascending: true });
+
+        if (!creditors || creditors.length === 0) return { settled: false, deposit_id: mainDeposit.id };
+
+        let poolAvailable = Math.min(amount, Math.abs(debtorDue.due_amount) - Math.abs(debtorDue.settled_amount));
+        let totalActuallySettled = 0;
+
+        for (const creditor of creditors) {
+            if (poolAvailable <= 0) break;
+
+            const creditorOwed = creditor.due_amount - creditor.settled_amount;
+            if (creditorOwed <= 0) continue;
+
+            const settleAmount = Math.min(poolAvailable, creditorOwed);
+
+            // Create Transfer Logs
+            await supabase.from('deposits').insert([
+                { cycle_id: targetCycleId, member_id: memberId, amount: -settleAmount, label: 'Auto-Settlement', notes: `Paid to ${creditor.members.name}` },
+                { cycle_id: targetCycleId, member_id: creditor.member_id, amount: settleAmount, label: 'Auto-Settlement', notes: `Received from ${memberObj.name}` }
+            ]);
+
+            // Update Creditor
+            const newCreditorSettled = creditor.settled_amount + settleAmount;
+            await supabase.from('cycle_dues').update({
+                settled_amount: newCreditorSettled,
+                status: newCreditorSettled >= creditor.due_amount ? 'settled' : 'settling',
+                settled_at: newCreditorSettled >= creditor.due_amount ? new Date().toISOString() : null
+            }).eq('id', creditor.id);
+
+            // LOG THE SETTLEMENT ACTION
+            await logActivity(`Settlement: ${memberObj.name} paid ${formatCurrency(settleAmount)} towards debt to ${creditor.members.name}`, 'deposit');
+
+            poolAvailable -= settleAmount;
+            totalActuallySettled += settleAmount;
+        }
+
+        // 4. Update Debtor Record
+        if (totalActuallySettled > 0) {
+            const newDebtorSettled = Math.abs(debtorDue.settled_amount) + totalActuallySettled;
+            const isFullySettled = newDebtorSettled >= Math.abs(debtorDue.due_amount);
+            
+            await supabase.from('cycle_dues').update({
+                settled_amount: -newDebtorSettled,
+                status: isFullySettled ? 'settled' : 'settling',
+                settled_at: isFullySettled ? new Date().toISOString() : null
+            }).eq('id', debtorDue.id);
+        }
+
+        return {
+            settled: totalActuallySettled > 0,
+            settled_amount: totalActuallySettled,
+            remaining_deposit: amount - totalActuallySettled,
+            deposit_id: mainDeposit.id
+        };
+
+    } catch (err) {
+        console.error("Settlement Logic Crash:", err);
+        throw err;
+    }
+}
+
 document.getElementById('depositForm').addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -3550,52 +3871,61 @@ document.getElementById('depositForm').addEventListener('submit', async (e) => {
     const label = document.getElementById('depositLabel').value;
     const notes = document.getElementById('depositNotes').value;
     
-    // Logic: Charge is negative, Deposit is positive
     const finalAmount = type === 'charge' ? -Math.abs(rawAmount) : Math.abs(rawAmount);
 
+    const btn = e.target.querySelector('button[type="submit"]');
+    btn.textContent = "Processing...";
+    btn.disabled = true;
+
     try {
-        await supabase
-            .from('deposits')
-            .insert({
-                cycle_id: currentCycleId,
-                member_id: memberId,
-                amount: finalAmount,
-                label: label,
-                notes: notes
+        let result;
+        const memberObj = allMembers.find(m => m.id === memberId);
+
+        try {
+            // Attempt RPC
+            const { data, error } = await supabase.rpc('process_deposit_with_settlement', {
+                p_member_id: memberId,
+                p_cycle_id: parseInt(currentCycleId),
+                p_amount: finalAmount,
+                p_label: label,
+                p_notes: notes
             });
 
-        const member = allMembers.find(m => m.id === memberId);
-        const editorName = currentUser.members ? currentUser.members.name : currentUser.username;
-        
-        // Custom Log Message
-        let logMessage = '';
-        if (type === 'charge') {
-            logMessage = `Charge Deduction: ${formatCurrency(finalAmount)} applied to ${member?.name} (${label}) by ${editorName}`;
-        } else {
-            logMessage = `Deposit Added: ${formatCurrency(finalAmount)} for ${member?.name}`;
+            if (error) throw error;
+            result = data;
+
+            // Log RPC success
+            if (result && result.settled) {
+                await logActivity(`Processed settlement for ${memberObj.name}: ${formatCurrency(result.settled_amount)} settled.`, 'deposit');
+            } else {
+                await logActivity(`Deposit added: ${formatCurrency(finalAmount)} for ${memberObj.name}`, 'deposit');
+            }
+
+        } catch (rpcError) {
+            // Fallback to JS
+            result = await processDepositWithClientSideSettlement(
+                memberId,
+                currentCycleId,
+                finalAmount,
+                label,
+                notes
+            );
         }
 
-        await logActivity(logMessage, 'deposit');
-
-        // Form Cleanup
+        showNotification("Transaction Processed", 'success');
         document.getElementById('depositAmount').value = '';
         document.getElementById('depositNotes').value = '';
-        // Note: We do NOT reset member ID so the admin can add multiple for same person easily
-        // We do NOT reset type/label automatically to keep workflow smooth
         
-        // Refresh Lists
-        await loadDeposits(); // Global List
-        await loadSelectedMemberHistory(memberId); // Right Side List
-        
-        showNotification('Transaction successful', 'success');
+        refreshCurrentPage(); // Update UI
 
     } catch (err) {
-        console.error('Error processing transaction:', err);
-        showNotification('Failed to process transaction', 'error');
+        console.error('❌ Transaction failed:', err);
+        showNotification('Error: ' + err.message, 'error');
+    } finally {
+        btn.textContent = "Submit Transaction";
+        btn.disabled = false;
     }
 });
-
-
 
     // ============================================
     // ADMIN PAGE
@@ -3641,14 +3971,7 @@ document.getElementById('depositForm').addEventListener('submit', async (e) => {
         }
     });
 
-    document.getElementById('closeMonthBtn').addEventListener('click', async () => {
-        if (!confirm('Are you sure you want to close this month? This will calculate final balances.')) {
-            return;
-        }
 
-        // Implementation for closing month and carrying forward balances
-        showNotification('Month closing feature coming soon', 'info');
-    });
 
     document.getElementById('addMemberForm').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -3661,7 +3984,7 @@ document.getElementById('depositForm').addEventListener('submit', async (e) => {
                 .from('members')
                 .insert({ name: name })
                 .select()
-                .single();
+                .maybeSingle();
             
             if (memberError) throw memberError;
 
@@ -3860,17 +4183,29 @@ document.getElementById('editMemberForm').addEventListener('submit', async (e) =
     // ============================================
     
 async function logActivity(message, type = 'info') {
+    if (!currentCycleId) {
+        console.error("Cannot log activity: currentCycleId is missing.");
+        return;
+    }
+    
     try {
-        await supabase
+        const { error } = await supabase
             .from('notifications')
             .insert({
-                cycle_id: currentCycleId,
+                cycle_id: parseInt(currentCycleId), // Ensure it's an Integer
                 message: message,
                 type: type,
-                member_id: currentUser?.member_id // Use member_id, not UUID
+                member_id: currentUser?.member_id || null // NULL for system logs
             });
+
+        if (error) throw error;
+        
+        // Refresh local notifications if the panel is open
+        if (document.getElementById('notifPanel').classList.contains('active')) {
+            loadNotifications();
+        }
     } catch (err) {
-        console.error('Error logging activity:', err);
+        console.error('Logging Error:', err.message);
     }
 }
 
@@ -4124,6 +4459,258 @@ document.querySelectorAll('.nav-link').forEach(link => {
         }
     });
 });
+
+
+
+// ============================================
+// CYCLE CLOSING & DUE MANAGEMENT
+// ============================================
+document.getElementById('closeMonthBtn').addEventListener('click', async () => {
+    if (!currentCycleId) {
+        showNotification("No active cycle to close", "error");
+        return;
+    }
+
+    // 1. Confirm action
+    if (!confirm("⚠️ WARNING: This will permanently close this cycle and forward balances. Continue?")) {
+        return;
+    }
+
+    const btn = document.getElementById('closeMonthBtn');
+    btn.textContent = "Processing...";
+    btn.disabled = true;
+
+    try {
+        // 2. Get current cycle details (Use == to match string ID to number ID)
+        const currentCycle = allCycles.find(c => c.id == currentCycleId);
+        if (!currentCycle) throw new Error("Current cycle not found. Try refreshing.");
+
+        // 3. Prompt for new cycle name
+        const nextMonthDate = new Date(currentCycle.end_date);
+        nextMonthDate.setDate(nextMonthDate.getDate() + 1);
+        const monthNames = ["January", "February", "March", "April", "May", "June", 
+                           "July", "August", "September", "October", "November", "December"];
+        const suggestedName = `${monthNames[nextMonthDate.getMonth()]} ${nextMonthDate.getFullYear()}`;
+        
+        const newCycleName = prompt(`Enter new cycle name:`, suggestedName);
+        
+        // If user hits cancel
+        if (newCycleName === null) {
+            btn.textContent = "🔒 Close Current Cycle & Create New";
+            btn.disabled = false;
+            return;
+        }
+
+        // 4. Calculate final balances
+        const balances = await calculateMemberBalances(currentCycleId);
+        const balancesWithDues = balances.filter(b => b.balance !== 0);
+
+        // 5. Deactivate Current Cycle
+        const { error: deactivateError } = await supabase
+            .from('cycles')
+            .update({ is_active: false })
+            .eq('id', currentCycleId);
+        if (deactivateError) throw deactivateError;
+
+        // 6. Create New Cycle
+        const startDateStr = new Date(nextMonthDate.getFullYear(), nextMonthDate.getMonth(), 1).toISOString().split('T')[0];
+        const endDateStr = new Date(nextMonthDate.getFullYear(), nextMonthDate.getMonth() + 1, 0).toISOString().split('T')[0];
+
+        const { data: newCycle, error: cycleError } = await supabase
+            .from('cycles')
+            .insert({
+                name: newCycleName,
+                start_date: startDateStr,
+                end_date: endDateStr,
+                is_active: true
+            })
+            .select().single();
+        if (cycleError) throw cycleError;
+
+        // 7. Forward Dues
+        if (balancesWithDues.length > 0) {
+            const dueRecords = balancesWithDues.map(b => ({
+                from_cycle_id: currentCycleId,
+                to_cycle_id: newCycle.id,
+                member_id: b.member_id,
+                due_amount: b.balance,
+                status: 'pending',
+                settled_amount: 0
+            }));
+            const { error: dueError } = await supabase.from('cycle_dues').insert(dueRecords);
+            if (dueError) throw dueError;
+        }
+
+        await logActivity(`Cycle ${currentCycle.name} closed. New cycle ${newCycleName} started.`, 'other');
+        showNotification("Cycle closed and dues forwarded!", "success");
+        
+        // Refresh app state
+        location.reload(); 
+
+    } catch (err) {
+        console.error("Cycle closing error:", err);
+        showNotification("Error: " + err.message, "error");
+    } finally {
+        btn.textContent = "🔒 Close Current Cycle & Create New";
+        btn.disabled = false;
+    }
+});
+
+
+
+// Helper: Calculate member balances for current cycle
+async function calculateMemberBalances(cycleId) {
+    try {
+        // Fetch data
+        const { data: meals } = await supabase.from('meals').select('*').eq('cycle_id', cycleId);
+        const { data: expenses } = await supabase.from('expenses').select('*').eq('cycle_id', cycleId);
+        const { data: deposits } = await supabase.from('deposits').select('*').eq('cycle_id', cycleId);
+
+        // Calculate meal rate
+        const totalExpense = expenses?.reduce((sum, e) => sum + parseFloat(e.amount), 0) || 0;
+        const totalMeals = meals?.reduce((sum, m) => sum + parseFloat(m.day_count) + parseFloat(m.night_count), 0) || 0;
+        const mealRate = totalMeals > 0 ? totalExpense / totalMeals : 0;
+
+        // Calculate per-member balances
+        const balances = [];
+        allMembers.forEach(member => {
+            const memberMeals = meals?.filter(m => m.member_id === member.id)
+                .reduce((sum, m) => sum + parseFloat(m.day_count) + parseFloat(m.night_count), 0) || 0;
+            
+            const memberDeposits = deposits?.filter(d => d.member_id === member.id)
+                .reduce((sum, d) => sum + parseFloat(d.amount), 0) || 0;
+
+            const memberCost = memberMeals * mealRate;
+            const balance = memberDeposits - memberCost;
+
+            balances.push({
+                member_id: member.id,
+                member_name: member.name,
+                balance: parseFloat(balance.toFixed(2))
+            });
+        });
+
+        return balances;
+
+    } catch (err) {
+        console.error("Balance calculation error:", err);
+        throw err;
+    }
+}
+
+// ============================================
+// DUE SETTLEMENT UI
+// ============================================
+
+async function loadDueSettlement() {
+    console.log("🔍 Loading due settlement for cycle:", currentCycleId);
+    
+    if (!currentCycleId) {
+        console.warn("No cycle ID, skipping due settlement");
+        return;
+    }
+
+    try {
+        // Fetch dues for current cycle
+        const { data: dues, error } = await supabase
+            .from('cycle_dues')
+            .select('*, members(name), from_cycle:cycles!cycle_dues_from_cycle_id_fkey(name)')
+            .eq('to_cycle_id', currentCycleId)
+            .order('due_amount', { ascending: true });
+
+        console.log("📊 Dues data received:", dues);
+
+        if (error) {
+            console.error("❌ Error fetching dues:", error);
+            throw error;
+        }
+
+        const card = document.getElementById('dueSettlementCard');
+        
+        if (!card) {
+            console.error("❌ dueSettlementCard element not found in DOM!");
+            return;
+        }
+
+        // Filter out fully settled
+        const activeDues = dues?.filter(d => d.status !== 'settled') || [];
+
+        // Show/hide card
+        if (activeDues.length === 0) {
+            console.log("✅ No active dues found, hiding card");
+            card.style.display = 'none';
+            return;
+        }
+
+        console.log(`✅ Found ${activeDues.length} active dues, showing card`);
+        card.style.display = 'block';
+
+        // Separate debtors and creditors
+        const debtors = activeDues.filter(d => d.due_amount < 0);
+        const creditors = activeDues.filter(d => d.due_amount > 0);
+
+        console.log(`📉 Debtors: ${debtors.length}, 📈 Creditors: ${creditors.length}`);
+
+        // Render Debtors
+        const debtorsList = document.getElementById('debtorsList');
+        if (debtors.length === 0) {
+            debtorsList.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-secondary);">No outstanding debts 🎉</div>';
+        } else {
+            debtorsList.innerHTML = debtors.map(d => renderDueItem(d, 'debtor')).join('');
+        }
+
+        // Render Creditors
+        const creditorsList = document.getElementById('creditorsList');
+        if (creditors.length === 0) {
+            creditorsList.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-secondary);">No pending credits</div>';
+        } else {
+            creditorsList.innerHTML = creditors.map(d => renderDueItem(d, 'creditor')).join('');
+        }
+
+    } catch (err) {
+        console.error("❌ Due settlement load error:", err);
+        showNotification("Failed to load due settlement: " + err.message, "error");
+    }
+}
+
+function renderDueItem(due, type) {
+    const absAmount = Math.abs(due.due_amount);
+    const settled = Math.abs(due.settled_amount);
+    const remaining = absAmount - settled;
+    const progress = (settled / absAmount) * 100;
+
+    const statusClass = due.status === 'pending' ? 'due-status-pending' : 
+                       due.status === 'settling' ? 'due-status-settling' : 
+                       'due-status-settled';
+
+    return `
+    <div class="due-item ${type}">
+        <div class="due-item-header">
+            <div class="due-item-name">${due.members.name}</div>
+            <div class="due-item-amount ${type === 'debtor' ? 'balance-negative' : 'balance-positive'}">
+                ${formatCurrency(remaining)}
+            </div>
+        </div>
+        <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 5px;">
+            From: ${due.from_cycle.name} 
+            <span class="due-status-badge ${statusClass}">${due.status}</span>
+        </div>
+        <div class="due-progress-bar">
+            <div class="due-progress-fill" style="width: ${progress}%"></div>
+        </div>
+        <div style="font-size: 10px; color: var(--text-secondary); margin-top: 4px;">
+            Settled: ${formatCurrency(settled)} / ${formatCurrency(absAmount)} (${progress.toFixed(0)}%)
+        </div>
+    </div>
+    `;
+}
+
+// Update loadSummary to include due settlement
+const originalLoadSummary = loadSummary;
+loadSummary = async function() {
+    await originalLoadSummary();
+    await loadDueSettlement();
+};
 
 
 </script>
