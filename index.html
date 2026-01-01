@@ -1016,7 +1016,9 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label">Amount (৳)</label>
-                            <input type="number" id="expenseAmount" class="form-input" step="0.01" required>
+                          <!-- Change step to 1 -->
+<input type="number" id="expenseAmount" class="form-input" step="1" required 
+       oninput="this.value = Math.round(this.value)">
                         </div>
                         <button type="submit" class="btn btn-primary">Add Expense</button>
                     </form>
@@ -1035,6 +1037,16 @@
 <div id="depositsPage" class="page-content hidden">
     <h2 style="margin-bottom: 20px;">Deposits & Charges</h2>
     
+    <!-- Consolidated Pending Approvals Section -->
+    <div id="pendingDepositsCard" class="card" style="display: none; border-left: 5px solid var(--warning-color);">
+        <div class="card-header">
+            <h3 class="card-title">⏳ Pending Deposit Requests</h3>
+        </div>
+        <div id="pendingDepositList">
+            <!-- JavaScript will inject items here -->
+        </div>
+    </div>
+
     <!-- Split View: Form + Specific History -->
     <div class="split-view-container" id="depositSplitView">
         
@@ -1068,7 +1080,9 @@
 
                 <div class="form-group">
                     <label class="form-label">Amount (৳)</label>
-                    <input type="number" id="depositAmount" class="form-input" step="0.01" min="0" required>
+                   <!-- Change step to 1 -->
+<input type="number" id="depositAmount" class="form-input" step="1" min="0" required 
+       oninput="this.value = Math.round(this.value)">
                 </div>
 
                 <div class="form-group">
@@ -1442,82 +1456,47 @@ document.getElementById('authToggleBtn').addEventListener('click', (e) => {
     document.getElementById('authToggleText').textContent = infoText;
 });
 
-// 2. Handle Submission
 // 2. Handle Submission (Improved with better debugging)
 document.getElementById('authForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    
+    const btn = document.getElementById('authBtn');
+    const originalText = btn.textContent;
     const emailOrUser = document.getElementById('authEmail').value.trim();
     const password = document.getElementById('authPassword').value;
     const username = document.getElementById('authUsername').value.trim();
-    
     const errorDiv = document.getElementById('authError');
-    const btn = document.getElementById('authBtn');
     
     errorDiv.style.display = 'none';
-    btn.textContent = 'Processing...';
+    btn.textContent = 'Verifying...';
     btn.disabled = true;
 
     try {
         if (isLoginMode) {
-            // ================= LOGIN FLOW =================
             let finalEmail = emailOrUser;
-
-            // 1. Resolve Username to Email
             if (!emailOrUser.includes('@')) {
-                const { data, error } = await supabase
-                    .from('members')
-                    .select('email')
-                    .eq('name', emailOrUser)
-                    .maybeSingle();
-
-                if (error || !data || !data.email) {
-                    throw new Error("Username not found. Please sign up or check spelling.");
-                }
+                const { data, error } = await supabase.from('members').select('email').eq('name', emailOrUser).maybeSingle();
+                if (error || !data || !data.email) throw new Error("Username not found.");
                 finalEmail = data.email;
             }
-
-            // 2. Log In
-            const { data, error } = await supabase.auth.signInWithPassword({
-                email: finalEmail,
-                password: password
-            });
-
+            const { data, error } = await supabase.auth.signInWithPassword({ email: finalEmail, password: password });
             if (error) throw error;
-
-            // 3. Force App Load (Don't wait for listener)
-            btn.textContent = 'Success!';
-            await handleUserSession(data.user); // <--- Manually trigger session handler
-
+            await handleUserSession(data.user);
         } else {
-            // ================= SIGN UP FLOW =================
-            if (username.length < 3) throw new Error("Username must be at least 3 chars.");
-
-            // 1. Sign Up
             const { data, error } = await supabase.auth.signUp({
                 email: emailOrUser,
                 password: password,
-                options: {
-                    data: { username: username } // Pass username to Trigger
-                }
+                options: { data: { username: username } }
             });
-
             if (error) throw error;
-            
-            alert("Account created successfully! You can now log in.");
-            
-            // Switch to Login View
+            alert("Account created! Please log in.");
             document.getElementById('authToggleBtn').click();
-            document.getElementById('authEmail').value = username; // Pre-fill username
         }
-
     } catch (err) {
-        console.error("Auth Error:", err);
         errorDiv.textContent = err.message;
         errorDiv.style.display = 'block';
     } finally {
         btn.disabled = false;
-        btn.textContent = isLoginMode ? 'Login' : 'Sign Up';
+        btn.textContent = originalText;
     }
 });
 
@@ -1580,13 +1559,23 @@ async function loadLoginUserDropdown() {
     }
 
     function formatCurrency(amount) {
-        return `৳${parseFloat(amount).toFixed(2)}`;
+         return `৳${parseFloat(amount || 0).toFixed(2)}`;
     }
 
-    function formatDate(dateString) {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('en-GB');
-    }
+// This function handles both the name 'formatDate' and adds the Time
+function formatDate(dateString) {
+    if (!dateString) return "-";
+    const date = new Date(dateString);
+    
+    // Formats to: 02 Jan • 10:30 AM
+    return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) + 
+           ' • ' + 
+           date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+}
+
+// Optional: Keep this as an alias in case you already changed some calls
+const formatDateTime = formatDate;
+
 
   function showNotification(message, type = 'info') {
     const container = document.getElementById('toast-container');
@@ -1723,31 +1712,156 @@ window.handleExpenseApproval = async function(expenseId, newStatus) {
     }
 };
 
+
+window.handleDepositApproval = async function(depositId) {
+    if (!confirm("Approve this deposit? This will apply the balance and trigger due settlements.")) return;
+    
+    const btn = event.target;
+    btn.disabled = true;
+
+    try {
+        // 1. Get the pending deposit details
+        const { data: dep, error: fetchErr } = await supabase
+            .from('deposits')
+            .select('*')
+            .eq('id', depositId)
+            .single();
+        
+        if (fetchErr) throw fetchErr;
+
+        // 2. Delete the pending record (to avoid duplicates, or update status)
+        // We update status to 'approved' and THEN run settlement logic
+        const { error: updateErr } = await supabase
+            .from('deposits')
+            .update({ status: 'approved' })
+            .eq('id', depositId);
+        
+        if (updateErr) throw updateErr;
+
+        // 3. Run the Settlement Logic (Crucial!)
+        // Since it's already in the DB as 'approved' now, we just need to 
+        // trigger the settlement portion of your existing logic.
+        // We reuse your client-side settlement function but modify it slightly 
+        // OR just call it. For simplicity, we manually run the settlement part:
+        
+        await logActivity(`Deposit Approved: ${formatCurrency(dep.amount)} for member ID ${dep.member_id}`, 'deposit');
+        
+        // Refresh page - the settlement logic should ideally be a separate function 
+        // but for now, we will re-run the "Approved" flow
+        showNotification("Deposit Approved!", "success");
+        refreshCurrentPage();
+
+    } catch (err) {
+        console.error(err);
+        showNotification("Approval failed", "error");
+    }
+};
+
+window.handleDepositRejection = async function(depositId) {
+    if (!confirm("Reject and delete this request?")) return;
+
+    try {
+        const { error } = await supabase.from('deposits').delete().eq('id', depositId);
+        if (error) throw error;
+        showNotification("Request Rejected", "warning");
+        refreshCurrentPage();
+    } catch (err) {
+        showNotification("Error", "error");
+    }
+};
+
+
+window.handleDepositAction = async function(depositId, action) {
+    console.log(`Action: ${action} triggered for ID: ${depositId}`);
+    
+    // Disable the button to prevent double-clicks
+    const btn = event.target;
+    btn.disabled = true;
+    const originalText = btn.textContent;
+    btn.textContent = "...";
+
+    try {
+        if (action === 'approve') {
+            // 1. Fetch the data of the pending request
+            const { data: dep, error: fError } = await supabase
+                .from('deposits')
+                .select('*')
+                .eq('id', depositId)
+                .single();
+
+            if (fError || !dep) {
+                console.error("Fetch Error:", fError);
+                throw new Error("Could not find the pending request.");
+            }
+
+            console.log("Pending data found. Attempting to delete request row...");
+
+            // 2. DELETE the pending record FIRST. 
+            // If this fails, we stop (prevents duplicates).
+            const { error: delError } = await supabase
+                .from('deposits')
+                .delete()
+                .eq('id', depositId);
+            
+            if (delError) {
+                console.error("Delete Error:", delError);
+                throw new Error("Permission denied or database error during deletion.");
+            }
+
+            console.log("Pending request deleted. Now processing official settlement...");
+
+            // 3. Process the NEW official deposit
+            // We pass status: 'approved' explicitly to ensure it hits the history filter
+            await processDepositWithClientSideSettlement(
+                dep.member_id, 
+                dep.cycle_id, 
+                dep.amount, 
+                dep.label || 'Deposit', 
+                dep.notes
+            );
+            
+            showNotification("Request Approved", "success");
+
+        } else if (action === 'reject') {
+            const { error: delError } = await supabase
+                .from('deposits')
+                .delete()
+                .eq('id', depositId);
+            
+            if (delError) throw delError;
+            showNotification("Request Rejected", "warning");
+        }
+        
+        // 4. Force UI update
+        console.log("Refreshing UI...");
+        await loadDeposits(); 
+        if (typeof loadDashboard === 'function') loadDashboard();
+
+    } catch (err) {
+        console.error("CRITICAL ERROR in handleDepositAction:", err.message);
+        showNotification(err.message, "error");
+        btn.disabled = false;
+        btn.textContent = originalText;
+    }
+};
+
 async function initializeApp() {
     try {
-        // 1. Load Essential Global Data first
-        await Promise.all([
-            loadCycles(),
-            loadAppConfig(),
-            loadMembers()
-        ]);
+        // Load sequentially to prevent network congestion
+        await loadCycles();
+        await loadAppConfig();
+        await loadMembers();
 
-        // 2. Setup UI
         initHeader();
         initNotifications();
         setupRobustRealtime(); 
 
-        // 3. Status Indicators
         updateEntryStatusIndicator();
         setInterval(updateEntryStatusIndicator, 60000); 
 
-        // 4. Navigate (This now only runs once globals are ready)
         navigateToPage('dashboard');
     } catch (err) {
         console.error("Critical Init Error:", err);
-        showNotification("Failed to connect to database", "error");
-        // Clear loading states across the app so it doesn't look "frozen"
-        document.querySelectorAll('.loading').forEach(el => el.textContent = "Connection Error. Please reload.");
     }
 }
 
@@ -1782,18 +1896,38 @@ async function initializeApp() {
     // Add Handler for Admin Settings Form
 document.getElementById('adminSettingsForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const newTime = document.getElementById('settingLockTime').value;
+    const start = document.getElementById('settingLockTime').value;
+    const end = document.getElementById('settingLockTimeEnd').value;
+    const autoTime = document.getElementById('settingAutoTime').value;
     
-    // Upsert Config
-    const { error } = await supabase
-        .from('app_config')
-        .upsert({ key_name: 'lock_time_start', value_text: newTime }, { onConflict: 'key_name' });
+    const btn = e.target.querySelector('button[type="submit"]');
+    btn.textContent = "Saving...";
+    btn.disabled = true;
 
-    if (!error) {
-        appConfig.lock_time_start = newTime;
-        showNotification("Settings updated!", "success");
-    } else {
+    try {
+        const { error } = await supabase.from('app_config').upsert([
+            { key_name: 'lock_time_start', value_text: start },
+            { key_name: 'lock_time_end', value_text: end },
+            { key_name: 'auto_entry_time', value_text: autoTime }
+        ], { onConflict: 'key_name' });
+
+        if (error) throw error;
+
+        appConfig.lock_time_start = start;
+        appConfig.lock_time_end = end;
+        appConfig.auto_entry_time = autoTime;
+        
+        const actor = currentUser.members ? currentUser.members.name : "Admin";
+        // LOG SETTINGS CHANGE
+        await logActivity(`System Config: Bazar lock times and auto-entry schedule were updated by ${actor}`, 'other');
+
+        showNotification("Settings saved successfully!", "success");
+        loadScheduler();
+    } catch (err) {
         showNotification("Failed to save settings", "error");
+    } finally {
+        btn.textContent = "Save Settings";
+        btn.disabled = false;
     }
 });
 
@@ -1982,7 +2116,7 @@ async function loadScheduler() {
     if (!currentUser.member_id || !currentCycleId) return;
     
     const container = document.getElementById('schedulerList');
-    container.innerHTML = '<div class="loading">Loading plans...</div>';
+    container.innerHTML = '<div class="loading">Loading schedule...</div>';
 
     try {
         // 1. Fetch Member Defaults
@@ -2006,7 +2140,7 @@ async function loadScheduler() {
             dates.push(d.toLocaleDateString('en-CA'));
         }
 
-        // 3. Fetch Existing Plans
+        // 3. Fetch Existing Plans from DB
         const { data: plans } = await supabase
             .from('meal_plans')
             .select('*')
@@ -2016,40 +2150,9 @@ async function loadScheduler() {
         const planMap = {};
         plans?.forEach(p => planMap[p.plan_date] = p);
 
-        // 4. AUTO-MATERIALIZE MISSING PLANS
-        // If a date has no plan, we create one NOW using current defaults.
-        // This "locks in" the current view so changing defaults later won't affect these specific days.
-        const newPlansToInsert = [];
+        // --- REMOVED: The old "Auto-Upsert" logic that was causing the freeze ---
 
-        dates.forEach(dateStr => {
-            if (!planMap[dateStr]) {
-                // Create the object
-                const newPlan = {
-                    member_id: currentUser.member_id,
-                    plan_date: dateStr,
-                    day_count: defDay ? 1 : 0,
-                    night_count: defNight ? 1 : 0
-                };
-                
-                // Add to bulk insert list
-                newPlansToInsert.push(newPlan);
-                
-                // Add to local map so we can render immediately without re-fetching
-                planMap[dateStr] = newPlan;
-            }
-        });
-
-        // Save to DB silently (Fire and forget)
-        if (newPlansToInsert.length > 0) {
-            supabase
-                .from('meal_plans')
-                .upsert(newPlansToInsert, { onConflict: 'member_id, plan_date' })
-                .then(({ error }) => {
-                    if (error) console.error("Auto-save plans error", error);
-                });
-        }
-
-        // 5. Render Cards
+        // 4. Render Cards
         container.innerHTML = '';
         const fmt = (dStr) => {
             const d = new Date(dStr);
@@ -2057,26 +2160,23 @@ async function loadScheduler() {
         };
 
         for (let i = 0; i < 7; i++) {
+            // These variables are defined INSIDE the loop
             const dateSession = dates[i];
             const dateNextDay = dates[i+1];
             
             const sessionLabel = fmt(dateSession);
             const nextDayLabel = fmt(dateNextDay);
-            
             const isFirstCard = (i === 0);
             
-            // We are guaranteed to have data now because of Step 4
-            const planSession = planMap[dateSession]; 
-            const planNext = planMap[dateNextDay];
+            // LOGIC: Use DB value if it exists, otherwise use Member Defaults
+            const nightActive = planMap[dateSession] ? planMap[dateSession].night_count > 0 : defNight;
+            const dayActive = planMap[dateNextDay] ? planMap[dateNextDay].day_count > 0 : defDay;
 
             const card = document.createElement('div');
             card.className = `scheduler-card ${isFirstCard ? 'is-today' : ''}`;
             card.style.minWidth = "160px";
             
-            const nightActive = planSession.night_count > 0;
-            const dayActive = planNext.day_count > 0;
-
- card.innerHTML = `
+            card.innerHTML = `
                 <div class="scheduler-date" style="font-size:10px; color:var(--text-secondary); text-transform:uppercase;">
                     ${isFirstCard ? 'Active Session' : 'Upcoming'} <br>
                     <span style="color:var(--primary-color); font-weight:700; font-size:14px;">
@@ -2085,7 +2185,6 @@ async function loadScheduler() {
                 </div>
                 
                 <div style="display:flex; flex-direction:column; gap:8px; width:100%;">
-                    
                     <!-- Night Plan Button -->
                     <button class="sched-btn ${nightActive ? 'active' : ''}" 
                         onclick="toggleSchedulerPlan('${dateSession}', 'night', this)">
@@ -2113,8 +2212,6 @@ async function loadScheduler() {
             `;
             container.appendChild(card);
         }
-
-
     } catch (err) {
         console.error("Scheduler Error:", err);
         container.innerHTML = '<div class="loading" style="color:red">Error loading schedule</div>';
@@ -2122,7 +2219,6 @@ async function loadScheduler() {
 }
 // Function triggered by clicking scheduler buttons
 async function toggleSchedulerPlan(date, type, btnElement) {
-    // Visual toggle immediately for responsiveness
     const wasActive = btnElement.classList.contains('active');
     if (wasActive) btnElement.classList.remove('active');
     else btnElement.classList.add('active');
@@ -2130,7 +2226,6 @@ async function toggleSchedulerPlan(date, type, btnElement) {
     const newCount = wasActive ? 0 : 1;
 
     try {
-        // 1. Fetch current plan to preserve the *other* meal type (Day/Night)
         const { data: existing } = await supabase
             .from('meal_plans')
             .select('*')
@@ -2148,18 +2243,16 @@ async function toggleSchedulerPlan(date, type, btnElement) {
         if (type === 'day') updateData.day_count = newCount;
         else updateData.night_count = newCount;
 
-        // 2. Save to PLAN table
-        const { error } = await supabase
-            .from('meal_plans')
-            .upsert(updateData, { onConflict: 'member_id, plan_date' });
-
+        const { error } = await supabase.from('meal_plans').upsert(updateData, { onConflict: 'member_id, plan_date' });
         if (error) throw error;
-        // console.log("Plan updated");
+
+        // LOG INDIVIDUAL MEAL TOGGLE
+        const actor = currentUser.members ? currentUser.members.name : "User";
+        await logActivity(`${actor} updated their ${type} plan for ${new Date(date).toLocaleDateString('en-GB')} to ${newCount > 0 ? 'ON' : 'OFF'}`, 'meal');
 
     } catch (err) {
         console.error("Plan update failed", err);
         showNotification("Failed to save plan", "error");
-        // Revert UI
         if (wasActive) btnElement.classList.add('active');
         else btnElement.classList.remove('active');
     }
@@ -2178,116 +2271,94 @@ async function toggleSchedulerPlan(date, type, btnElement) {
         const cycle = allCycles.find(c => c.id == currentCycleId);
         if (!cycle) return;
 
-        // Fetch meals for this cycle
-        const { data: meals } = await supabase
-            .from('meals')
-            .select('*')
-            .eq('cycle_id', currentCycleId);
+        // Fetch data in one go
+        const { data: meals } = await supabase.from('meals').select('*').eq('cycle_id', currentCycleId);
 
         const matrixData = {};
-        if (meals) {
-            meals.forEach(m => {
-                if (!matrixData[m.meal_date]) matrixData[m.meal_date] = {};
-                matrixData[m.meal_date][m.member_id] = { d: m.day_count, n: m.night_count };
-            });
-        }
+        meals?.forEach(m => {
+            if (!matrixData[m.meal_date]) matrixData[m.meal_date] = {};
+            matrixData[m.meal_date][m.member_id] = { d: m.day_count, n: m.night_count };
+        });
 
-        // Build Header
-        let headerHTML = '<tr><th style="min-width: 90px; z-index:20;">Session<br>Date</th>';
+        // 1. Build Header String
+        let headerHTML = '<tr><th style="min-width: 90px; z-index:20;">Session Date</th>';
         allMembers.forEach(m => {
             headerHTML += `<th>${m.name.split(' ')[0]}</th>`; 
         });
         headerHTML += '</tr>';
         tableHead.innerHTML = headerHTML;
 
-        // Loop dates carefully (Timezone safe approach)
+        // 2. Build Body String (Build the whole thing in memory first)
         let bodyHTML = '';
-        let currentIter = new Date(cycle.start_date + 'T00:00:00'); // Force local start
-        let endIter = new Date(cycle.end_date + 'T00:00:00');     // Force local end
+        let currentIter = new Date(cycle.start_date + 'T00:00:00');
+        let endIter = new Date(cycle.end_date + 'T00:00:00');
         const todayStr = new Date().toISOString().split('T')[0];
 
         while (currentIter <= endIter) {
             const dateSessionStr = currentIter.toISOString().split('T')[0];
-            
             const dNext = new Date(currentIter);
             dNext.setDate(currentIter.getDate() + 1);
             const dateNextStr = dNext.toISOString().split('T')[0];
-
-            const dateLabel = currentIter.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
             const isToday = (dateSessionStr === todayStr);
-            const rowStyle = isToday ? 'style="background: rgba(79, 70, 229, 0.08); border-left: 3px solid var(--primary-color);"' : '';
 
-            bodyHTML += `<tr ${rowStyle}>
+            bodyHTML += `<tr ${isToday ? 'style="background: rgba(79, 70, 229, 0.08);"' : ''}>
                 <td style="font-weight:600; font-size:11px;">
-                    ${dateLabel}<br><span style="color:var(--text-secondary); font-weight:400; font-size:9px;">Nights + Next Day</span>
+                    ${currentIter.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
                 </td>`;
 
             allMembers.forEach(m => {
-                const sessionData = (matrixData[dateSessionStr] && matrixData[dateSessionStr][m.id]) 
-                                    ? matrixData[dateSessionStr][m.id] : { d:0, n: 0 };
+                const nVal = matrixData[dateSessionStr]?.[m.id]?.n || 0;
+                const dVal = matrixData[dateNextStr]?.[m.id]?.d || 0;
                 
-                const nextData = (matrixData[dateNextStr] && matrixData[dateNextStr][m.id]) 
-                                    ? matrixData[dateNextStr][m.id] : { d: 0, n:0 };
-
-                const nVal = parseFloat(sessionData.n) || 0;
-                const dVal = parseFloat(nextData.d) || 0;   
-
-                const nTxt = nVal > 0 ? nVal : '-';
-                const dTxt = dVal > 0 ? dVal : '-';
-                const nClass = nVal > 0 ? 'active' : 'zero';
-                const dClass = dVal > 0 ? 'active' : 'zero';
-
-                const isAdmin = (currentUser.role === 'admin' || currentUser.role === 'manager');
-                const clickAction = isAdmin ? `onclick="openMealModal('${m.id}', '${dateSessionStr}', ${nVal}, ${dVal})"` : '';
-
                 bodyHTML += `
                     <td>
                         <div class="cell-split">
-                            <div class="cell-val night-col ${nClass}" ${clickAction} style="cursor:${isAdmin ? 'pointer':'default'}">
-                                ${nTxt}
+                            <div class="cell-val ${nVal > 0 ? 'active' : 'zero'}" 
+                                 onclick="openMealModal('${m.id}', '${dateSessionStr}', ${nVal}, ${dVal})">
+                                 ${nVal > 0 ? nVal : '-'}
                             </div>
-                            <div class="cell-val day-col ${dClass}" ${clickAction} style="cursor:${isAdmin ? 'pointer':'default'}">
-                                ${dTxt}
+                            <div class="cell-val ${dVal > 0 ? 'active' : 'zero'}" 
+                                 onclick="openMealModal('${m.id}', '${dateSessionStr}', ${nVal}, ${dVal})">
+                                 ${dVal > 0 ? dVal : '-'}
                             </div>
                         </div>
                     </td>`;
             });
-
             bodyHTML += '</tr>';
-            currentIter.setDate(currentIter.getDate() + 1); // Increment the loop
+            currentIter.setDate(currentIter.getDate() + 1);
         }
+
+        // ONE SINGLE DOM UPDATE (prevents freezing)
         tableBody.innerHTML = bodyHTML;
 
     } catch (err) {
-        console.error("Matrix Error", err);
-        tableBody.innerHTML = '<tr><td colspan="100">Error loading cycle data.</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="100">Error loading matrix.</td></tr>';
     }
 }
-    function initHeader() {
+function initHeader() {
     // 1. Set User Info
     if (currentUser) {
-        // Use member name if available, else username
-        const displayName = currentUser.members ? currentUser.members.name : currentUser.username;
-        document.getElementById('headerUserName').textContent = displayName;
-        document.getElementById('headerUserRole').textContent = currentUser.role;
+        // Use member name if available, else username from auth
+        const displayName = currentUser.members ? currentUser.members.name : (currentUser.user_metadata?.username || "User");
+        const role = currentUser.role || 'user';
+        
+        // Update header with format: Name (ROLE)
+        document.getElementById('headerUserName').textContent = `${displayName} (${role.toUpperCase()})`;
+        
+        // Clear the secondary role line since it's now combined
+        document.getElementById('headerUserRole').textContent = "";
     }
 
     // 2. Start Clock
     updateClock();
     setInterval(updateClock, 1000);
 
-    // 3. Listen for Cycle Changes to update header badge
+    // 3. Update Cycle Name Badge
     const cycleSelect = document.getElementById('cycleSelect');
     if (cycleSelect.options[cycleSelect.selectedIndex]) {
         document.getElementById('headerCycleName').textContent = cycleSelect.options[cycleSelect.selectedIndex].text;
     }
-    
-    // Add listener to update badge when selector changes
-    cycleSelect.addEventListener('change', (e) => {
-        document.getElementById('headerCycleName').textContent = e.target.options[e.target.selectedIndex].text;
-    });
 }
-
 function updateClock() {
     const now = new Date();
     
@@ -2519,7 +2590,7 @@ function updateDashboardActivity(data) {
         <div class="list-item">
             <div class="list-item-info">
                 <div class="list-item-title">${notif.message}</div>
-                <div class="list-item-subtitle">${formatDate(notif.created_at)}</div>
+                <div class="list-item-subtitle">${formatDateTime(notif.created_at)}</div>
             </div>
         </div>
     `).join('');
@@ -2691,10 +2762,11 @@ function refreshCurrentPage() {
 
         try {
             // Calculate meal rate
-            const { data: expenses } = await supabase
-                .from('expenses')
-                .select('amount')
-                .eq('cycle_id', currentCycleId);
+         const { data: expenses } = await supabase
+    .from('expenses')
+    .select('amount')
+    .eq('cycle_id', currentCycleId)
+    .eq('status', 'approved'); // <--- ADD THIS FILTER
 
             const { data: meals } = await supabase
                 .from('meals')
@@ -2719,21 +2791,23 @@ if (log) {
 
             const totalExpense = expenses?.reduce((sum, e) => sum + parseFloat(e.amount), 0) || 0;
             const totalMeals = meals?.reduce((sum, m) => sum + parseFloat(m.day_count) + parseFloat(m.night_count), 0) || 0;
-            const mealRate = totalMeals > 0 ? totalExpense / totalMeals : 0;
+const mealRate = totalMeals > 0 ? totalExpense / totalMeals : 0;
 
-            document.getElementById('statMealRate').textContent = formatCurrency(mealRate);
-            document.getElementById('statTotalMeals').textContent = totalMeals.toFixed(1);
-            document.getElementById('statTotalExpense').textContent = formatCurrency(totalExpense);
+document.getElementById('statMealRate').textContent = formatCurrency(mealRate);
+           document.getElementById('statTotalMeals').textContent = Math.round(totalMeals);
+document.getElementById('statTotalExpense').textContent = formatCurrencyRound(totalExpense);
 
           // Inside loadSummary or loadDashboard
+// Change the deposit query to:
 const { data: deposits } = await supabase
     .from('deposits')
     .select('*')
     .eq('cycle_id', currentCycleId)
-    .neq('label', 'Auto-Settlement'); // <--- CRITICAL: Filter out transfers
+    .neq('label', 'Auto-Settlement')
+    .neq('status', 'pending'); // <--- ADD THIS FILTER
 
             const totalDeposit = deposits?.reduce((sum, d) => sum + parseFloat(d.amount), 0) || 0;
-            document.getElementById('statTotalDeposit').textContent = formatCurrency(totalDeposit);
+          document.getElementById('statTotalDeposit').textContent = formatCurrencyRound(totalDeposit);
 
              loadSystemStatus(); 
 
@@ -2811,22 +2885,25 @@ const { data: deposits } = await supabase
                 .eq('member_id', currentUser.member_id);
 
             const totalMeals = meals?.reduce((sum, m) => sum + parseFloat(m.day_count) + parseFloat(m.night_count), 0) || 0;
-            document.getElementById('profileTotalMeals').textContent = totalMeals.toFixed(1);
+            document.getElementById('profileTotalMeals').textContent = Math.round(totalMeals);
 
-            const { data: deposits } = await supabase
-                .from('deposits')
-                .select('amount')
-                .eq('cycle_id', currentCycleId)
-                .eq('member_id', currentUser.member_id);
+// Change the deposit query to:
+const { data: deposits } = await supabase
+    .from('deposits')
+    .select('amount')
+    .eq('cycle_id', currentCycleId)
+    .eq('member_id', currentUser.member_id)
+    .neq('status', 'pending'); // <--- ADD THIS FILTER
 
             const totalDeposit = deposits?.reduce((sum, d) => sum + parseFloat(d.amount), 0) || 0;
-            document.getElementById('profileTotalDeposit').textContent = formatCurrency(totalDeposit);
+           document.getElementById('profileTotalDeposit').textContent = formatCurrencyRound(totalDeposit);
 
             // Calculate balance
-            const { data: allExpenses } = await supabase
-                .from('expenses')
-                .select('amount')
-                .eq('cycle_id', currentCycleId);
+           const { data: allExpenses } = await supabase
+    .from('expenses')
+    .select('amount')
+    .eq('cycle_id', currentCycleId)
+    .eq('status', 'approved'); // <--- ADD THIS FILTER
 
             const { data: allMeals } = await supabase
                 .from('meals')
@@ -2918,7 +2995,7 @@ const { data: deposits } = await supabase
                 <div class="list-item">
                     <div class="list-item-info">
                         <div class="list-item-title">${deposit.label || 'Deposit'}</div>
-                        <div class="list-item-subtitle">${formatDate(deposit.created_at)}</div>
+                       <div class="list-item-subtitle">${formatDateTime(deposit.created_at)}</div>
                     </div>
                     <div class="list-item-amount balance-positive">${formatCurrency(deposit.amount)}</div>
                 </div>
@@ -3181,82 +3258,42 @@ function openMealModal(memberId, sessionDate, currentNightVal, nextDayVal) {
 document.getElementById('mealForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const btn = e.target.querySelector('button[type="submit"]');
+    const originalText = btn.textContent;
+    
+    const memberId = parseInt(document.getElementById('mealMemberId').value);
+    const sessionDate = document.getElementById('mealDateSession').value;
+    const nextDate = document.getElementById('mealDateNext').value;
+    const nightVal = Math.round(parseFloat(document.getElementById('mealNightCount').value)) || 0;
+    const dayVal = Math.round(parseFloat(document.getElementById('mealDayCount').value)) || 0;
+
     btn.textContent = "Saving...";
     btn.disabled = true;
 
-    // Get Inputs
-    const memberId = parseInt(document.getElementById('mealMemberId').value);
-    const sessionDate = document.getElementById('mealDateSession').value; // e.g. Dec 8
-    const nextDate = document.getElementById('mealDateNext').value;       // e.g. Dec 9
-    
-    const nightVal = parseFloat(document.getElementById('mealNightCount').value) || 0;
-    const dayVal = parseFloat(document.getElementById('mealDayCount').value) || 0;
-
     try {
-        // Fetch current state to preserve non-edited slots
-        const { data: existingRows } = await supabase
-            .from('meals')
-            .select('*')
-            .eq('member_id', memberId)
-            .in('meal_date', [sessionDate, nextDate]);
-
-        // Helper to find existing row
+        const { data: existingRows } = await supabase.from('meals').select('*').eq('member_id', memberId).in('meal_date', [sessionDate, nextDate]);
         const findRow = (d) => existingRows?.find(r => r.meal_date === d);
         const rowSession = findRow(sessionDate);
         const rowNext = findRow(nextDate);
 
-        // Prepare Upsert for Session Date (Update NIGHT, Keep Day)
-        const upsertSession = {
-            cycle_id: currentCycleId,
-            member_id: memberId,
-            meal_date: sessionDate,
-            night_count: nightVal,
-            day_count: rowSession ? rowSession.day_count : 0, 
-            updated_at: new Date().toISOString()
-        };
+        const upserts = [
+            { cycle_id: currentCycleId, member_id: memberId, meal_date: sessionDate, night_count: nightVal, day_count: rowSession ? rowSession.day_count : 0 },
+            { cycle_id: currentCycleId, member_id: memberId, meal_date: nextDate, day_count: dayVal, night_count: rowNext ? rowNext.night_count : 0 }
+        ];
 
-        // Prepare Upsert for Next Date (Update DAY, Keep Night)
-        const upsertNext = {
-            cycle_id: currentCycleId,
-            member_id: memberId,
-            meal_date: nextDate,
-            day_count: dayVal,
-            night_count: rowNext ? rowNext.night_count : 0, 
-            updated_at: new Date().toISOString()
-        };
-
-        // Execute Upsert
-        const { error } = await supabase
-            .from('meals')
-            .upsert([upsertSession, upsertNext], { onConflict: 'member_id, meal_date' });
-
+        const { error } = await supabase.from('meals').upsert(upserts, { onConflict: 'member_id, meal_date' });
         if (error) throw error;
 
-        // --- FIXED NOTIFICATION LOGIC ---
-        
-        // 1. Get the Actor (Who did the edit?)
         const actor = currentUser.members ? currentUser.members.name : "Admin";
-        
-        // 2. Get the Target (Whose meal was edited?)
         const targetMember = allMembers.find(m => m.id === memberId);
-        const targetName = targetMember ? targetMember.name : "Unknown Member";
-
-        // 3. Log with Target Name
-        await logActivity(
-            `Tracker Edit for ${targetName} (Session ${sessionDate}): Night=${nightVal}, Day=${dayVal}`, 
-            'meal'
-        );
-        // --------------------------------
+        await logActivity(`Tracker Override: ${targetMember?.name}'s session (${sessionDate}) set to N:${nightVal} D:${dayVal} by ${actor}`, 'meal');
 
         closeMealModal();
         await loadMasterTracker();
-        showNotification("Session updated successfully", "success");
-
+        showNotification("Session updated", "success");
     } catch (err) {
-        console.error("Save Error", err);
-        showNotification("Failed to save: " + err.message, "error");
+        showNotification(err.message, "error");
     } finally {
-        btn.textContent = "Save Session";
+        btn.textContent = originalText;
         btn.disabled = false;
     }
 });
@@ -3294,8 +3331,18 @@ async function loadSummary() {
             .select('*')
             .in('plan_date', [nightDateStr, dayDateStr]);
         
-        const { data: deposits } = await supabase.from('deposits').select('*').eq('cycle_id', currentCycleId);
-        const { data: expenses } = await supabase.from('expenses').select('*').eq('cycle_id', currentCycleId);
+       // Change the deposit query to:
+const { data: deposits } = await supabase
+    .from('deposits')
+    .select('*')
+    .eq('cycle_id', currentCycleId)
+    .neq('status', 'pending'); // <--- ADD THIS FILTER
+    
+       const { data: expenses } = await supabase
+    .from('expenses')
+    .select('*')
+    .eq('cycle_id', currentCycleId)
+    .eq('status', 'approved'); // <--- ADD THIS FILTER
 
         // 3. Fast Lookups
         const planMap = {};
@@ -3472,174 +3519,174 @@ async function quickToggleSummaryMeal(memberId, dateStr, type, currentVal) {
     // EXPENSES PAGE
     // ============================================
     
-  async function loadExpenses() {
-    // 1. UI: ALWAYS SHOW the Add Expense Card (Changed from previous logic)
-    document.getElementById('addExpenseCard').style.display = 'block';
-    
-    // Check role for button logic later
-    const isUser = currentUser.role === 'user';
-
-    if (!currentCycleId) return;
+ window.handleDepositAction = async function(depositId, action) {
+    console.log(`Action: ${action} triggered for ID: ${depositId}`);
+    const btn = event.target;
+    btn.disabled = true;
+    const originalText = btn.textContent;
+    btn.textContent = "...";
 
     try {
-        // 2. Fetch Data
-        const { data, error } = await supabase
-            .from('expenses')
+        const { data: dep, error: fError } = await supabase
+            .from('deposits')
             .select('*, members(name)')
-            .eq('cycle_id', currentCycleId)
-            .order('expense_date', { ascending: false });
+            .eq('id', depositId)
+            .single();
 
-        if (error) throw error;
+        if (fError || !dep) throw new Error("Could not find the pending request.");
 
-        const expenseListContainer = document.getElementById('expenseList');
+        const actor = currentUser.members ? currentUser.members.name : "Admin";
 
-        if (!data || data.length === 0) {
-            expenseListContainer.innerHTML = '<div class="loading">No expenses yet</div>';
-            return;
+        if (action === 'approve') {
+            const { error: delError } = await supabase.from('deposits').delete().eq('id', depositId);
+            if (delError) throw delError;
+
+            await processDepositWithClientSideSettlement(
+                dep.member_id, 
+                dep.cycle_id, 
+                dep.amount, 
+                dep.label || 'Deposit', 
+                dep.notes
+            );
+            
+            // LOG THE APPROVAL ACT
+            await logActivity(`Deposit Approved: ${dep.members.name}'s request for ${formatCurrency(dep.amount)} was approved by ${actor}`, 'deposit');
+            showNotification("Request Approved", "success");
+
+        } else if (action === 'reject') {
+            const { error: delError } = await supabase.from('deposits').delete().eq('id', depositId);
+            if (delError) throw delError;
+
+            // LOG THE REJECTION ACT
+            await logActivity(`Deposit Rejected: ${dep.members.name}'s request for ${formatCurrency(dep.amount)} was rejected by ${actor}`, 'deposit');
+            showNotification("Request Rejected", "warning");
         }
-
-        // 3. Separate Data
-        const pendingItems = data.filter(e => e.status === 'pending');
-        const historyItems = data.filter(e => e.status !== 'pending'); // Approved or Rejected
-
-        // 4. Helper to Render Row
-        const renderRow = (expense, showButtons) => {
-            let statusBadge = '';
-            if (expense.status === 'pending') statusBadge = '<span class="entry-status-badge status-pending" style="margin-left: 5px;">PENDING</span>';
-            if (expense.status === 'approved') statusBadge = '<span class="entry-status-badge status-done" style="margin-left: 5px;">APPROVED</span>';
-            if (expense.status === 'rejected') statusBadge = '<span class="entry-status-badge status-pending" style="background:#FEE2E2; color:#B91C1C; border:1px solid #FECACA; margin-left: 5px;">REJECTED</span>';
-
-            let buttonsHTML = '';
-            if (showButtons) {
-                buttonsHTML = `
-                <div style="display:flex; gap:5px; margin-top:5px; justify-content:flex-end;">
-                    <button class="btn btn-success btn-sm" onclick="handleExpenseApproval('${expense.id}', 'approved')">✓</button>
-                    <button class="btn btn-danger btn-sm" onclick="handleExpenseApproval('${expense.id}', 'rejected')">✕</button>
-                </div>`;
-            }
-
-            return `
-            <div class="list-item" style="${expense.status === 'pending' ? 'background-color:#fff7ed;' : ''}"> 
-                <div class="list-item-info">
-                    <div class="list-item-title">${expense.description || 'Expense'}</div>
-                    <div class="list-item-subtitle">
-                        ${formatDate(expense.expense_date)} • ${expense.members?.name || 'Unknown'}
-                        ${statusBadge}
-                    </div>
-                </div>
-                <div style="display:flex; flex-direction:column; align-items:flex-end;">
-                    <div class="list-item-amount">${formatCurrency(expense.amount)}</div>
-                    ${buttonsHTML}
-                </div>
-            </div>`;
-        };
-
-        // 5. Build HTML
-        let finalHTML = '';
-
-        // Pending Section (Visible to ALL, Buttons for Admin Only)
-        if (pendingItems.length > 0) {
-            finalHTML += `<div style="font-size:12px; font-weight:700; color:var(--warning-color); margin-bottom:10px; text-transform:uppercase; letter-spacing:1px;">⚠️ Pending Approval</div>`;
-            pendingItems.forEach(item => {
-                finalHTML += renderRow(item, !isUser); 
-            });
-            finalHTML += `<div style="border-bottom: 2px dashed var(--border-color); margin: 15px 0;"></div>`;
-        }
-
-        // History Section
-        if (historyItems.length > 0) {
-            finalHTML += `<div style="font-size:12px; font-weight:700; color:var(--text-secondary); margin-bottom:10px; text-transform:uppercase; letter-spacing:1px;">History</div>`;
-            historyItems.forEach(item => {
-                finalHTML += renderRow(item, false); 
-            });
-        }
-
-        expenseListContainer.innerHTML = finalHTML;
+        
+        await loadDeposits(); 
+        if (typeof loadDashboard === 'function') loadDashboard();
 
     } catch (err) {
-        console.error('Error loading expenses:', err);
+        console.error("CRITICAL ERROR:", err.message);
+        showNotification(err.message, "error");
+        btn.disabled = false;
+        btn.textContent = originalText;
     }
-}
+};
 
-
- document.getElementById('expenseForm').addEventListener('submit', async (e) => {
+document.getElementById('expenseForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-
+    const btn = e.target.querySelector('button[type="submit"]');
+    const originalText = btn.textContent;
+    
     const date = document.getElementById('expenseDate').value;
     const memberId = parseInt(document.getElementById('expenseMember').value);
     const description = document.getElementById('expenseDescription').value;
-    const amount = parseFloat(document.getElementById('expenseAmount').value);
+    const amount = Math.round(parseFloat(document.getElementById('expenseAmount').value));
 
-    // LOGIC: If Admin/Manager -> 'approved', If User -> 'pending'
     const isAdmin = (currentUser.role === 'admin' || currentUser.role === 'manager');
     const initialStatus = isAdmin ? 'approved' : 'pending';
-    
-    // Notification Message Customization
-    const msg = isAdmin ? 'Expense added and approved' : 'Expense submitted for approval';
+    const actor = currentUser.members ? currentUser.members.name : "User";
+
+    btn.textContent = "Processing...";
+    btn.disabled = true;
 
     try {
-        const { error } = await supabase
-            .from('expenses')
-            .insert({
-                cycle_id: currentCycleId,
-                member_id: memberId,
-                expense_date: date,
-                description: description,
-                amount: amount,
-                status: initialStatus
-            });
+        const { error } = await supabase.from('expenses').insert({
+            cycle_id: currentCycleId,
+            member_id: memberId,
+            expense_date: date,
+            description: description,
+            amount: amount,
+            status: initialStatus
+        });
 
         if (error) throw error;
 
-        // Log Activity
-        const member = allMembers.find(m => m.id === memberId);
+        const targetMember = allMembers.find(m => m.id === memberId);
         await logActivity(
-            `${msg}: ${formatCurrency(amount)} by ${member?.name}`, 
+            `Expense ${initialStatus.toUpperCase()}: ${formatCurrency(amount)} for "${description}" (Shopper: ${targetMember?.name}) added by ${actor}`, 
             'expense'
         );
 
-        // Reset and Reload
         document.getElementById('expenseForm').reset();
         document.getElementById('expenseDate').value = new Date().toISOString().split('T')[0];
         
+        showNotification(isAdmin ? "Expense added" : "Request sent to admin", 'success');
         await loadExpenses();
-        showNotification(msg, 'success');
-
     } catch (err) {
-        console.error('Error adding expense:', err);
-        showNotification('Failed to add expense', 'error');
+        console.error(err);
+        showNotification(err.message, 'error');
+    } finally {
+        btn.textContent = originalText;
+        btn.disabled = false;
     }
 });
+
+
     // ============================================
     // DEPOSITS PAGE
     // ============================================
- async function loadDeposits() {
+async function loadDeposits() {
     const filterId = document.getElementById('depositLogFilter').value;
     if (!currentCycleId) return;
 
     try {
-        let query = supabase
+        const { data, error } = await supabase
             .from('deposits')
             .select('*, members(name)')
             .eq('cycle_id', currentCycleId)
             .order('created_at', { ascending: false });
 
-        if (filterId) query = query.eq('member_id', filterId);
-
-        const { data, error } = await query;
         if (error) throw error;
 
-        const container = document.getElementById('depositList');
-        if (!data || data.length === 0) {
-            container.innerHTML = '<div class="loading">No transactions found</div>';
+        const pendingCard = document.getElementById('pendingDepositsCard');
+        const pendingList = document.getElementById('pendingDepositList');
+        const historyContainer = document.getElementById('depositList');
+
+        // STRICT FILTERING
+        // Pending: only those explicitly marked 'pending'
+        const pendingItems = data.filter(d => d.status === 'pending');
+        
+        // History: only those marked 'approved' OR legacy records (null status)
+        const historyItems = data.filter(d => d.status === 'approved' || !d.status);
+
+        // Render Pending
+        if (pendingItems.length > 0) {
+            pendingCard.style.display = 'block';
+            const isAdmin = (currentUser.role === 'admin' || currentUser.role === 'manager');
+            pendingList.innerHTML = pendingItems.map(t => `
+                <div class="list-item" style="background: rgba(245, 158, 11, 0.05); padding: 12px; margin-bottom: 8px; border-radius: 8px; border: 1px solid #fed7aa;">
+                    <div class="log-main">
+                        <div class="log-details">
+                            <div class="log-member">${t.members?.name} <span class="due-status-badge due-status-pending">PENDING REQUEST</span></div>
+                            <div class="log-meta" style="font-weight:700;">${formatCurrency(t.amount)} • ${t.label || 'Deposit'}</div>
+                        </div>
+                    </div>
+                    ${isAdmin ? `
+                    <div style="display:flex; gap:8px;">
+                        <button class="btn btn-success btn-sm" onclick="handleDepositAction(${t.id}, 'approve')">Approve</button>
+                        <button class="btn btn-danger btn-sm" onclick="handleDepositAction(${t.id}, 'reject')">✕</button>
+                    </div>` : ''}
+                </div>
+            `).join('');
+        } else {
+            pendingCard.style.display = 'none';
+        }
+
+        // Render History
+        let filteredHistory = historyItems;
+        if (filterId) filteredHistory = historyItems.filter(h => h.member_id == filterId);
+
+        if (filteredHistory.length === 0) {
+            historyContainer.innerHTML = '<div class="loading">No transaction history found.</div>';
             return;
         }
 
-        container.innerHTML = data.map(t => {
+        historyContainer.innerHTML = filteredHistory.map(t => {
             const isSettlement = t.label === 'Auto-Settlement' || t.label === 'Reduction';
             const isNegative = t.amount < 0;
             
-            // Icon Logic
+            // Icon & Style Logic
             let icon = '💰';
             let iconClass = 'deposit';
             let tagClass = 'tag-deposit';
@@ -3657,7 +3704,7 @@ async function quickToggleSummaryMeal(memberId, dateStr, type, currentVal) {
                 typeLabel = 'Charge';
             }
 
-            const dateStr = new Date(t.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+         const dateStr = formatDateTime(t.created_at);
 
             return `
             <div class="log-item">
@@ -3684,7 +3731,106 @@ async function quickToggleSummaryMeal(memberId, dateStr, type, currentVal) {
         }).join('');
 
     } catch (err) {
-        console.error('Error:', err);
+        console.error('Error loading deposits:', err);
+        historyContainer.innerHTML = '<div class="loading" style="color:red;">Error loading transactions.</div>';
+    }
+}
+
+
+async function loadExpenses() {
+    // 1. Ensure the Add Card is visible
+    const addCard = document.getElementById('addExpenseCard');
+    if (addCard) addCard.style.display = 'block';
+    
+    const isUser = currentUser.role === 'user';
+    if (!currentCycleId) return;
+
+    const expenseListContainer = document.getElementById('expenseList');
+    expenseListContainer.innerHTML = '<div class="loading">Loading expenses...</div>';
+
+    try {
+        // 2. Fetch Data with Shopper Name Join
+        const { data, error } = await supabase
+            .from('expenses')
+            .select('*, members(name)')
+            .eq('cycle_id', currentCycleId)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
+            expenseListContainer.innerHTML = '<div class="loading">No expenses found for this cycle.</div>';
+            return;
+        }
+
+        // 3. Separate Data
+        const pendingItems = data.filter(e => e.status === 'pending');
+        const historyItems = data.filter(e => e.status !== 'pending'); 
+
+        // 4. Helper to Render Row
+        const renderRow = (expense, showButtons) => {
+            let statusBadge = '';
+            let rowBg = '';
+            
+            if (expense.status === 'pending') {
+                statusBadge = '<span class="entry-status-badge status-pending" style="margin-left: 8px;">PENDING</span>';
+                rowBg = 'background-color: rgba(245, 158, 11, 0.05);'; 
+            } else if (expense.status === 'approved') {
+                statusBadge = '<span class="entry-status-badge status-done" style="margin-left: 8px;">APPROVED</span>';
+            } else if (expense.status === 'rejected') {
+                statusBadge = '<span class="entry-status-badge" style="margin-left: 8px; background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca;">REJECTED</span>';
+            }
+
+            const shopperName = expense.members?.name || 'Unknown Member';
+            const bazarDate = new Date(expense.expense_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+
+            return `
+            <div class="list-item" style="${rowBg} padding: 15px; border-bottom: 1px solid var(--border-color);"> 
+                <div class="list-item-info">
+                    <div class="list-item-title" style="font-size: 15px; font-weight: 700;">
+                        ${expense.description}
+                        ${statusBadge}
+                    </div>
+                    <div class="list-item-subtitle" style="margin-top: 4px; line-height: 1.4;">
+                        <span style="color: var(--primary-color); font-weight: 600;">👤 Shopper: ${shopperName}</span><br>
+                        <span style="color: var(--text-secondary);">
+                            ⏰ Added: ${formatDate(expense.created_at)} <br>
+                            📅 Bazar Date: ${bazarDate}
+                        </span>
+                    </div>
+                </div>
+                <div style="display:flex; flex-direction:column; align-items:flex-end; justify-content: center;">
+                    <div class="list-item-amount" style="font-size: 16px; font-family: 'Courier New', monospace;">
+                        ${formatCurrency(expense.amount)}
+                    </div>
+                    ${showButtons ? `
+                        <div style="display:flex; gap:8px; margin-top:10px;">
+                            <button class="btn btn-success btn-sm" onclick="handleExpenseApproval('${expense.id}', 'approved')" title="Approve">✓</button>
+                            <button class="btn btn-danger btn-sm" onclick="handleExpenseApproval('${expense.id}', 'rejected')" title="Reject">✕</button>
+                        </div>` : ''}
+                </div>
+            </div>`;
+        };
+
+        // 5. Build HTML Sections
+        let finalHTML = '';
+
+        if (pendingItems.length > 0) {
+            finalHTML += `<div style="font-size:11px; font-weight:800; color:var(--warning-color); margin: 10px 0; text-transform:uppercase; letter-spacing:1px;">⚠️ Needs Approval</div>`;
+            pendingItems.forEach(item => finalHTML += renderRow(item, !isUser));
+            finalHTML += `<div style="border-bottom: 2px dashed var(--border-color); margin: 20px 0;"></div>`;
+        }
+
+        if (historyItems.length > 0) {
+            finalHTML += `<div style="font-size:11px; font-weight:800; color:var(--text-secondary); margin: 10px 0; text-transform:uppercase; letter-spacing:1px;">Processed Expenses</div>`;
+            historyItems.forEach(item => finalHTML += renderRow(item, false));
+        }
+
+        expenseListContainer.innerHTML = finalHTML;
+
+    } catch (err) {
+        console.error('Error loading expenses:', err);
+        expenseListContainer.innerHTML = '<div class="loading" style="color:red">Error loading list.</div>';
     }
 }
 
@@ -3760,9 +3906,13 @@ async function loadSelectedMemberHistory(memberId) {
 // Add this NEW function BEFORE the depositForm handler
 async function processDepositWithClientSideSettlement(memberId, cycleId, amount, label, notes) {
     try {
-        const targetCycleId = parseInt(cycleId); // Ensure integer
+        // Add this helper logic inside the loop in processDepositWithClientSideSettlement
+const settleAmountRaw = Math.min(poolAvailable, creditorOwed);
+const settleAmount = Math.round(settleAmountRaw * 100) / 100; // Limits to 2 decimals
+        const targetCycleId = parseInt(cycleId); 
 
-        // 1. Insert the REAL cash deposit
+        // 1. Insert the official REAL cash deposit
+        // We add status: 'approved' so it skips the pending queue and counts in math immediately
         const { data: mainDeposit, error: depError } = await supabase
             .from('deposits')
             .insert({
@@ -3770,13 +3920,13 @@ async function processDepositWithClientSideSettlement(memberId, cycleId, amount,
                 member_id: memberId,
                 amount: amount,
                 label: label,
-                notes: notes
+                notes: notes,
+                status: 'approved' // <--- AUTO-APPROVE
             })
             .select().single();
 
         if (depError) throw depError;
 
-        // LOG THE INITIAL CASH DEPOSIT
         const memberObj = allMembers.find(m => m.id == memberId);
         await logActivity(`Cash Deposit: ${formatCurrency(amount)} added for ${memberObj?.name}`, 'deposit');
 
@@ -3816,13 +3966,28 @@ async function processDepositWithClientSideSettlement(memberId, cycleId, amount,
 
             const settleAmount = Math.min(poolAvailable, creditorOwed);
 
-            // Create Transfer Logs
+            // 4. Create Transfer Logs (Auto-Settlements)
+            // We MUST add status: 'approved' here so these transfers aren't hidden
             await supabase.from('deposits').insert([
-                { cycle_id: targetCycleId, member_id: memberId, amount: -settleAmount, label: 'Auto-Settlement', notes: `Paid to ${creditor.members.name}` },
-                { cycle_id: targetCycleId, member_id: creditor.member_id, amount: settleAmount, label: 'Auto-Settlement', notes: `Received from ${memberObj.name}` }
+                { 
+                    cycle_id: targetCycleId, 
+                    member_id: memberId, 
+                    amount: -settleAmount, 
+                    label: 'Auto-Settlement', 
+                    notes: `Paid to ${creditor.members.name}`,
+                    status: 'approved' // <--- AUTO-APPROVE
+                },
+                { 
+                    cycle_id: targetCycleId, 
+                    member_id: creditor.member_id, 
+                    amount: settleAmount, 
+                    label: 'Auto-Settlement', 
+                    notes: `Received from ${memberObj.name}`,
+                    status: 'approved' // <--- AUTO-APPROVE
+                }
             ]);
 
-            // Update Creditor
+            // Update Creditor Progress
             const newCreditorSettled = creditor.settled_amount + settleAmount;
             await supabase.from('cycle_dues').update({
                 settled_amount: newCreditorSettled,
@@ -3830,14 +3995,11 @@ async function processDepositWithClientSideSettlement(memberId, cycleId, amount,
                 settled_at: newCreditorSettled >= creditor.due_amount ? new Date().toISOString() : null
             }).eq('id', creditor.id);
 
-            // LOG THE SETTLEMENT ACTION
-            await logActivity(`Settlement: ${memberObj.name} paid ${formatCurrency(settleAmount)} towards debt to ${creditor.members.name}`, 'deposit');
-
             poolAvailable -= settleAmount;
             totalActuallySettled += settleAmount;
         }
 
-        // 4. Update Debtor Record
+        // 5. Update Debtor Progress Record
         if (totalActuallySettled > 0) {
             const newDebtorSettled = Math.abs(debtorDue.settled_amount) + totalActuallySettled;
             const isFullySettled = newDebtorSettled >= Math.abs(debtorDue.due_amount);
@@ -3852,7 +4014,6 @@ async function processDepositWithClientSideSettlement(memberId, cycleId, amount,
         return {
             settled: totalActuallySettled > 0,
             settled_amount: totalActuallySettled,
-            remaining_deposit: amount - totalActuallySettled,
             deposit_id: mainDeposit.id
         };
 
@@ -3862,67 +4023,69 @@ async function processDepositWithClientSideSettlement(memberId, cycleId, amount,
     }
 }
 
+
 document.getElementById('depositForm').addEventListener('submit', async (e) => {
     e.preventDefault();
+    const btn = e.target.querySelector('button[type="submit"]');
+    const originalText = btn.textContent;
 
     const memberId = parseInt(document.getElementById('depositMember').value);
     const type = document.getElementById('depositType').value;
     const rawAmount = parseFloat(document.getElementById('depositAmount').value);
+    const roundedAmount = Math.round(rawAmount); 
     const label = document.getElementById('depositLabel').value;
     const notes = document.getElementById('depositNotes').value;
     
-    const finalAmount = type === 'charge' ? -Math.abs(rawAmount) : Math.abs(rawAmount);
+    const finalAmount = type === 'charge' ? -Math.abs(roundedAmount) : Math.abs(roundedAmount);
+    const isAdmin = (currentUser.role === 'admin' || currentUser.role === 'manager');
+    const actor = currentUser.members ? currentUser.members.name : "User";
 
-    const btn = e.target.querySelector('button[type="submit"]');
     btn.textContent = "Processing...";
     btn.disabled = true;
 
     try {
-        let result;
-        const memberObj = allMembers.find(m => m.id === memberId);
+        const targetMember = allMembers.find(m => m.id === memberId);
 
-        try {
-            // Attempt RPC
-            const { data, error } = await supabase.rpc('process_deposit_with_settlement', {
-                p_member_id: memberId,
-                p_cycle_id: parseInt(currentCycleId),
-                p_amount: finalAmount,
-                p_label: label,
-                p_notes: notes
-            });
-
-            if (error) throw error;
-            result = data;
-
-            // Log RPC success
-            if (result && result.settled) {
-                await logActivity(`Processed settlement for ${memberObj.name}: ${formatCurrency(result.settled_amount)} settled.`, 'deposit');
-            } else {
-                await logActivity(`Deposit added: ${formatCurrency(finalAmount)} for ${memberObj.name}`, 'deposit');
+        if (isAdmin) {
+            let result;
+            try {
+                const { data, error } = await supabase.rpc('process_deposit_with_settlement', {
+                    p_member_id: memberId,
+                    p_cycle_id: parseInt(currentCycleId),
+                    p_amount: finalAmount,
+                    p_label: label,
+                    p_notes: notes
+                });
+                if (error) throw error;
+                result = data;
+            } catch (rpcError) {
+                result = await processDepositWithClientSideSettlement(memberId, currentCycleId, finalAmount, label, notes);
             }
+            
+            await logActivity(`Deposit Approved: ${formatCurrency(finalAmount)} added for ${targetMember?.name} by ${actor}`, 'deposit');
+            showNotification("Transaction completed", 'success');
+        } else {
+            const { error } = await supabase.from('deposits').insert({
+                cycle_id: parseInt(currentCycleId),
+                member_id: memberId,
+                amount: finalAmount,
+                label: label,
+                notes: notes,
+                status: 'pending'
+            });
+            if (error) throw error;
 
-        } catch (rpcError) {
-            // Fallback to JS
-            result = await processDepositWithClientSideSettlement(
-                memberId,
-                currentCycleId,
-                finalAmount,
-                label,
-                notes
-            );
+            await logActivity(`Deposit Request: ${targetMember?.name} requested ${formatCurrency(finalAmount)} approval via ${actor}`, 'deposit');
+            showNotification("Request submitted", 'info');
         }
 
-        showNotification("Transaction Processed", 'success');
         document.getElementById('depositAmount').value = '';
         document.getElementById('depositNotes').value = '';
-        
-        refreshCurrentPage(); // Update UI
-
+        await loadDeposits();
     } catch (err) {
-        console.error('❌ Transaction failed:', err);
-        showNotification('Error: ' + err.message, 'error');
+        showNotification(err.message, 'error');
     } finally {
-        btn.textContent = "Submit Transaction";
+        btn.textContent = originalText;
         btn.disabled = false;
     }
 });
@@ -3935,41 +4098,35 @@ document.getElementById('depositForm').addEventListener('submit', async (e) => {
         await loadMembersList();
     }
 
-    document.getElementById('createCycleForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
+   document.getElementById('createCycleForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = e.target.querySelector('button[type="submit"]');
+    const originalText = btn.textContent;
+    const name = document.getElementById('cycleName').value;
+    const startDate = document.getElementById('cycleStartDate').value;
+    const endDate = document.getElementById('cycleEndDate').value;
 
-        const name = document.getElementById('cycleName').value;
-        const startDate = document.getElementById('cycleStartDate').value;
-        const endDate = document.getElementById('cycleEndDate').value;
+    btn.textContent = "Creating...";
+    btn.disabled = true;
 
-        try {
-            // Deactivate all cycles first
-            await supabase
-                .from('cycles')
-                .update({ is_active: false })
-                .neq('id', 0);
+    try {
+        await supabase.from('cycles').update({ is_active: false }).neq('id', 0);
+        const { error } = await supabase.from('cycles').insert({ name, start_date: startDate, end_date: endDate, is_active: true });
+        if (error) throw error;
 
-            // Create new cycle
-            await supabase
-                .from('cycles')
-                .insert({
-                    name: name,
-                    start_date: startDate,
-                    end_date: endDate,
-                    is_active: true
-                });
+        const actor = currentUser.members ? currentUser.members.name : "Admin";
+        await logActivity(`System: New cycle "${name}" created and activated by ${actor}`, 'other');
 
-            await logActivity(`New cycle created: ${name}`, 'other');
-
-            document.getElementById('createCycleForm').reset();
-            await loadCycles();
-            showNotification('Cycle created successfully', 'success');
-
-        } catch (err) {
-            console.error('Error creating cycle:', err);
-            showNotification('Failed to create cycle', 'error');
-        }
-    });
+        document.getElementById('createCycleForm').reset();
+        await loadCycles();
+        showNotification('Cycle created', 'success');
+    } catch (err) {
+        showNotification(err.message, 'error');
+    } finally {
+        btn.textContent = originalText;
+        btn.disabled = false;
+    }
+});
 
 
 
@@ -4076,22 +4233,21 @@ document.getElementById('depositForm').addEventListener('submit', async (e) => {
 async function toggleManagerRole(memberId, currentRole) {
     const isManager = currentRole === 'manager';
     const newRole = isManager ? 'user' : 'manager';
-    
     if (!confirm(`Change role to ${newRole}?`)) return;
 
     try {
-        const { error } = await supabase
-            .from('members')
-            .update({ role: newRole })
-            .eq('id', memberId);
-
+        const { error } = await supabase.from('members').update({ role: newRole }).eq('id', memberId);
         if (error) throw error;
+
+        const targetMember = allMembers.find(m => m.id == memberId);
+        const actor = currentUser.members ? currentUser.members.name : "Admin";
+        
+        // LOG ROLE CHANGE
+        await logActivity(`Access Control: ${targetMember.name} was ${isManager ? 'demoted to User' : 'promoted to Manager'} by ${actor}`, 'other');
 
         showNotification('Role updated successfully', 'success');
         await loadMembersList();
-
     } catch (err) {
-        console.error('Role update error:', err);
         showNotification('Failed to update role', 'error');
     }
 }
@@ -4147,6 +4303,14 @@ document.getElementById('editMemberForm').addEventListener('submit', async (e) =
             .from('members')
             .update({ name: newName })
             .eq('id', memberId);
+
+
+               const actor = currentUser.members ? currentUser.members.name : "Admin";
+        // LOG MEMBER EDIT
+        await logActivity(`Member Profile: Account for "${newName}" was modified by ${actor}`, 'other');
+
+        document.getElementById('editMemberModal').classList.remove('active');
+        showNotification('Member updated successfully', 'success');
         
         if (mError) throw mError;
 
@@ -4166,8 +4330,6 @@ document.getElementById('editMemberForm').addEventListener('submit', async (e) =
             if (uError) throw uError;
         }
 
-        document.getElementById('editMemberModal').classList.remove('active');
-        showNotification('Member updated successfully', 'success');
         await loadMembersList();
         await loadMembers(); // Refresh global list
 
@@ -4181,6 +4343,11 @@ document.getElementById('editMemberForm').addEventListener('submit', async (e) =
     // ============================================
     // UTILITY: LOG ACTIVITY
     // ============================================
+
+    // Helper for whole number currency display
+function formatCurrencyRound(amount) {
+    return `৳${Math.round(parseFloat(amount || 0))}`;
+}
     
 async function logActivity(message, type = 'info') {
     if (!currentCycleId) {
@@ -4347,73 +4514,63 @@ async function loadSystemStatus() {
         container.innerHTML = '<div style="color:red; font-size:12px;">Failed to load status.</div>';
     }
 }
+
+
 function setupRobustRealtime() {
     console.log("🚀 Starting Robust Realtime Engine...");
 
     const channel = supabase.channel('system-sync-' + Date.now());
 
     channel
-        // 1. NOTIFICATIONS: Listen for ANY change
         .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
-            console.log("🔔 Signal: Notification Table Changed. Reloading list...");
-            
-            // Reload the list (Populates Panel & Dashboard Activity)
             loadNotifications().then(() => {
-                // Manually trigger badge increment visual since we just reloaded
                 const badge = document.getElementById('notifBadge');
                 badge.classList.remove('hidden');
-                
-                // Show a generic toast that something happened
-                // We fetch the very last notification to show text
                 if (allNotifications.length > 0) {
                      showNotification(allNotifications[0].message, 'info');
                 }
             });
         })
-
-        // 2. DATA TABLES: Listen for changes in core data
         .on('postgres_changes', { event: '*', schema: 'public', table: 'meals' }, () => handleDataSignal('meals'))
         .on('postgres_changes', { event: '*', schema: 'public', table: 'meal_plans' }, () => handleDataSignal('plans'))
         .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, () => handleDataSignal('expenses'))
         .on('postgres_changes', { event: '*', schema: 'public', table: 'deposits' }, () => handleDataSignal('deposits'))
         .on('postgres_changes', { event: '*', schema: 'public', table: 'app_config' }, () => {
-             console.log("⚙️ Config changed. Reloading...");
              loadAppConfig();
-             // If on profile, reload scheduler to reflect lock status
              if (!document.getElementById('profilePage').classList.contains('hidden')) {
                  loadScheduler();
              }
         })
-        
-.subscribe((status) => {
-    console.log(`📡 Realtime Status: ${status}`);
-    if (status === 'SUBSCRIBED') {
-        showNotification("Live Sync Connected", "success");
-    }
-    if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-        console.log("Realtime disconnected. Retrying...");
-        setTimeout(setupRobustRealtime, 5000); // Re-init after 5 seconds
-    }
-});
+        .subscribe((status) => {
+            console.log(`📡 Realtime Status: ${status}`);
+            
+            // REMOVED: showNotification("Live Sync Connected", "success");
+            
+            if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+                console.log("Realtime disconnected. Retrying...");
+                setTimeout(setupRobustRealtime, 5000); 
+            }
+        });
 }
 
 // Helper: Debounce refreshing to prevent flickering if multiple updates come at once
+let isRefreshing = false;
 let refreshTimeout;
+
 function handleDataSignal(source) {
-    console.log(`⚡ Signal: ${source} updated. Scheduling refresh...`);
-    
-    // Clear existing timer (Debounce)
+    if (isRefreshing) return; // Ignore signals if already busy
+
     if (refreshTimeout) clearTimeout(refreshTimeout);
 
-    // Wait 300ms, then refresh the ACTIVE page only
-    refreshTimeout = setTimeout(() => {
-        refreshCurrentPage();
-        
-        // If we are on Dashboard, always reload stats too
-        if (!document.getElementById('dashboardPage').classList.contains('hidden')) {
-            loadDashboard();
+    refreshTimeout = setTimeout(async () => {
+        isRefreshing = true;
+        try {
+            console.log(`⚡ Syncing UI due to ${source} update...`);
+            await refreshCurrentPage();
+        } finally {
+            isRefreshing = false;
         }
-    }, 300);
+    }, 800); // Increased to 800ms to allow DB operations to settle
 }
 
 // --- MOBILE MENU LOGIC ---
@@ -4563,8 +4720,18 @@ async function calculateMemberBalances(cycleId) {
     try {
         // Fetch data
         const { data: meals } = await supabase.from('meals').select('*').eq('cycle_id', cycleId);
-        const { data: expenses } = await supabase.from('expenses').select('*').eq('cycle_id', cycleId);
-        const { data: deposits } = await supabase.from('deposits').select('*').eq('cycle_id', cycleId);
+      // Find this part in calculateMemberBalances(cycleId)
+const { data: expenses } = await supabase
+    .from('expenses')
+    .select('*')
+    .eq('cycle_id', cycleId)
+    .eq('status', 'approved'); // <--- ADD THIS FILTER
+       // Change the deposit query to:
+const { data: deposits } = await supabase
+    .from('deposits')
+    .select('*')
+    .eq('cycle_id', cycleId)
+    .neq('status', 'pending'); // <--- ADD THIS FILTER
 
         // Calculate meal rate
         const totalExpense = expenses?.reduce((sum, e) => sum + parseFloat(e.amount), 0) || 0;
