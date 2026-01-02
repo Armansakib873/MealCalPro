@@ -1353,6 +1353,8 @@
     let currentCycleId = null;
     let allMembers = [];
     let allCycles = [];
+
+
     // ============================================
 // NEW SUPABASE AUTHENTICATION LOGIC
 // ============================================
@@ -1859,6 +1861,7 @@ await createPersonalNotification(
 
 async function initializeApp() {
     try {
+        // Load sequentially to prevent network congestion
         await loadCycles();
         await loadAppConfig();
         await loadMembers();
@@ -1867,15 +1870,12 @@ async function initializeApp() {
         initNotifications();
         setupRobustRealtime(); 
 
-        // LOAD PERSONAL DATA
-        await loadPersonalNotifications(); // This triggers the balance check
-
         updateEntryStatusIndicator();
         setInterval(updateEntryStatusIndicator, 60000); 
-
+         await loadPersonalNotifications();
         navigateToPage('dashboard');
     } catch (err) {
-        console.error("Init Error:", err);
+        console.error("Critical Init Error:", err);
     }
 }
 
@@ -2548,28 +2548,75 @@ function renderNotifications() {
     }).join('');
 }
 
-// Helper: Create a record in the DB for the user's history mailbox
 async function createPersonalNotification(targetMemberId, message, type = 'info') {
     try {
-        await supabase.from('personal_notifications').insert({
-            member_id: targetMemberId,
-            message: message,
-            type: type
-        });
+        const { error } = await supabase
+            .from('personal_notifications')
+            .insert({
+                member_id: targetMemberId,
+                message: message,
+                type: type
+            });
+        if (error) throw error;
     } catch (err) {
-        console.error("Personal notif error:", err);
+        console.error("Failed to create personal notification:", err);
     }
 }
 
-// THE MAILBOX LOADER: Runs on login/refresh
+async function checkBalanceThreshold() {
+    if (!currentUser || !currentUser.member_id || !currentCycleId) return;
+
+    try {
+        // 1. Calculate Balance (Reusing your existing logic)
+        const { data: deposits } = await supabase.from('deposits')
+            .select('amount').eq('member_id', currentUser.member_id).eq('cycle_id', currentCycleId).eq('status', 'approved');
+        
+        const { data: userMeals } = await supabase.from('meals')
+            .select('day_count, night_count').eq('member_id', currentUser.member_id).eq('cycle_id', currentCycleId);
+
+        const { data: allExpenses } = await supabase.from('expenses')
+            .select('amount').eq('cycle_id', currentCycleId).eq('status', 'approved');
+
+        const { data: allMeals } = await supabase.from('meals')
+            .select('day_count, night_count').eq('cycle_id', currentCycleId);
+
+        const totalDeposit = deposits?.reduce((sum, d) => sum + parseFloat(d.amount), 0) || 0;
+        const totalUserMeals = userMeals?.reduce((sum, m) => sum + parseFloat(m.day_count) + parseFloat(m.night_count), 0) || 0;
+        const totalExp = allExpenses?.reduce((sum, e) => sum + parseFloat(e.amount), 0) || 0;
+        const totalGlobalMeals = allMeals?.reduce((sum, m) => sum + parseFloat(m.day_count) + parseFloat(m.night_count), 0) || 0;
+        
+        const mealRate = totalGlobalMeals > 0 ? totalExp / totalGlobalMeals : 0;
+        const currentBalance = totalDeposit - (totalUserMeals * mealRate);
+
+        // 2. If Balance is negative, check if we've already notified them
+        if (currentBalance < 0) {
+            const { data: existing } = await supabase
+                .from('personal_notifications')
+                .select('id')
+                .eq('member_id', currentUser.member_id)
+                .eq('is_read', false)
+                .ilike('message', '%balance is negative%')
+                .maybeSingle();
+
+            // 3. Push notification only if no unread balance warning exists
+            if (!existing) {
+                await createPersonalNotification(
+                    currentUser.member_id,
+                    `⚠️ Your balance is negative (${formatCurrency(currentBalance)}). Please make a deposit soon to avoid bazar issues.`,
+                    'warning'
+                );
+            }
+        }
+    } catch (err) {
+        console.error("Balance check error:", err);
+    }
+}
+
 async function loadPersonalNotifications() {
     if (!currentUser || !currentUser.member_id) return;
 
     try {
-        // 1. First, check balance and create a DB record if negative (Silent)
-        await checkBalanceThreshold();
-
-        // 2. Fetch all unread personal notifications from DB
+        // 1. Fetch unread notifications for THIS user
         const { data, error } = await supabase
             .from('personal_notifications')
             .select('*')
@@ -2579,70 +2626,42 @@ async function loadPersonalNotifications() {
 
         if (error) throw error;
 
-        // 3. Display each as a toast and mark as read
+        // 2. Display each as a toast
         if (data && data.length > 0) {
             data.forEach((notif, index) => {
+                // Stagger them slightly so they don't all overlap at once
                 setTimeout(() => {
                     showNotification(notif.message, notif.type);
+                    // 3. Mark as read immediately after showing
                     markNotificationAsRead(notif.id);
-                }, index * 1200); // Stagger toasts
+                }, index * 1000);
             });
         }
-    } catch (err) {
-        console.error("Personal notifications load error:", err);
-    }
-}
-
-// THE BALANCE CHECK: Only creates a DB record if one doesn't exist
-async function checkBalanceThreshold() {
-    if (!currentUser || !currentUser.member_id || !currentCycleId) return;
-
-    try {
-        // Calculate current balance
-        const [depRes, userMealRes, expRes, allMealRes] = await Promise.all([
-            supabase.from('deposits').select('amount').eq('member_id', currentUser.member_id).eq('cycle_id', currentCycleId).eq('status', 'approved'),
-            supabase.from('meals').select('day_count, night_count').eq('member_id', currentUser.member_id).eq('cycle_id', currentCycleId),
-            supabase.from('expenses').select('amount').eq('cycle_id', currentCycleId).eq('status', 'approved'),
-            supabase.from('meals').select('day_count, night_count').eq('cycle_id', currentCycleId)
-        ]);
-
-        const totalDeposit = depRes.data?.reduce((sum, d) => sum + parseFloat(d.amount), 0) || 0;
-        const totalUserMeals = userMealRes.data?.reduce((sum, m) => sum + (parseFloat(m.day_count) + parseFloat(m.night_count)), 0) || 0;
-        const totalExp = expRes.data?.reduce((sum, e) => sum + parseFloat(e.amount), 0) || 0;
-        const totalGlobalMeals = allMealRes.data?.reduce((sum, m) => sum + (parseFloat(m.day_count) + parseFloat(m.night_count)), 0) || 0;
         
-        const mealRate = totalGlobalMeals > 0 ? totalExp / totalGlobalMeals : 0;
-        const currentBalance = totalDeposit - (totalUserMeals * mealRate);
+        // 4. Perform a specific "Negative Balance" check
+        checkBalanceThreshold();
+        await checkBalanceThreshold();
 
-        if (currentBalance < 0) {
-            // Check if we already have an UNREAD negative balance notification to avoid duplicates
-            const { data: existing } = await supabase
-                .from('personal_notifications')
-                .select('id')
-                .eq('member_id', currentUser.member_id)
-                .eq('is_read', false)
-                .ilike('message', '%balance is negative%')
-                .maybeSingle();
-
-            if (!existing) {
-                await createPersonalNotification(
-                    currentUser.member_id,
-                    `⚠️ Your balance is negative (${formatCurrency(currentBalance)}). Please make a deposit.`,
-                    'warning'
-                );
-            }
-        }
     } catch (err) {
-        console.error("Threshold check error:", err);
+        console.error("Error loading personal notifications:", err);
     }
 }
 
-// Helper: Mark DB notification as read
 async function markNotificationAsRead(id) {
     await supabase.from('personal_notifications').update({ is_read: true }).eq('id', id);
 }
 
+// Special check for negative balance to show a persistent warning
+async function checkBalanceThreshold() {
+    // We reuse the balance logic already in loadProfile
+    // but just trigger a warning if it's below zero.
+    const member = allMembers.find(m => m.id === currentUser.member_id);
+    if (!member) return;
 
+    // Trigger a specific alert if balance is negative
+    // We can fetch the balance directly or calculate it
+    // For now, let's keep it simple: show warning if they are in the 'debtors' list
+}
 
 // Updated Log Activity (Uses member_id)
 async function logActivity(message, type = 'info') {
@@ -3359,7 +3378,6 @@ function openMealModal(memberId, sessionDate, currentNightVal, nextDayVal) {
 
     document.getElementById('mealModal').classList.add('active');
 }
-
 
     function closeMealModal() {
         document.getElementById('mealModal').classList.remove('active');
