@@ -2192,16 +2192,11 @@ document.getElementById('adminSettingsForm').addEventListener('submit', async (e
 // Centralized Logic for "Active Session Date" (Timezone Safe)
 async function getActiveSessionDate() {
     const today = new Date();
-    
-    // FORCE LOCAL DATE STRING (YYYY-MM-DD)
-    // using components avoids UTC conversion issues at midnight
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    const todayStr = `${year}-${month}-${day}`; // "2025-12-16" strictly local
+    // Force local date string
+    const todayStr = toLocalISO(today);
 
     try {
-        // Check System Log for LOCALLY calculated Today
+        // Check if bazar for today is already done
         const { data: log } = await supabase
             .from('system_logs')
             .select('id')
@@ -2209,17 +2204,12 @@ async function getActiveSessionDate() {
             .maybeSingle();
 
         let sessionDate = new Date(today);
-
-        // Logic:
-        // If log found for Today -> Today is done -> Target Tomorrow
-        // If no log for Today -> Today is active -> Target Today
         if (log) {
+            // If today's automation ran, the "Active" bazar is now tomorrow's
             sessionDate.setDate(today.getDate() + 1);
         }
-
         return sessionDate;
     } catch (err) {
-        console.error("Date Logic Error", err);
         return new Date(); 
     }
 }
@@ -2512,6 +2502,14 @@ async function toggleSchedulerPlan(date, type, btnElement) {
     }
 }
 
+// Helper to get YYYY-MM-DD in LOCAL time (prevents Dec 31st bug)
+function toLocalISO(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
+
 async function loadMasterTracker() {
     if (!currentCycleId) return;
     
@@ -2525,31 +2523,41 @@ async function loadMasterTracker() {
         const cycle = allCycles.find(c => c.id == currentCycleId);
         if (!cycle) return;
 
+        // Fetch all meals for this cycle
         const { data: meals } = await supabase.from('meals').select('*').eq('cycle_id', currentCycleId);
 
+        // Map data for quick lookup: matrixData[date][memberId]
         const matrixData = {};
         meals?.forEach(m => {
             if (!matrixData[m.meal_date]) matrixData[m.meal_date] = {};
             matrixData[m.meal_date][m.member_id] = { d: m.day_count, n: m.night_count };
         });
 
-        let headerHTML = '<tr><th style="min-width: 90px; z-index:20;">Session Date</th>';
+        // 1. Generate Header
+        let headerHTML = '<tr><th style="min-width: 90px; z-index:20;">Bazar Date</th>';
         allMembers.forEach(m => {
             headerHTML += `<th>${m.name.split(' ')[0]}</th>`; 
         });
         headerHTML += '</tr>';
         tableHead.innerHTML = headerHTML;
 
+        // 2. Generate Body
         let bodyHTML = '';
+        
+        // CRITICAL FIX: Use 'T00:00:00' to force local midnight
         let currentIter = new Date(cycle.start_date + 'T00:00:00');
         let endIter = new Date(cycle.end_date + 'T00:00:00');
-        const todayStr = new Date().toISOString().split('T')[0];
+        
+        const todayStr = toLocalISO(new Date());
 
         while (currentIter <= endIter) {
-            const dateSessionStr = currentIter.toISOString().split('T')[0];
+            const dateSessionStr = toLocalISO(currentIter); // e.g. "2026-01-02"
+            
+            // Calculate "Tomorrow" for the Day Meal
             const dNext = new Date(currentIter);
             dNext.setDate(currentIter.getDate() + 1);
-            const dateNextStr = dNext.toISOString().split('T')[0];
+            const dateNextStr = toLocalISO(dNext);
+
             const isToday = (dateSessionStr === todayStr);
 
             bodyHTML += `<tr ${isToday ? 'style="background: rgba(79, 70, 229, 0.08);"' : ''}>
@@ -2558,10 +2566,11 @@ async function loadMasterTracker() {
                 </td>`;
 
             allMembers.forEach(m => {
+                // Get Night meal of THIS Bazar Date
                 const nVal = matrixData[dateSessionStr]?.[m.id]?.n || 0;
+                // Get Day meal of the FOLLOWING Morning
                 const dVal = matrixData[dateNextStr]?.[m.id]?.d || 0;
                 
-                // RESTRICTION: Use pointer cursor for everyone, we handle the block inside the modal
                 bodyHTML += `
                     <td>
                         <div class="cell-split" onclick="openMealModal('${m.id}', '${dateSessionStr}', ${nVal}, ${dVal})" style="cursor:pointer">
@@ -2575,6 +2584,8 @@ async function loadMasterTracker() {
                     </td>`;
             });
             bodyHTML += '</tr>';
+            
+            // Move to next day
             currentIter.setDate(currentIter.getDate() + 1);
         }
         tableBody.innerHTML = bodyHTML;
