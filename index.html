@@ -1353,8 +1353,6 @@
     let currentCycleId = null;
     let allMembers = [];
     let allCycles = [];
-
-
     // ============================================
 // NEW SUPABASE AUTHENTICATION LOGIC
 // ============================================
@@ -1700,6 +1698,13 @@ window.handleExpenseApproval = async function(expenseId, newStatus) {
 
         // 4. Refresh List
         await loadExpenses();
+
+        // After the update logic...
+await createPersonalNotification(
+    expense.member_id, 
+    `🛒 Your expense for "${expense.description}" was approved.`, 
+    'success'
+);
         showNotification(`Expense ${newStatus} successfully`, 'success');
 
     } catch (err) {
@@ -1819,6 +1824,13 @@ window.handleDepositAction = async function(depositId, action) {
                 dep.label || 'Deposit', 
                 dep.notes
             );
+
+            // After processDepositWithClientSideSettlement...
+await createPersonalNotification(
+    dep.member_id, 
+    `✅ Your deposit of ${formatCurrency(dep.amount)} has been approved!`, 
+    'success'
+);
             
             showNotification("Request Approved", "success");
 
@@ -1847,7 +1859,6 @@ window.handleDepositAction = async function(depositId, action) {
 
 async function initializeApp() {
     try {
-        // Load sequentially to prevent network congestion
         await loadCycles();
         await loadAppConfig();
         await loadMembers();
@@ -1856,12 +1867,15 @@ async function initializeApp() {
         initNotifications();
         setupRobustRealtime(); 
 
+        // LOAD PERSONAL DATA
+        await loadPersonalNotifications(); // This triggers the balance check
+
         updateEntryStatusIndicator();
         setInterval(updateEntryStatusIndicator, 60000); 
 
         navigateToPage('dashboard');
     } catch (err) {
-        console.error("Critical Init Error:", err);
+        console.error("Init Error:", err);
     }
 }
 
@@ -2258,7 +2272,7 @@ async function toggleSchedulerPlan(date, type, btnElement) {
     }
 }
 
- async function loadMasterTracker() {
+async function loadMasterTracker() {
     if (!currentCycleId) return;
     
     const tableHead = document.querySelector('#masterMatrixTable thead');
@@ -2271,7 +2285,6 @@ async function toggleSchedulerPlan(date, type, btnElement) {
         const cycle = allCycles.find(c => c.id == currentCycleId);
         if (!cycle) return;
 
-        // Fetch data in one go
         const { data: meals } = await supabase.from('meals').select('*').eq('cycle_id', currentCycleId);
 
         const matrixData = {};
@@ -2280,7 +2293,6 @@ async function toggleSchedulerPlan(date, type, btnElement) {
             matrixData[m.meal_date][m.member_id] = { d: m.day_count, n: m.night_count };
         });
 
-        // 1. Build Header String
         let headerHTML = '<tr><th style="min-width: 90px; z-index:20;">Session Date</th>';
         allMembers.forEach(m => {
             headerHTML += `<th>${m.name.split(' ')[0]}</th>`; 
@@ -2288,7 +2300,6 @@ async function toggleSchedulerPlan(date, type, btnElement) {
         headerHTML += '</tr>';
         tableHead.innerHTML = headerHTML;
 
-        // 2. Build Body String (Build the whole thing in memory first)
         let bodyHTML = '';
         let currentIter = new Date(cycle.start_date + 'T00:00:00');
         let endIter = new Date(cycle.end_date + 'T00:00:00');
@@ -2310,15 +2321,14 @@ async function toggleSchedulerPlan(date, type, btnElement) {
                 const nVal = matrixData[dateSessionStr]?.[m.id]?.n || 0;
                 const dVal = matrixData[dateNextStr]?.[m.id]?.d || 0;
                 
+                // RESTRICTION: Use pointer cursor for everyone, we handle the block inside the modal
                 bodyHTML += `
                     <td>
-                        <div class="cell-split">
-                            <div class="cell-val ${nVal > 0 ? 'active' : 'zero'}" 
-                                 onclick="openMealModal('${m.id}', '${dateSessionStr}', ${nVal}, ${dVal})">
+                        <div class="cell-split" onclick="openMealModal('${m.id}', '${dateSessionStr}', ${nVal}, ${dVal})" style="cursor:pointer">
+                            <div class="cell-val ${nVal > 0 ? 'active' : 'zero'}">
                                  ${nVal > 0 ? nVal : '-'}
                             </div>
-                            <div class="cell-val ${dVal > 0 ? 'active' : 'zero'}" 
-                                 onclick="openMealModal('${m.id}', '${dateSessionStr}', ${nVal}, ${dVal})">
+                            <div class="cell-val ${dVal > 0 ? 'active' : 'zero'}">
                                  ${dVal > 0 ? dVal : '-'}
                             </div>
                         </div>
@@ -2327,14 +2337,15 @@ async function toggleSchedulerPlan(date, type, btnElement) {
             bodyHTML += '</tr>';
             currentIter.setDate(currentIter.getDate() + 1);
         }
-
-        // ONE SINGLE DOM UPDATE (prevents freezing)
         tableBody.innerHTML = bodyHTML;
 
     } catch (err) {
+        console.error("Matrix error", err);
         tableBody.innerHTML = '<tr><td colspan="100">Error loading matrix.</td></tr>';
     }
 }
+
+
 function initHeader() {
     // 1. Set User Info
     if (currentUser) {
@@ -2535,6 +2546,100 @@ function renderNotifications() {
         </div>
         `;
     }).join('');
+}
+
+// Helper: Create a record in the DB for the user's history mailbox
+async function createPersonalNotification(targetMemberId, message, type = 'info') {
+    try {
+        await supabase.from('personal_notifications').insert({
+            member_id: targetMemberId,
+            message: message,
+            type: type
+        });
+    } catch (err) {
+        console.error("Personal notif error:", err);
+    }
+}
+
+// THE MAILBOX LOADER: Runs on login/refresh
+async function loadPersonalNotifications() {
+    if (!currentUser || !currentUser.member_id) return;
+
+    try {
+        // 1. First, check balance and create a DB record if negative (Silent)
+        await checkBalanceThreshold();
+
+        // 2. Fetch all unread personal notifications from DB
+        const { data, error } = await supabase
+            .from('personal_notifications')
+            .select('*')
+            .eq('member_id', currentUser.member_id)
+            .eq('is_read', false)
+            .order('created_at', { ascending: true });
+
+        if (error) throw error;
+
+        // 3. Display each as a toast and mark as read
+        if (data && data.length > 0) {
+            data.forEach((notif, index) => {
+                setTimeout(() => {
+                    showNotification(notif.message, notif.type);
+                    markNotificationAsRead(notif.id);
+                }, index * 1200); // Stagger toasts
+            });
+        }
+    } catch (err) {
+        console.error("Personal notifications load error:", err);
+    }
+}
+
+// THE BALANCE CHECK: Only creates a DB record if one doesn't exist
+async function checkBalanceThreshold() {
+    if (!currentUser || !currentUser.member_id || !currentCycleId) return;
+
+    try {
+        // Calculate current balance
+        const [depRes, userMealRes, expRes, allMealRes] = await Promise.all([
+            supabase.from('deposits').select('amount').eq('member_id', currentUser.member_id).eq('cycle_id', currentCycleId).eq('status', 'approved'),
+            supabase.from('meals').select('day_count, night_count').eq('member_id', currentUser.member_id).eq('cycle_id', currentCycleId),
+            supabase.from('expenses').select('amount').eq('cycle_id', currentCycleId).eq('status', 'approved'),
+            supabase.from('meals').select('day_count, night_count').eq('cycle_id', currentCycleId)
+        ]);
+
+        const totalDeposit = depRes.data?.reduce((sum, d) => sum + parseFloat(d.amount), 0) || 0;
+        const totalUserMeals = userMealRes.data?.reduce((sum, m) => sum + (parseFloat(m.day_count) + parseFloat(m.night_count)), 0) || 0;
+        const totalExp = expRes.data?.reduce((sum, e) => sum + parseFloat(e.amount), 0) || 0;
+        const totalGlobalMeals = allMealRes.data?.reduce((sum, m) => sum + (parseFloat(m.day_count) + parseFloat(m.night_count)), 0) || 0;
+        
+        const mealRate = totalGlobalMeals > 0 ? totalExp / totalGlobalMeals : 0;
+        const currentBalance = totalDeposit - (totalUserMeals * mealRate);
+
+        if (currentBalance < 0) {
+            // Check if we already have an UNREAD negative balance notification to avoid duplicates
+            const { data: existing } = await supabase
+                .from('personal_notifications')
+                .select('id')
+                .eq('member_id', currentUser.member_id)
+                .eq('is_read', false)
+                .ilike('message', '%balance is negative%')
+                .maybeSingle();
+
+            if (!existing) {
+                await createPersonalNotification(
+                    currentUser.member_id,
+                    `⚠️ Your balance is negative (${formatCurrency(currentBalance)}). Please make a deposit.`,
+                    'warning'
+                );
+            }
+        }
+    } catch (err) {
+        console.error("Threshold check error:", err);
+    }
+}
+
+// Helper: Mark DB notification as read
+async function markNotificationAsRead(id) {
+    await supabase.from('personal_notifications').update({ is_read: true }).eq('id', id);
 }
 
 
@@ -3207,44 +3312,55 @@ function updateDefaultButtons(member) {
     }
 
 function openMealModal(memberId, sessionDate, currentNightVal, nextDayVal) {
-    // 1. Calculate Dates
     const dSession = new Date(sessionDate);
     const dNext = new Date(dSession);
     dNext.setDate(dSession.getDate() + 1);
-    
     const nextDateStr = dNext.toISOString().split('T')[0];
     
-    // 2. Format Labels
-    const fmt = (d) => d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); // "8 Dec"
-    const fmtFull = (d) => d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); // "8 Dec 2025"
-
-    // 3. GET MEMBER NAME
+    const fmt = (d) => d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
     const member = allMembers.find(m => m.id == memberId);
-    const memberName = member ? member.name : 'Member';
 
-    // 4. Update Header (Name + Date)
-    document.getElementById('mealModalTitle').innerHTML = `
-        <div style="color:var(--primary-color); font-size:18px;">${memberName}</div>
-        <div style="font-size:13px; color:var(--text-primary); font-weight:400; margin-top:2px;">
-            Bazar Session of <strong>${fmtFull(dSession)}</strong>
-        </div>
-    `;
-    
-    // 5. Update Input Labels
-    document.getElementById('mealNightLabel').innerHTML = `Night <span style="font-weight:400; color:var(--primary-color)">(${fmt(dSession)})</span>`;
-    document.getElementById('mealDayLabel').innerHTML = `Day <span style="font-weight:400; color:#d97706">(${fmt(dNext)})</span>`;
-
-    // 6. Set Inputs and Hidden IDs
+    // Set Hidden Fields
     document.getElementById('mealMemberId').value = memberId;
     document.getElementById('mealDateSession').value = sessionDate;
     document.getElementById('mealDateNext').value = nextDateStr;
 
-    // Round values before showing
-    document.getElementById('mealNightCount').value = Math.round(parseFloat(currentNightVal || 0));
-    document.getElementById('mealDayCount').value = Math.round(parseFloat(nextDayVal || 0));
+    // Set Values
+    document.getElementById('mealNightCount').value = currentNightVal;
+    document.getElementById('mealDayCount').value = nextDayVal;
+
+    // PERMISSION CHECK
+    const isAdminOrManager = (currentUser.role === 'admin' || currentUser.role === 'manager');
+    const saveBtn = document.querySelector('#mealForm button[type="submit"]');
+    const nightInput = document.getElementById('mealNightCount');
+    const dayInput = document.getElementById('mealDayCount');
+    const modalTitle = document.getElementById('mealModalTitle');
+
+    if (!isAdminOrManager) {
+        // Mode: View Only
+        saveBtn.classList.add('hidden'); // Ensure .hidden is in your CSS or use .style.display='none'
+        saveBtn.style.display = 'none';
+        nightInput.disabled = true;
+        dayInput.disabled = true;
+        modalTitle.innerHTML = `<div style="color:var(--text-secondary); font-size:14px;">View Session: ${member?.name}</div>
+                               <div style="font-size:11px; color:var(--danger-color); font-weight:700;">READ ONLY MODE</div>`;
+    } else {
+        // Mode: Edit
+        saveBtn.classList.remove('hidden');
+        saveBtn.style.display = 'block';
+        nightInput.disabled = false;
+        dayInput.disabled = false;
+        modalTitle.innerHTML = `<div style="color:var(--primary-color); font-size:16px;">Edit Session: ${member?.name}</div>
+                               <div style="font-size:11px;">Bazar Date: ${fmt(dSession)}</div>`;
+    }
     
+    document.getElementById('mealNightLabel').innerHTML = `Night (${fmt(dSession)})`;
+    document.getElementById('mealDayLabel').innerHTML = `Day (${fmt(dNext)})`;
+
     document.getElementById('mealModal').classList.add('active');
 }
+
+
     function closeMealModal() {
         document.getElementById('mealModal').classList.remove('active');
     }
@@ -3556,6 +3672,12 @@ async function quickToggleSummaryMeal(memberId, dateStr, type, currentVal) {
         } else if (action === 'reject') {
             const { error: delError } = await supabase.from('deposits').delete().eq('id', depositId);
             if (delError) throw delError;
+
+            await createPersonalNotification(
+    dep.member_id, 
+    `❌ Your deposit request for ${formatCurrency(dep.amount)} was rejected. Contact admin.`, 
+    'error'
+);
 
             // LOG THE REJECTION ACT
             await logActivity(`Deposit Rejected: ${dep.members.name}'s request for ${formatCurrency(dep.amount)} was rejected by ${actor}`, 'deposit');
@@ -3906,13 +4028,9 @@ async function loadSelectedMemberHistory(memberId) {
 // Add this NEW function BEFORE the depositForm handler
 async function processDepositWithClientSideSettlement(memberId, cycleId, amount, label, notes) {
     try {
-        // Add this helper logic inside the loop in processDepositWithClientSideSettlement
-const settleAmountRaw = Math.min(poolAvailable, creditorOwed);
-const settleAmount = Math.round(settleAmountRaw * 100) / 100; // Limits to 2 decimals
         const targetCycleId = parseInt(cycleId); 
 
-        // 1. Insert the official REAL cash deposit
-        // We add status: 'approved' so it skips the pending queue and counts in math immediately
+        // 1. Insert the official REAL cash deposit (Approved)
         const { data: mainDeposit, error: depError } = await supabase
             .from('deposits')
             .insert({
@@ -3921,14 +4039,23 @@ const settleAmount = Math.round(settleAmountRaw * 100) / 100; // Limits to 2 dec
                 amount: amount,
                 label: label,
                 notes: notes,
-                status: 'approved' // <--- AUTO-APPROVE
+                status: 'approved'
             })
             .select().single();
 
         if (depError) throw depError;
 
         const memberObj = allMembers.find(m => m.id == memberId);
+        
+        // GLOBAL LOG
         await logActivity(`Cash Deposit: ${formatCurrency(amount)} added for ${memberObj?.name}`, 'deposit');
+        
+        // PERSONAL NOTIFICATION (Added for Hybrid System)
+        await createPersonalNotification(
+            memberId, 
+            `✅ Your deposit of ${formatCurrency(amount)} has been approved and added to your balance.`, 
+            'success'
+        );
 
         if (amount <= 0) return { settled: false, deposit_id: mainDeposit.id };
 
@@ -3955,6 +4082,7 @@ const settleAmount = Math.round(settleAmountRaw * 100) / 100; // Limits to 2 dec
 
         if (!creditors || creditors.length === 0) return { settled: false, deposit_id: mainDeposit.id };
 
+        // INITIALIZE POOL (Fixed placement)
         let poolAvailable = Math.min(amount, Math.abs(debtorDue.due_amount) - Math.abs(debtorDue.settled_amount));
         let totalActuallySettled = 0;
 
@@ -3964,10 +4092,13 @@ const settleAmount = Math.round(settleAmountRaw * 100) / 100; // Limits to 2 dec
             const creditorOwed = creditor.due_amount - creditor.settled_amount;
             if (creditorOwed <= 0) continue;
 
-            const settleAmount = Math.min(poolAvailable, creditorOwed);
+            // CALCULATE SETTLEMENT (With Rounding Logic)
+            const settleAmountRaw = Math.min(poolAvailable, creditorOwed);
+            const settleAmount = Math.round(settleAmountRaw * 100) / 100; // Limits to 2 decimals
+
+            if (settleAmount <= 0) continue;
 
             // 4. Create Transfer Logs (Auto-Settlements)
-            // We MUST add status: 'approved' here so these transfers aren't hidden
             await supabase.from('deposits').insert([
                 { 
                     cycle_id: targetCycleId, 
@@ -3975,7 +4106,7 @@ const settleAmount = Math.round(settleAmountRaw * 100) / 100; // Limits to 2 dec
                     amount: -settleAmount, 
                     label: 'Auto-Settlement', 
                     notes: `Paid to ${creditor.members.name}`,
-                    status: 'approved' // <--- AUTO-APPROVE
+                    status: 'approved'
                 },
                 { 
                     cycle_id: targetCycleId, 
@@ -3983,9 +4114,16 @@ const settleAmount = Math.round(settleAmountRaw * 100) / 100; // Limits to 2 dec
                     amount: settleAmount, 
                     label: 'Auto-Settlement', 
                     notes: `Received from ${memberObj.name}`,
-                    status: 'approved' // <--- AUTO-APPROVE
+                    status: 'approved'
                 }
             ]);
+
+            // Notify Creditor (Added for Hybrid System)
+            await createPersonalNotification(
+                creditor.member_id, 
+                `💰 Settlement: You received ${formatCurrency(settleAmount)} from ${memberObj.name} towards your previous dues.`, 
+                'success'
+            );
 
             // Update Creditor Progress
             const newCreditorSettled = creditor.settled_amount + settleAmount;
@@ -4009,6 +4147,13 @@ const settleAmount = Math.round(settleAmountRaw * 100) / 100; // Limits to 2 dec
                 status: isFullySettled ? 'settled' : 'settling',
                 settled_at: isFullySettled ? new Date().toISOString() : null
             }).eq('id', debtorDue.id);
+            
+            // Notify Debtor about debt reduction
+            await createPersonalNotification(
+                memberId, 
+                `📉 Your outstanding debt has been reduced by ${formatCurrency(totalActuallySettled)} through auto-settlement.`, 
+                'info'
+            );
         }
 
         return {
@@ -4022,7 +4167,6 @@ const settleAmount = Math.round(settleAmountRaw * 100) / 100; // Limits to 2 dec
         throw err;
     }
 }
-
 
 document.getElementById('depositForm').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -4541,6 +4685,18 @@ function setupRobustRealtime() {
                  loadScheduler();
              }
         })
+
+        // Add this inside the .on('postgres_changes'...) chain
+.on('postgres_changes', { 
+    event: 'INSERT', 
+    schema: 'public', 
+    table: 'personal_notifications',
+    filter: `member_id=eq.${currentUser.member_id}` 
+}, (payload) => {
+    // This only triggers for the specific user
+    showNotification(payload.new.message, payload.new.type);
+    markNotificationAsRead(payload.new.id);
+})
         .subscribe((status) => {
             console.log(`📡 Realtime Status: ${status}`);
             
