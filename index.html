@@ -483,6 +483,37 @@
     color: #065F46;
 }
 
+
+/* Header Warning State */
+.app-header.balance-warning {
+    background-color: #f8d9e59f !important; /* Very light red */
+    border-bottom: 2px solid var(--danger-color);
+    transition: all 0.5s ease;
+}
+
+.app-header.balance-warning .app-logo {
+    color: var(--danger-color);
+}
+
+/* Optional: Add a pulsing animation to the logo when in debt */
+.app-header.balance-warning .app-logo {
+    animation: pulse-red 2s infinite;
+}
+
+@keyframes pulse-red {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+/* Mobile tweak for the warning */
+@media (max-width: 768px) {
+    .app-header.balance-warning {
+        border-bottom-width: 3px;
+    }
+}
+
+
 /* Mobile responsive for due cards */
 @media (max-width: 768px) {
     #dueSettlementCard > div[style*="grid"] {
@@ -490,7 +521,28 @@
     }
 }
 
+/* Dynamic Badge Animations */
+#entryStatusBadge {
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    display: inline-block;
+    min-width: 120px;
+    text-align: center;
+}
 
+/* Transition classes */
+.badge-fade-out {
+    opacity: 0;
+    transform: translateY(-10px);
+}
+
+.badge-fade-in {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Specific colors for warnings */
+.status-debt { background: #FEE2E2; color: #B91C1C; border: 1px solid #FECACA; }
+.status-due { background: #FEF3C7; color: #92400E; border: 1px solid #FDE68A; }
     /* =========================================
            7. MOBILE RESPONSIVENESS (CRITICAL)
            ========================================= */
@@ -1873,6 +1925,7 @@ async function initializeApp() {
         updateEntryStatusIndicator();
         setInterval(updateEntryStatusIndicator, 60000); 
          await loadPersonalNotifications();
+         checkGlobalBalanceWarning();
         navigateToPage('dashboard');
     } catch (err) {
         console.error("Critical Init Error:", err);
@@ -4574,30 +4627,66 @@ async function triggerManualAutoEntry() {
 // ENTRY STATUS INDICATOR LOGIC
 // ==========================================
 
+let statusQueue = [];
+let currentStatusIndex = 0;
+let statusCycleInterval = null;
+
 async function updateEntryStatusIndicator() {
     try {
-        // 1. Get the Calculated Active Date (Timezone Safe)
+        // 1. Gather Data for the Queue
+        const newQueue = [];
+        
+        // --- A. DEFAULT: Bazar Target ---
         const sessionDate = await getActiveSessionDate();
-        
-        // 2. Format for Display (e.g., "16 DEC")
         const dateLabel = sessionDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }).toUpperCase();
-        
-        // 3. Compare with Real Calendar Today to decide Color/Status
         const today = new Date();
         const isToday = sessionDate.getDate() === today.getDate();
-
-        const badge = document.getElementById('entryStatusBadge');
         
-        if (isToday) {
-            // If Session Date is TODAY, it means auto-entry hasn't run yet.
-            badge.textContent = `TARGET: ${dateLabel} BAZAR`;
-            badge.className = 'entry-status-badge status-pending'; // Orange/Active
-            badge.title = "Waiting for auto-entry tonight.";
-        } else {
-            // If Session Date is TOMORROW, it means Today is done.
-            badge.textContent = `TARGET: ${dateLabel} BAZAR`;
-            badge.className = 'entry-status-badge status-done'; // Green/Done
-            badge.title = "Today's entry is complete. Next target is shown.";
+        newQueue.push({
+            text: `TARGET: ${dateLabel} BAZAR`,
+            class: isToday ? 'status-pending' : 'status-done'
+        });
+
+        // --- B. Personal Balance Check ---
+        if (currentUser && currentUser.member_id) {
+            // Reusing balance calculation logic
+            const { data: expenses } = await supabase.from('expenses').select('amount').eq('cycle_id', currentCycleId).eq('status', 'approved');
+            const { data: allMeals } = await supabase.from('meals').select('day_count, night_count').eq('cycle_id', currentCycleId);
+            const { data: userMeals } = await supabase.from('meals').select('day_count, night_count').eq('member_id', currentUser.member_id).eq('cycle_id', currentCycleId);
+            const { data: userDeps } = await supabase.from('deposits').select('amount').eq('member_id', currentUser.member_id).eq('cycle_id', currentCycleId).neq('status', 'pending');
+
+            const rate = (expenses?.reduce((s, e) => s + parseFloat(e.amount), 0) || 0) / (allMeals?.reduce((s, m) => s + parseFloat(m.day_count) + parseFloat(m.night_count), 0) || 1);
+            const bal = (userDeps?.reduce((s, d) => s + parseFloat(d.amount), 0) || 0) - ((userMeals?.reduce((s, m) => s + parseFloat(m.day_count) + parseFloat(m.night_count), 0) || 0) * rate);
+
+            if (bal < 0) {
+                newQueue.push({
+                    text: `WARN: BALANCE ৳${Math.abs(bal).toFixed(0)}`,
+                    class: 'status-debt'
+                });
+            }
+
+            // --- C. Cycle Dues Check ---
+            const { data: dues } = await supabase.from('cycle_dues')
+                .select('due_amount, settled_amount')
+                .eq('member_id', currentUser.member_id)
+                .eq('to_cycle_id', currentCycleId)
+                .neq('status', 'settled');
+
+            if (dues && dues.length > 0) {
+                const totalDue = dues.reduce((s, d) => s + (Math.abs(d.due_amount) - Math.abs(d.settled_amount)), 0);
+                if (totalDue > 1) {
+                    newQueue.push({
+                        text: `DUE: ৳${totalDue.toFixed(0)}`,
+                        class: 'status-due'
+                    });
+                }
+            }
+        }
+
+        // 2. Update Global Queue & Start Rotation
+        statusQueue = newQueue;
+        if (!statusCycleInterval) {
+            startStatusRotation();
         }
 
     } catch (err) {
@@ -4605,6 +4694,36 @@ async function updateEntryStatusIndicator() {
     }
 }
 
+function startStatusRotation() {
+    const badge = document.getElementById('entryStatusBadge');
+    
+    const updateDisplay = () => {
+        if (statusQueue.length === 0) return;
+        
+        // Apply fade out
+        badge.classList.add('badge-fade-out');
+        
+        setTimeout(() => {
+            currentStatusIndex = (currentStatusIndex + 1) % statusQueue.length;
+            const current = statusQueue[currentStatusIndex];
+            
+            // Change content and classes
+            badge.textContent = current.text;
+            badge.className = `entry-status-badge ${current.class} badge-fade-in`;
+            
+            // Remove fade out for next cycle
+            badge.classList.remove('badge-fade-out');
+        }, 500);
+    };
+
+    // Initialize first display
+    const initial = statusQueue[0];
+    badge.textContent = initial.text;
+    badge.className = `entry-status-badge ${initial.class}`;
+
+    // Set rotation every 4 seconds
+    statusCycleInterval = setInterval(updateDisplay, 4000);
+}
 
 
 async function loadSystemStatus() {
@@ -4741,6 +4860,8 @@ function handleDataSignal(source) {
         try {
             console.log(`⚡ Syncing UI due to ${source} update...`);
             await refreshCurrentPage();
+            await checkGlobalBalanceWarning();
+            await updateEntryStatusIndicator();
         } finally {
             isRefreshing = false;
         }
@@ -5053,6 +5174,54 @@ loadSummary = async function() {
     await loadDueSettlement();
 };
 
+
+async function checkGlobalBalanceWarning() {
+    if (!currentUser || !currentUser.member_id || !currentCycleId) return;
+
+    try {
+        // 1. Fetch data needed for Meal Rate
+        const { data: expenses } = await supabase.from('expenses')
+            .select('amount').eq('cycle_id', currentCycleId).eq('status', 'approved');
+        
+        const { data: allMeals } = await supabase.from('meals')
+            .select('day_count, night_count').eq('cycle_id', currentCycleId);
+
+        // 2. Fetch User Specific data
+        const { data: userMeals } = await supabase.from('meals')
+            .select('day_count, night_count').eq('member_id', currentUser.member_id).eq('cycle_id', currentCycleId);
+        
+        const { data: userDeposits } = await supabase.from('deposits')
+            .select('amount').eq('member_id', currentUser.member_id).eq('cycle_id', currentCycleId).neq('status', 'pending');
+
+        // 3. Perform Calculations
+        const totalExp = expenses?.reduce((sum, e) => sum + parseFloat(e.amount), 0) || 0;
+        const totalGlobalMeals = allMeals?.reduce((sum, m) => sum + parseFloat(m.day_count) + parseFloat(m.night_count), 0) || 0;
+        const mealRate = totalGlobalMeals > 0 ? totalExp / totalGlobalMeals : 0;
+
+        const totalUserMeals = userMeals?.reduce((sum, m) => sum + parseFloat(m.day_count) + parseFloat(m.night_count), 0) || 0;
+        const totalUserDeposit = userDeposits?.reduce((sum, d) => sum + parseFloat(d.amount), 0) || 0;
+        
+        const currentBalance = totalUserDeposit - (totalUserMeals * mealRate);
+
+        // 4. Update Header UI
+        const header = document.querySelector('.app-header');
+        const nameDisplay = document.getElementById('headerUserName');
+
+        if (currentBalance < 0) {
+            header.classList.add('balance-warning');
+            // Optional: Add a small warning icon next to the name
+            if (!nameDisplay.innerHTML.includes('⚠️')) {
+                nameDisplay.innerHTML = '⚠️ ' + nameDisplay.innerHTML;
+            }
+        } else {
+            header.classList.remove('balance-warning');
+            // Remove warning icon if balance is recovered
+            nameDisplay.innerHTML = nameDisplay.innerHTML.replace('⚠️ ', '');
+        }
+    } catch (err) {
+        console.error("Balance Warning Check Error:", err);
+    }
+}
 
 </script>
 </body>
