@@ -411,6 +411,95 @@
 
 
 
+        /* Summary Table Styles */
+.summary-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background: var(--card-bg);
+}
+
+.summary-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    min-width: 700px; /* Ensures table has room to breathe */
+}
+
+.summary-table th, .summary-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.summary-table th {
+    background-color: var(--bg-color);
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
+/* Status Button Modern Look */
+.status-btn {
+    padding: 6px 0;
+    width: 55px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 800;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+}
+
+.status-btn.on {
+    background-color: #ECFDF5;
+    color: #059669;
+    border-color: #A7F3D0;
+}
+
+.status-btn.off {
+    background-color: #F3F4F6;
+    color: #6B7280;
+    border-color: #E5E7EB;
+}
+
+/* Mobile Responsiveness for Summary */
+@media (max-width: 768px) {
+    .summary-table {
+        font-size: 12px;
+    }
+
+    /* Sticky first column (Name) for mobile */
+    .summary-table th:first-child, 
+    .summary-table td:first-child {
+        position: sticky;
+        left: 0;
+        z-index: 10;
+        background-color: var(--card-bg);
+        border-right: 2px solid var(--border-color);
+        min-width: 100px;
+    }
+
+    .summary-table th:first-child {
+        background-color: var(--bg-color);
+    }
+    
+    .summary-table td {
+        padding: 10px 8px;
+    }
+}
+
+.balance-cell {
+    font-family: 'Courier New', monospace;
+    font-weight: 800;
+}
+
+
         /* Due Settlement Styles */
 .due-item {
     padding: 12px;
@@ -588,6 +677,121 @@
     outline: none;
     box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
 }
+
+
+/* --- Modern Table Styling --- */
+.summary-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.table-wrapper {
+    overflow-x: auto;
+    background: var(--card-bg);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    -webkit-overflow-scrolling: touch;
+}
+
+.managed-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.managed-table th {
+    background: var(--bg-color);
+    padding: 12px 15px;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+    border-bottom: 2px solid var(--border-color);
+    text-align: center;
+}
+
+.managed-table td {
+    padding: 10px 15px;
+    border-bottom: 1px solid var(--border-color);
+    vertical-align: middle;
+    text-align: center;
+}
+
+/* Sticky First Column (Name) */
+.managed-table th:first-child, 
+.managed-table td:first-child {
+    position: sticky;
+    left: 0;
+    background-color: var(--card-bg);
+    z-index: 10;
+    text-align: left;
+    border-right: 2px solid var(--border-color);
+    min-width: 120px;
+}
+
+.managed-table th:first-child {
+    background: var(--bg-color);
+}
+
+.managed-table tr:hover td {
+    background-color: rgba(79, 70, 229, 0.02);
+}
+
+/* Status Buttons on Summary */
+.summary-status-btn {
+    width: 45px;
+    height: 24px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    font-size: 9px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.summary-status-btn.on {
+    background: #10B981;
+    color: white;
+    border-color: #059669;
+}
+
+.summary-status-btn.off {
+    background: var(--bg-color);
+    color: var(--text-secondary);
+}
+
+/* Balance Badges */
+.balance-tag {
+    font-family: 'Courier New', monospace;
+    font-weight: 800;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 13px;
+}
+
+.balance-tag.pos { background: #ECFDF5; color: #047857; }
+.balance-tag.neg { background: #FEF2F2; color: #B91C1C; }
+
+/* Mobile View Adjustments */
+@media (max-width: 768px) {
+    .managed-table {
+        font-size: 12px;
+    }
+    
+    .managed-table td, .managed-table th {
+        padding: 8px 10px;
+    }
+
+    .summary-status-btn {
+        width: 40px;
+        height: 22px;
+    }
+}
+
+
 
 /* MOBILE VIEW RESPONSIVENESS */
 @media (max-width: 768px) {
@@ -1491,10 +1695,10 @@
                 <span>📊</span>Home
             </a>
         </li>
-        <!-- 2. Tracker -->
+        <!-- 2. Profile -->
         <li class="bottom-nav-item">
-            <a class="bottom-nav-link" data-page="tracker">
-                <span>📅</span>Tracker
+            <a class="bottom-nav-link" data-page="profile">
+                <span>👤</span>Profile
             </a>
         </li>
         <!-- 3. Add Expense (Quick Access) -->
@@ -3578,144 +3782,91 @@ async function loadSummary() {
     if (!currentCycleId) return;
 
     try {
-        // 1. USE CENTRALIZED DATE LOGIC
         const sessionDate = await getActiveSessionDate();
-        
-        // Define Columns based on Active Session
-        const nightDateStr = sessionDate.toLocaleDateString('en-CA');
-        
+        const nightDateStr = toLocalISO(sessionDate);
         const nextDay = new Date(sessionDate);
         nextDay.setDate(sessionDate.getDate() + 1);
-        const dayDateStr = nextDay.toLocaleDateString('en-CA');
+        const dayDateStr = toLocalISO(nextDay);
 
         const fmt = (d) => d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 
-        // 2. Fetch Data Separately
-        // A. Billed Meals (History/Tracker) -> ONLY for calculating Total Cost/Meals
-        const { data: meals } = await supabase
-            .from('meals')
-            .select('*')
-            .eq('cycle_id', currentCycleId);
-        
-        // B. Plans (Future/Intent) -> ONLY for the Buttons
-        const { data: plans } = await supabase
-            .from('meal_plans')
-            .select('*')
-            .in('plan_date', [nightDateStr, dayDateStr]);
-        
-       // Change the deposit query to:
-const { data: deposits } = await supabase
-    .from('deposits')
-    .select('*')
-    .eq('cycle_id', currentCycleId)
-    .neq('status', 'pending'); // <--- ADD THIS FILTER
-    
-       const { data: expenses } = await supabase
-    .from('expenses')
-    .select('*')
-    .eq('cycle_id', currentCycleId)
-    .eq('status', 'approved'); // <--- ADD THIS FILTER
+        // 1. Fetch Data
+        const { data: meals } = await supabase.from('meals').select('*').eq('cycle_id', currentCycleId);
+        const { data: plans } = await supabase.from('meal_plans').select('*').in('plan_date', [nightDateStr, dayDateStr]);
+        const { data: deposits } = await supabase.from('deposits').select('*').eq('cycle_id', currentCycleId).neq('status', 'pending');
+        const { data: expenses } = await supabase.from('expenses').select('*').eq('cycle_id', currentCycleId).eq('status', 'approved');
 
-        // 3. Fast Lookups
+        // 2. Map Plans for buttons
         const planMap = {};
         plans?.forEach(p => { planMap[`${p.member_id}_${p.plan_date}`] = p; });
 
-        // 4. Financial Rates
+        // 3. Create Bazar Count Map (Count approved expenses per member)
+        const bazarCountMap = {};
+        expenses?.forEach(exp => {
+            bazarCountMap[exp.member_id] = (bazarCountMap[exp.member_id] || 0) + 1;
+        });
+
+        // 4. Calculate Global Rates
         const totalExpense = expenses?.reduce((sum, e) => sum + parseFloat(e.amount), 0) || 0;
         const allTotalMeals = meals?.reduce((sum, m) => sum + parseFloat(m.day_count) + parseFloat(m.night_count), 0) || 0;
         const mealRate = allTotalMeals > 0 ? totalExpense / allTotalMeals : 0;
 
-        // 5. Build Member Stats
-        const memberStats = {};
-
-        // Helper: Get Plan Status (Plan -> Default) 
-        // STRICTLY IGNORES TRACKER ('meals' table)
-        const getPlanStatus = (member, dateStr, type) => {
-            const plan = planMap[`${member.id}_${dateStr}`];
-            
-            if (plan) {
-                return type === 'night' ? plan.night_count : plan.day_count;
-            }
-            
-            // Fallback to Default
-            return type === 'night' ? (member.default_night_on ? 1 : 0) : (member.default_day_on ? 1 : 0);
-        };
-
-        allMembers.forEach(member => {
-            // A. Calculate Historical Totals (From Tracker)
-            let totalMeals = 0;
-            meals?.filter(m => m.member_id === member.id).forEach(m => {
-                totalMeals += (parseFloat(m.day_count) + parseFloat(m.night_count));
-            });
-
-            const memDeposits = deposits?.filter(d => d.member_id === member.id).reduce((sum, d) => sum + parseFloat(d.amount), 0) || 0;
-            const totalCost = totalMeals * mealRate;
-
-            memberStats[member.id] = {
-                id: member.id,
-                name: member.name,
-                // B. Calculate Button Status (From Plan Only)
-                // This ensures it matches the Profile Card exactly
-                nightStatus: parseFloat(getPlanStatus(member, nightDateStr, 'night')),
-                dayStatus: parseFloat(getPlanStatus(member, dayDateStr, 'day')),
-                totalMeals: totalMeals,
-                totalCost: totalCost,
-                totalDeposit: memDeposits,
-                balance: memDeposits - totalCost
-            };
-        });
-
-        // Store original loadSummary function reference
-const _originalLoadSummary = loadSummary;
-
-// Override with enhanced version
-loadSummary = async function() {
-    await _originalLoadSummary();
-    await loadDueSettlement();
-};
-
-        // 6. Header
-        const realTodayStr = new Date().toLocaleDateString('en-CA');
-        const isTargetingTomorrow = (nightDateStr !== realTodayStr);
-        const dateLabelPrefix = isTargetingTomorrow ? "Target: " : "Active: ";
-
+        // 5. Update Table Header
         const tableHead = document.querySelector('#summaryTable thead tr');
         tableHead.innerHTML = `
-            <th>Name</th>
-            <th style="text-align:center;">Night <br><span style="font-size:9px; color:var(--primary-color)">${dateLabelPrefix}${fmt(sessionDate)}</span></th>
-            <th style="text-align:center;">Day <br><span style="font-size:9px; color:#d97706">${fmt(nextDay)}</span></th>
-            <th>Total<br>Meals</th>
-            <th>Total<br>Cost</th>
-            <th>Deposits</th>
+            <th>Member Name</th>
+            <th title="Bazar Night">🌙 ${fmt(sessionDate)}</th>
+            <th title="Next Morning">🌞 ${fmt(nextDay)}</th>
+            <th>Bazar</th> <!-- NEW COLUMN HEADER -->
+            <th>Meals</th>
+            <th>Cost</th>
+            <th>Paid</th>
             <th>Balance</th>
         `;
 
-        // 7. Render Body
         const isAdmin = (currentUser.role === 'admin' || currentUser.role === 'manager');
         const tbody = document.getElementById('summaryTableBody');
         
-        tbody.innerHTML = Object.values(memberStats).map(stat => {
-            const nightIsOn = stat.nightStatus > 0;
-            const nightBtnClass = nightIsOn ? 'status-btn on' : 'status-btn off';
-            const nightAction = isAdmin ? `onclick="quickToggleSummaryMeal(${stat.id}, '${nightDateStr}', 'night', ${stat.nightStatus})"` : 'disabled';
+        tbody.innerHTML = allMembers.map(member => {
+            // Member specific data
+            const memMeals = meals?.filter(m => m.member_id === member.id).reduce((sum, m) => sum + (parseFloat(m.day_count) + parseFloat(m.night_count)), 0) || 0;
+            const memPaid = deposits?.filter(d => d.member_id === member.id).reduce((sum, d) => sum + parseFloat(d.amount), 0) || 0;
+            const memBazarCount = bazarCountMap[member.id] || 0; // NEW COUNT VALUE
             
-            const dayIsOn = stat.dayStatus > 0;
-            const dayBtnClass = dayIsOn ? 'status-btn on' : 'status-btn off';
-            const dayAction = isAdmin ? `onclick="quickToggleSummaryMeal(${stat.id}, '${dayDateStr}', 'day', ${stat.dayStatus})"` : 'disabled';
+            const memCost = memMeals * mealRate;
+            const memBal = memPaid - memCost;
+
+            const nPlan = planMap[`${member.id}_${nightDateStr}`]?.night_count ?? (member.default_night_on ? 1 : 0);
+            const dPlan = planMap[`${member.id}_${dayDateStr}`]?.day_count ?? (member.default_day_on ? 1 : 0);
 
             return `
             <tr>
-                <td style="vertical-align: middle;"><strong>${stat.name}</strong></td>
-                <td style="text-align:center;"><button class="${nightBtnClass}" ${nightAction}>${nightIsOn ? 'ON' : 'OFF'}</button></td>
-                <td style="text-align:center;"><button class="${dayBtnClass}" ${dayAction}>${dayIsOn ? 'ON' : 'OFF'}</button></td>
-                <td style="vertical-align: middle;"><strong>${stat.totalMeals.toFixed(1)}</strong></td>
-                <td style="vertical-align: middle;">${formatCurrency(stat.totalCost)}</td>
-                <td style="vertical-align: middle;">${formatCurrency(stat.totalDeposit)}</td>
-                <td style="vertical-align: middle;" class="${stat.balance >= 0 ? 'balance-positive' : 'balance-negative'}">
-                    <strong>${formatCurrency(stat.balance)}</strong>
+                <td><strong>${member.name}</strong></td>
+                <td>
+                    <button class="summary-status-btn ${nPlan > 0 ? 'on' : 'off'}" 
+                        ${isAdmin ? `onclick="quickToggleSummaryMeal(${member.id}, '${nightDateStr}', 'night', ${nPlan})"` : 'disabled'}>
+                        ${nPlan > 0 ? 'ON' : 'OFF'}
+                    </button>
+                </td>
+                <td>
+                    <button class="summary-status-btn ${dPlan > 0 ? 'on' : 'off'}" 
+                        ${isAdmin ? `onclick="quickToggleSummaryMeal(${member.id}, '${dayDateStr}', 'day', ${dPlan})"` : 'disabled'}>
+                        ${dPlan > 0 ? 'ON' : 'OFF'}
+                    </button>
+                </td>
+                <td style="font-weight:700; color:var(--primary-color);">${memBazarCount}</td> <!-- NEW BAZAR COLUMN -->
+                <td>${memMeals.toFixed(1)}</td>
+                <td style="color: var(--text-secondary);">৳${Math.round(memCost)}</td>
+                <td style="color: var(--success-color); font-weight:600;">৳${Math.round(memPaid)}</td>
+                <td>
+                    <span class="balance-tag ${memBal >= 0 ? 'pos' : 'neg'}">
+                        ${memBal >= 0 ? '+' : ''}${Math.round(memBal)}
+                    </span>
                 </td>
             </tr>`;
         }).join('');
+
+        await loadDueSettlement();
 
     } catch (err) {
         console.error('Error loading summary:', err);
