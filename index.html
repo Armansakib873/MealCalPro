@@ -484,9 +484,148 @@
 }
 
 
+
+/* Dashboard Grid Layout */
+.dashboard-header-grid {
+    display: grid;
+    grid-template-columns: 320px 1fr; /* Desktop: Plan card fixed, stats take rest */
+    gap: 15px;
+    margin-bottom: 20px;
+    align-items: stretch;
+}
+
+.stats-subgrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* 2x2 on Desktop */
+    gap: 15px;
+}
+
+/* Meal Plan Card Specific Styling */
+.meal-plan-main-card {
+    background-color: #b9d3fd;
+    padding: 15px !important;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* .card meal-plan-main-card */
+
+.meal-plan-inner {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 5px 0;
+}
+
+.meal-plan-segment {
+    flex: 1;
+    text-align: center;
+}
+
+.segment-label {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--text-primary);
+}
+
+.segment-date {
+    font-size: 10px;
+    font-weight: 700;
+    color: #EF4444;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+
+.segment-count {
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    font-size: 24px;
+    font-weight: 900;
+    padding: 10px;
+    width: 70px;
+    margin: 0 auto 8px;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.segment-menu {
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+.segment-divider {
+    width: 1px;
+    height: 80px;
+    background: var(--border-color);
+    margin: 0 10px;
+}
+
+/* Adjusting Stat Cards for the Subgrid */
+.stat-card {
+    margin-bottom: 0 !important; /* Override global margin */
+    padding: 20px;
+    min-height: 120px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.weekly-menu-input {
+    border: 1px solid transparent !important;
+    background: transparent !important;
+    transition: all 0.3s ease;
+}
+
+.weekly-menu-input:hover, .weekly-menu-input:focus {
+    border: 1px solid var(--border-color) !important;
+    background: var(--bg-color) !important;
+}
+
+/* Flash feedback during save */
+.weekly-menu-input:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
+}
+
+/* MOBILE VIEW RESPONSIVENESS */
+@media (max-width: 768px) {
+    .dashboard-header-grid {
+        grid-template-columns: 1fr; /* Stack: Plan on top, stats below */
+    }
+    
+    .stats-subgrid {
+        grid-template-columns: 1fr 1fr; /* Stats share width: 2 per row */
+        gap: 10px;
+    }
+
+    .stat-card {
+        padding: 15px;
+        min-height: 100px;
+    }
+    
+    .stat-value {
+        font-size: 18px;
+    }
+
+    .segment-count {
+        width: 60px;
+        font-size: 20px;
+        padding: 8px;
+    }
+}
+/* Mobile Tweak */
+@media (max-width: 480px) {
+    .meal-plan-count-box {
+        font-size: 20px;
+        padding: 4px 15px;
+    }
+}
+
 /* Header Warning State */
 .app-header.balance-warning {
-    background-color: #f8d9e59f !important; /* Very light red */
+    background-color: #fffcf6 !important; /* Very light red */
     border-bottom: 2px solid var(--danger-color);
     transition: all 0.5s ease;
 }
@@ -833,48 +972,82 @@
         <!-- Main Content -->
         <main class="main-content" id="mainContent">
             <!-- Dashboard Page -->
-            <div id="dashboardPage" class="page-content">
-                <h2 style="margin-bottom: 20px;">Dashboard</h2>
-                
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-label">Meal Rate</div>
-                        <div class="stat-value" id="statMealRate">৳0</div>
-                    </div>
-                    <div class="stat-card" style="background: linear-gradient(135deg, #10B981, #059669);">
-                        <div class="stat-label">Total Meals</div>
-                        <div class="stat-value" id="statTotalMeals">0</div>
-                    </div>
-                    <div class="stat-card" style="background: linear-gradient(135deg, #F59E0B, #D97706);">
-                        <div class="stat-label">Total Deposit</div>
-                        <div class="stat-value" id="statTotalDeposit">৳0</div>
-                    </div>
-                    <div class="stat-card" style="background: linear-gradient(135deg, #EF4444, #DC2626);">
-                        <div class="stat-label">Total Expense</div>
-                        <div class="stat-value" id="statTotalExpense">৳0</div>
-                    </div>
-                </div>
-
-                <!-- NEW: System Status Card -->
-<div class="card">
-    <div class="card-header">
-        <h3 class="card-title">Daily Automation Status</h3>
-        <div id="statusDateDisplay" style="font-size:12px; color:var(--text-secondary);"></div>
+<div id="dashboardPage" class="page-content">
+    <h2 style="margin-bottom: 20px;">Dashboard</h2>
+    
+    <!-- TOP SECTION: Meal Plan + Stats -->
+    <div class="dashboard-header-grid">
+        
+        <!-- Large Meal Plan Card -->
+<div class="card meal-plan-main-card" id="dashboardMealPlanCard">
+    <div class="card-header" style="margin-bottom: 10px;">
+        <h3 class="card-title" id="planDayTitle" style="font-size: 14px;">Meal Plan</h3>
+        <span style="font-size: 18px; opacity: 0.5;">🍴</span>
     </div>
-    <div id="systemStatusContent">
-        <div class="loading">Checking system logs...</div>
+    
+    <div class="meal-plan-inner">
+        <!-- Night Segment -->
+        <div class="meal-plan-segment">
+            <div class="segment-label">🌙 Night</div>
+            <div class="segment-date" id="planNightDate">-- ---</div> <!-- ID HERE -->
+            <div class="segment-count" id="planNightTotal">0</div>
+            <div class="segment-menu" id="planNightMenu">Not set</div> <!-- ID HERE -->
+        </div>
+        
+        <div class="segment-divider"></div>
+        
+        <!-- Day Segment -->
+        <div class="meal-plan-segment">
+            <div class="segment-label">🌞 Day</div>
+            <div class="segment-date" id="planDayDate">-- ---</div> <!-- ID HERE -->
+            <div class="segment-count" id="planDayTotal">0</div>
+            <div class="segment-menu" id="planDayMenu">Not set</div> <!-- ID HERE -->
+        </div>
     </div>
 </div>
 
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">Recent Activity</h3>
-                    </div>
-                    <div id="recentActivity">
-                        <div class="loading">Loading activity...</div>
-                    </div>
-                </div>
+        <!-- Smaller Stats Sub-Grid -->
+        <div class="stats-subgrid">
+            <div class="stat-card" style="background: linear-gradient(135deg, #4F46E5, #3730A3);">
+                <div class="stat-label">Meal Rate</div>
+                <div class="stat-value" id="statMealRate">৳0</div>
             </div>
+            <div class="stat-card" style="background: linear-gradient(135deg, #10B981, #065F46);">
+                <div class="stat-label">Total Meals</div>
+                <div class="stat-value" id="statTotalMeals">0</div>
+            </div>
+            <div class="stat-card" style="background: linear-gradient(135deg, #F59E0B, #B45309);">
+                <div class="stat-label">Total Deposit</div>
+                <div class="stat-value" id="statTotalDeposit">৳0</div>
+            </div>
+            <div class="stat-card" style="background: linear-gradient(135deg, #EF4444, #B91C1C);">
+                <div class="stat-label">Total Expense</div>
+                <div class="stat-value" id="statTotalExpense">৳0</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Daily Automation Status Card (Kept the same) -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Daily Automation Status</h3>
+            <div id="statusDateDisplay" style="font-size:12px; color:var(--text-secondary);"></div>
+        </div>
+        <div id="systemStatusContent">
+            <div class="loading">Checking system logs...</div>
+        </div>
+    </div>
+
+    <!-- Recent Activity (Kept the same) -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Recent Activity</h3>
+        </div>
+        <div id="recentActivity">
+            <div class="loading">Loading activity...</div>
+        </div>
+    </div>
+</div>
 
             <!-- Profile Page -->
             <div id="profilePage" class="page-content hidden">
@@ -976,7 +1149,32 @@
     Row Date indicates the Night meal.
 </div>
     </div>
+
+<!-- Weekly Menu Editor Section -->
+<div class="card" style="margin-top: 30px;">
+    <div class="card-header">
+        <h3 class="card-title">📅 Fixed Weekly Menu Schedule</h3>
+        <span style="font-size: 11px; color: var(--text-secondary);">Only Admins/Managers can edit</span>
+    </div>
+    <div class="matrix-wrapper">
+        <table class="matrix-table" id="weeklyMenuTable">
+            <thead>
+                <tr>
+                    <th style="min-width: 100px;">Day</th>
+                    <th>🌙 Night Menu</th>
+                    <th>🌞 Day Menu</th>
+                </tr>
+            </thead>
+            <tbody id="weeklyMenuBody">
+                <!-- Rows injected by JS -->
+            </tbody>
+        </table>
+    </div>
 </div>
+
+
+</div>
+
 
    <!-- Summary Page -->
 <div id="summaryPage" class="page-content hidden">
@@ -1753,12 +1951,6 @@ window.handleExpenseApproval = async function(expenseId, newStatus) {
         // 4. Refresh List
         await loadExpenses();
 
-        // After the update logic...
-await createPersonalNotification(
-    expense.member_id, 
-    `🛒 Your expense for "${expense.description}" was approved.`, 
-    'success'
-);
         showNotification(`Expense ${newStatus} successfully`, 'success');
 
     } catch (err) {
@@ -1879,12 +2071,7 @@ window.handleDepositAction = async function(depositId, action) {
                 dep.notes
             );
 
-            // After processDepositWithClientSideSettlement...
-await createPersonalNotification(
-    dep.member_id, 
-    `✅ Your deposit of ${formatCurrency(dep.amount)} has been approved!`, 
-    'success'
-);
+
             
             showNotification("Request Approved", "success");
 
@@ -1924,7 +2111,6 @@ async function initializeApp() {
 
         updateEntryStatusIndicator();
         setInterval(updateEntryStatusIndicator, 60000); 
-         await loadPersonalNotifications();
          checkGlobalBalanceWarning();
         navigateToPage('dashboard');
     } catch (err) {
@@ -1944,6 +2130,7 @@ async function initializeApp() {
             case 'tracker':
                 loadTracker();
                   loadMasterTracker(); // <--- NEW CALL
+                  loadWeeklyMenuEditor();
                 break;
             case 'summary':
                 loadSummary();
@@ -2601,120 +2788,8 @@ function renderNotifications() {
     }).join('');
 }
 
-async function createPersonalNotification(targetMemberId, message, type = 'info') {
-    try {
-        const { error } = await supabase
-            .from('personal_notifications')
-            .insert({
-                member_id: targetMemberId,
-                message: message,
-                type: type
-            });
-        if (error) throw error;
-    } catch (err) {
-        console.error("Failed to create personal notification:", err);
-    }
-}
 
-async function checkBalanceThreshold() {
-    if (!currentUser || !currentUser.member_id || !currentCycleId) return;
 
-    try {
-        // 1. Calculate Balance (Reusing your existing logic)
-        const { data: deposits } = await supabase.from('deposits')
-            .select('amount').eq('member_id', currentUser.member_id).eq('cycle_id', currentCycleId).eq('status', 'approved');
-        
-        const { data: userMeals } = await supabase.from('meals')
-            .select('day_count, night_count').eq('member_id', currentUser.member_id).eq('cycle_id', currentCycleId);
-
-        const { data: allExpenses } = await supabase.from('expenses')
-            .select('amount').eq('cycle_id', currentCycleId).eq('status', 'approved');
-
-        const { data: allMeals } = await supabase.from('meals')
-            .select('day_count, night_count').eq('cycle_id', currentCycleId);
-
-        const totalDeposit = deposits?.reduce((sum, d) => sum + parseFloat(d.amount), 0) || 0;
-        const totalUserMeals = userMeals?.reduce((sum, m) => sum + parseFloat(m.day_count) + parseFloat(m.night_count), 0) || 0;
-        const totalExp = allExpenses?.reduce((sum, e) => sum + parseFloat(e.amount), 0) || 0;
-        const totalGlobalMeals = allMeals?.reduce((sum, m) => sum + parseFloat(m.day_count) + parseFloat(m.night_count), 0) || 0;
-        
-        const mealRate = totalGlobalMeals > 0 ? totalExp / totalGlobalMeals : 0;
-        const currentBalance = totalDeposit - (totalUserMeals * mealRate);
-
-        // 2. If Balance is negative, check if we've already notified them
-        if (currentBalance < 0) {
-            const { data: existing } = await supabase
-                .from('personal_notifications')
-                .select('id')
-                .eq('member_id', currentUser.member_id)
-                .eq('is_read', false)
-                .ilike('message', '%balance is negative%')
-                .maybeSingle();
-
-            // 3. Push notification only if no unread balance warning exists
-            if (!existing) {
-                await createPersonalNotification(
-                    currentUser.member_id,
-                    `⚠️ Your balance is negative (${formatCurrency(currentBalance)}). Please make a deposit soon to avoid bazar issues.`,
-                    'warning'
-                );
-            }
-        }
-    } catch (err) {
-        console.error("Balance check error:", err);
-    }
-}
-
-async function loadPersonalNotifications() {
-    if (!currentUser || !currentUser.member_id) return;
-
-    try {
-        // 1. Fetch unread notifications for THIS user
-        const { data, error } = await supabase
-            .from('personal_notifications')
-            .select('*')
-            .eq('member_id', currentUser.member_id)
-            .eq('is_read', false)
-            .order('created_at', { ascending: true });
-
-        if (error) throw error;
-
-        // 2. Display each as a toast
-        if (data && data.length > 0) {
-            data.forEach((notif, index) => {
-                // Stagger them slightly so they don't all overlap at once
-                setTimeout(() => {
-                    showNotification(notif.message, notif.type);
-                    // 3. Mark as read immediately after showing
-                    markNotificationAsRead(notif.id);
-                }, index * 1000);
-            });
-        }
-        
-        // 4. Perform a specific "Negative Balance" check
-        checkBalanceThreshold();
-        await checkBalanceThreshold();
-
-    } catch (err) {
-        console.error("Error loading personal notifications:", err);
-    }
-}
-
-async function markNotificationAsRead(id) {
-    await supabase.from('personal_notifications').update({ is_read: true }).eq('id', id);
-}
-
-// Special check for negative balance to show a persistent warning
-async function checkBalanceThreshold() {
-    // We reuse the balance logic already in loadProfile
-    // but just trigger a warning if it's below zero.
-    const member = allMembers.find(m => m.id === currentUser.member_id);
-    if (!member) return;
-
-    // Trigger a specific alert if balance is negative
-    // We can fetch the balance directly or calculate it
-    // For now, let's keep it simple: show warning if they are in the 'debtors' list
-}
 
 // Updated Log Activity (Uses member_id)
 async function logActivity(message, type = 'info') {
@@ -2986,9 +3061,8 @@ const { data: deposits } = await supabase
             const totalDeposit = deposits?.reduce((sum, d) => sum + parseFloat(d.amount), 0) || 0;
           document.getElementById('statTotalDeposit').textContent = formatCurrencyRound(totalDeposit);
 
-             loadSystemStatus(); 
-
-            // Load recent activity
+             loadSystemStatus();
+               await updateDashboardMealPlan();
             await loadRecentActivity();
 
         } catch (err) {
@@ -3744,11 +3818,6 @@ async function quickToggleSummaryMeal(memberId, dateStr, type, currentVal) {
             const { error: delError } = await supabase.from('deposits').delete().eq('id', depositId);
             if (delError) throw delError;
 
-            await createPersonalNotification(
-    dep.member_id, 
-    `❌ Your deposit request for ${formatCurrency(dep.amount)} was rejected. Contact admin.`, 
-    'error'
-);
 
             // LOG THE REJECTION ACT
             await logActivity(`Deposit Rejected: ${dep.members.name}'s request for ${formatCurrency(dep.amount)} was rejected by ${actor}`, 'deposit');
@@ -4121,12 +4190,7 @@ async function processDepositWithClientSideSettlement(memberId, cycleId, amount,
         // GLOBAL LOG
         await logActivity(`Cash Deposit: ${formatCurrency(amount)} added for ${memberObj?.name}`, 'deposit');
         
-        // PERSONAL NOTIFICATION (Added for Hybrid System)
-        await createPersonalNotification(
-            memberId, 
-            `✅ Your deposit of ${formatCurrency(amount)} has been approved and added to your balance.`, 
-            'success'
-        );
+    
 
         if (amount <= 0) return { settled: false, deposit_id: mainDeposit.id };
 
@@ -4189,12 +4253,7 @@ async function processDepositWithClientSideSettlement(memberId, cycleId, amount,
                 }
             ]);
 
-            // Notify Creditor (Added for Hybrid System)
-            await createPersonalNotification(
-                creditor.member_id, 
-                `💰 Settlement: You received ${formatCurrency(settleAmount)} from ${memberObj.name} towards your previous dues.`, 
-                'success'
-            );
+         
 
             // Update Creditor Progress
             const newCreditorSettled = creditor.settled_amount + settleAmount;
@@ -4219,12 +4278,6 @@ async function processDepositWithClientSideSettlement(memberId, cycleId, amount,
                 settled_at: isFullySettled ? new Date().toISOString() : null
             }).eq('id', debtorDue.id);
             
-            // Notify Debtor about debt reduction
-            await createPersonalNotification(
-                memberId, 
-                `📉 Your outstanding debt has been reduced by ${formatCurrency(totalActuallySettled)} through auto-settlement.`, 
-                'info'
-            );
         }
 
         return {
@@ -4827,7 +4880,6 @@ function setupRobustRealtime() {
 .on('postgres_changes', { 
     event: 'INSERT', 
     schema: 'public', 
-    table: 'personal_notifications',
     filter: `member_id=eq.${currentUser.member_id}` 
 }, (payload) => {
     // This only triggers for the specific user
@@ -5220,6 +5272,144 @@ async function checkGlobalBalanceWarning() {
         }
     } catch (err) {
         console.error("Balance Warning Check Error:", err);
+    }
+}
+
+
+// --- WEEKLY MENU LOGIC ---
+
+// 1. Load the Menu Editor with Auto-Save events
+async function loadWeeklyMenuEditor() {
+    const tbody = document.getElementById('weeklyMenuBody');
+    const isAdmin = (currentUser.role === 'admin' || currentUser.role === 'manager');
+    
+    try {
+        const { data, error } = await supabase.from('weekly_menus').select('*').order('day_index', { ascending: true });
+        if (error) throw error;
+
+        // Custom order to start with Saturday for BD context
+        const order = [6, 0, 1, 2, 3, 4, 5]; 
+        const sortedData = order.map(idx => data.find(d => d.day_index === idx));
+
+        tbody.innerHTML = sortedData.map(day => `
+            <tr>
+                <td style="font-weight:700; color:var(--primary-color);">${day.day_name}</td>
+                <td>
+                    <input type="text" id="night-${day.day_index}" class="form-input weekly-menu-input" 
+                        value="${day.night_menu || ''}" 
+                        ${!isAdmin ? 'disabled' : ''} 
+                        onchange="saveDayMenu(${day.day_index})"
+                        placeholder="Type and click away to save...">
+                </td>
+                <td>
+                    <input type="text" id="day-${day.day_index}" class="form-input weekly-menu-input" 
+                        value="${day.day_menu || ''}" 
+                        ${!isAdmin ? 'disabled' : ''} 
+                        onchange="saveDayMenu(${day.day_index})"
+                        placeholder="Type and click away to save...">
+                </td>
+            </tr>
+        `).join('');
+    } catch (err) {
+        console.error("Error loading weekly menu:", err);
+    }
+}
+
+// 2. Save logic (triggered on change)
+async function saveDayMenu(dayIndex) {
+    const night = document.getElementById(`night-${dayIndex}`).value;
+    const day = document.getElementById(`day-${dayIndex}`).value;
+    
+    // Visual feedback: briefly highlight the inputs
+    const inputs = [document.getElementById(`night-${dayIndex}`), document.getElementById(`day-${dayIndex}`)];
+    
+    try {
+        const { error } = await supabase
+            .from('weekly_menus')
+            .update({ night_menu: night, day_menu: day })
+            .eq('day_index', dayIndex);
+
+        if (error) throw error;
+
+        // Success: flash green border
+        inputs.forEach(i => {
+            i.style.borderColor = 'var(--success-color)';
+            setTimeout(() => i.style.borderColor = '', 1000);
+        });
+
+        // Update dashboard if visible
+        if (!document.getElementById('dashboardPage').classList.contains('hidden')) {
+            updateDashboardMealPlan();
+        }
+    } catch (err) {
+        // Error: flash red border
+        inputs.forEach(i => {
+            i.style.borderColor = 'var(--danger-color)';
+            setTimeout(() => i.style.borderColor = '', 1000);
+        });
+        showNotification("Auto-save failed", "error");
+    }
+}
+
+async function updateDashboardMealPlan() {
+    const now = new Date();
+    const dayIndex = now.getDay(); // 0 (Sun) to 6 (Sat)
+    
+    // Calculate Tomorrow's Date
+    const tomorrow = new Date(now);
+    tomorrow.setDate(now.getDate() + 1);
+
+    // Format strings for Database Query (YYYY-MM-DD)
+    const todayStr = now.toISOString().split('T')[0];
+    const tomorrowStr = tomorrow.toISOString().split('T')[0];
+
+    try {
+        // 1. Fetch the Fixed Weekly Menu for Today
+        const { data: menu, error: menuError } = await supabase
+            .from('weekly_menus')
+            .select('*')
+            .eq('day_index', dayIndex)
+            .single();
+
+        if (menuError) throw menuError;
+
+        // 2. Fetch Live Totals from meal_plans for Today and Tomorrow
+        const { data: plans, error: planError } = await supabase
+            .from('meal_plans')
+            .select('plan_date, night_count, day_count')
+            .in('plan_date', [todayStr, tomorrowStr]);
+
+        if (planError) throw planError;
+
+        // 3. Calculate Totals (Summing up everyone's intent)
+        // Night total comes from Today's record
+        const nightTotal = plans?.filter(p => p.plan_date === todayStr).reduce((s, p) => s + p.night_count, 0) || 0;
+        // Day total comes from Tomorrow's record
+        const dayTotal = plans?.filter(p => p.plan_date === tomorrowStr).reduce((s, p) => s + p.day_count, 0) || 0;
+
+        // 4. Update the UI Elements
+        // Ensure these IDs match your HTML exactly
+        if (document.getElementById('planDayTitle')) {
+            document.getElementById('planDayTitle').textContent = `${menu.day_name}'s Meal Plan`;
+        }
+
+        // Update Dates
+        document.getElementById('planNightDate').textContent = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+        document.getElementById('planDayDate').textContent = tomorrow.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+
+        // Update Counts
+        document.getElementById('planNightTotal').textContent = nightTotal;
+        document.getElementById('planDayTotal').textContent = dayTotal;
+
+        // Update Menu Text (The "Not set" part)
+        document.getElementById('planNightMenu').textContent = menu.night_menu || "Not set";
+        document.getElementById('planDayMenu').textContent = menu.day_menu || "Not set";
+
+    } catch (err) {
+        console.error("Dashboard Plan Error:", err);
+        // Fallback display on error
+        document.getElementById('planNightMenu').textContent = "Error loading";
+        document.getElementById('planDayMenu').textContent = "Error loading";
     }
 }
 
