@@ -1072,6 +1072,7 @@
         <div class="header-left">
             <div class="app-logo">MealCal 2.0</div>
             <div class="cycle-badge" id="headerCycleName">Loading...</div>
+            <div id="realtimeStatus" class="realtime-status">⚫ Connecting...</div>
         </div>
 
    <div class="header-clock">
@@ -1080,6 +1081,8 @@
             <!-- NEW INDICATOR -->
             <div id="entryStatusBadge" class="entry-status-badge status-pending">Loading...</div>
         </div>
+
+        
 
         <div class="header-right">
             <div class="user-info">
@@ -1790,6 +1793,8 @@
 <div id="toast-container"></div>
 
 
+
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
@@ -1807,6 +1812,48 @@
     let currentCycleId = null;
     let allMembers = [];
     let allCycles = [];
+
+
+    // Master Local Mirror of the Database
+let appState = {
+    members: [],
+    meals: [],
+    meal_plans: [],
+    expenses: [],
+    deposits: [],
+    notifications: [],
+    lastSync: null
+};
+
+
+async function syncFullState() {
+    console.log("🔄 Syncing local state with database...");
+    
+    // Fetch everything in parallel for speed
+    const [
+        { data: members },
+        { data: meals },
+        { data: plans },
+        { data: expenses },
+        { data: deposits }
+    ] = await Promise.all([
+        supabase.from('members').select('*').order('name'),
+        supabase.from('meals').select('*').eq('cycle_id', currentCycleId),
+        supabase.from('meal_plans').select('*'),
+        supabase.from('expenses').select('*').eq('cycle_id', currentCycleId).eq('status', 'approved'),
+        supabase.from('deposits').select('*').eq('cycle_id', currentCycleId).neq('status', 'pending')
+    ]);
+
+    // Update the mirror
+    appState.members = members || [];
+    appState.meals = meals || [];
+    appState.meal_plans = plans || [];
+    appState.expenses = expenses || [];
+    appState.deposits = deposits || [];
+    appState.lastSync = Date.now();
+
+    console.log("✅ Local state is now current.");
+}
 
 
     // ============================================
@@ -1837,6 +1884,14 @@ async function initAuth() {
             document.getElementById('mainApp').classList.add('hidden');
         }
     });
+
+    // Force refresh session every 10 minutes to keep the socket alive
+setInterval(async () => {
+    if (document.visibilityState === 'visible') {
+        const { data } = await supabase.auth.getSession();
+        console.log("Session heartbeat check...");
+    }
+}, 1000 * 60 * 10);
 }
 
 // 2. Fetch Member Profile based on Login ID
@@ -2026,6 +2081,435 @@ function formatDate(dateString) {
            ' • ' + 
            date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
 }
+
+
+
+// Utility: Prevents a function from running too many times in a short period
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+
+
+// ============================================
+// REAL-TIME SYNCHRONIZATION SYSTEM (Free Tier)
+// ============================================
+
+let realtimeChannels = [];
+
+// Initialize real-time listeners
+function initRealtimeSync() {
+    // Clean up existing channels first
+    cleanupRealtimeChannels();
+    
+    if (!currentCycleId) {
+        console.warn("No cycle ID, skipping real-time setup");
+        return;
+    }
+
+    console.log("🔄 Setting up real-time sync for cycle:", currentCycleId);
+
+    // Create a SINGLE channel for all tables (free tier has channel limits)
+    const mainChannel = supabase
+        .channel('db_changes')
+        
+        // 1. MEAL PLANS - Watch for schedule changes
+        .on('postgres_changes', 
+            { event: '*', schema: 'public', table: 'meal_plans' },
+            (payload) => {
+                console.log("📅 Meal Plan Changed:", payload.eventType);
+                handleRealtimeUpdate('meal_plans', payload);
+            }
+        )
+        
+        // 2. MEALS (Tracker)
+        .on('postgres_changes',
+            { event: '*', schema: 'public', table: 'meals' },
+            (payload) => {
+                console.log("🍽️ Meal Record Changed:", payload.eventType);
+                handleRealtimeUpdate('meals', payload);
+            }
+        )
+        
+        // 3. DEPOSITS
+        .on('postgres_changes',
+            { event: '*', schema: 'public', table: 'deposits' },
+            (payload) => {
+                console.log("💰 Deposit Changed:", payload.eventType);
+                handleRealtimeUpdate('deposits', payload);
+            }
+        )
+        
+        // 4. EXPENSES
+        .on('postgres_changes',
+            { event: '*', schema: 'public', table: 'expenses' },
+            (payload) => {
+                console.log("🛒 Expense Changed:", payload.eventType);
+                handleRealtimeUpdate('expenses', payload);
+            }
+        )
+        
+        // 5. NOTIFICATIONS
+        .on('postgres_changes',
+            { event: 'INSERT', schema: 'public', table: 'notifications' },
+            (payload) => {
+                console.log("🔔 New Notification");
+                handleRealtimeUpdate('notifications', payload);
+            }
+        )
+        
+        // 6. MEMBERS
+        .on('postgres_changes',
+            { event: '*', schema: 'public', table: 'members' },
+            (payload) => {
+                console.log("👤 Member Changed:", payload.eventType);
+                handleRealtimeUpdate('members', payload);
+            }
+        )
+        
+        // 7. CYCLE DUES
+        .on('postgres_changes',
+            { event: '*', schema: 'public', table: 'cycle_dues' },
+            (payload) => {
+                console.log("💳 Due Changed:", payload.eventType);
+                handleRealtimeUpdate('cycle_dues', payload);
+            }
+        )
+        
+        .subscribe((status) => {
+            console.log("Realtime status:", status);
+            updateConnectionStatus(status);
+        });
+
+    realtimeChannels.push(mainChannel);
+    console.log("✅ Real-time sync initialized");
+}
+
+// Cleanup function
+function cleanupRealtimeChannels() {
+    realtimeChannels.forEach(channel => {
+        supabase.removeChannel(channel);
+    });
+    realtimeChannels = [];
+}
+
+// ============================================
+// UNIFIED REAL-TIME HANDLER
+// ============================================
+
+// Debounce timers for each page/component
+const refreshTimers = {};
+
+function handleRealtimeUpdate(table, payload) {
+    const activePage = getActivePage();
+    const eventType = payload.eventType; // INSERT, UPDATE, DELETE
+    const newData = payload.new;
+    const oldData = payload.old;
+    
+    // Filter out updates not related to current cycle (optimization)
+    if (newData?.cycle_id && newData.cycle_id != currentCycleId) return;
+    if (oldData?.cycle_id && oldData.cycle_id != currentCycleId) return;
+    
+    // Route to appropriate handler based on table
+    switch(table) {
+        case 'meal_plans':
+            handleMealPlanUpdate(activePage, payload);
+            break;
+        case 'meals':
+            handleMealUpdate(activePage, payload);
+            break;
+        case 'deposits':
+            handleDepositUpdate(activePage, payload, newData, oldData);
+            break;
+        case 'expenses':
+            handleExpenseUpdate(activePage, payload, newData);
+            break;
+        case 'notifications':
+            handleNotificationUpdate(payload, newData);
+            break;
+        case 'members':
+            handleMemberUpdate(activePage);
+            break;
+        case 'cycle_dues':
+            handleDueUpdate(activePage, newData, oldData);
+            break;
+    }
+}
+
+// ============================================
+// INDIVIDUAL TABLE HANDLERS
+// ============================================
+
+function handleMealPlanUpdate(activePage, payload) {
+    // Update Profile scheduler
+    if (activePage === 'profile') {
+        debounceRefresh(() => loadScheduler(), 'scheduler', 500);
+    }
+    
+    // Update Summary table
+    if (activePage === 'summary') {
+        debounceRefresh(() => loadSummary(), 'summary', 800);
+    }
+    
+    // Update Dashboard meal plan card
+    if (activePage === 'dashboard') {
+        debounceRefresh(() => {
+            updateDashboardMealPlan();
+            loadDashboard();
+        }, 'dashboard', 1000);
+    } else {
+        // Even if not on dashboard, update the meal plan card for next visit
+        debounceRefresh(() => updateDashboardMealPlan(), 'dashboard-plan', 1500);
+    }
+    
+    // Always update status badge
+    updateEntryStatusIndicator();
+}
+
+function handleMealUpdate(activePage, payload) {
+    // Update Tracker matrix
+    if (activePage === 'tracker') {
+        debounceRefresh(() => loadMasterTracker(), 'tracker', 800);
+    }
+    
+    // Update Summary
+    if (activePage === 'summary') {
+        debounceRefresh(() => loadSummary(), 'summary', 1000);
+    }
+    
+    // Update Dashboard stats
+    if (activePage === 'dashboard') {
+        debounceRefresh(() => loadDashboard(), 'dashboard', 1000);
+    }
+    
+    // Update Profile if it's current user's meal
+    if (activePage === 'profile' && 
+        (payload.new?.member_id === currentUser?.member_id || payload.old?.member_id === currentUser?.member_id)) {
+        debounceRefresh(() => loadProfile(), 'profile', 800);
+    }
+}
+
+function handleDepositUpdate(activePage, payload, newData, oldData) {
+    const isCurrentUser = newData?.member_id === currentUser?.member_id || 
+                          oldData?.member_id === currentUser?.member_id;
+    
+    // Update Deposits page
+    if (activePage === 'deposits') {
+        debounceRefresh(() => loadDeposits(), 'deposits', 500);
+    }
+    
+    // Update Summary
+    if (activePage === 'summary') {
+        debounceRefresh(() => loadSummary(), 'summary', 1000);
+    }
+    
+    // Update Dashboard
+    if (activePage === 'dashboard') {
+        debounceRefresh(() => loadDashboard(), 'dashboard', 1000);
+    }
+    
+    // Update Profile if current user
+    if (activePage === 'profile' && isCurrentUser) {
+        debounceRefresh(() => loadProfile(), 'profile', 800);
+    }
+    
+    // Update balance warning
+    if (isCurrentUser) {
+        debounceRefresh(() => {
+            checkGlobalBalanceWarning();
+            updateEntryStatusIndicator();
+        }, 'balance-check', 1000);
+    }
+    
+    // Show toast notification for new deposits (not from current user)
+    if (payload.eventType === 'INSERT' && newData && !isCurrentUser) {
+        const memberName = allMembers.find(m => m.id === newData.member_id)?.name || 'Someone';
+        const amount = Math.abs(newData.amount);
+        const type = newData.amount > 0 ? '💰 Deposit' : '📉 Charge';
+        showNotification(`${type}: ${memberName} - ৳${amount}`, 'info');
+    }
+}
+
+function handleExpenseUpdate(activePage, payload, newData) {
+    // Update Expenses page
+    if (activePage === 'expenses') {
+        debounceRefresh(() => loadExpenses(), 'expenses', 500);
+    }
+    
+    // Update Summary (affects meal rate)
+    if (activePage === 'summary') {
+        debounceRefresh(() => loadSummary(), 'summary', 1000);
+    }
+    
+    // Update Dashboard stats
+    if (activePage === 'dashboard') {
+        debounceRefresh(() => loadDashboard(), 'dashboard', 1000);
+    }
+    
+    // Show notifications
+    if (payload.eventType === 'INSERT' && newData) {
+        const memberName = allMembers.find(m => m.id === newData.member_id)?.name || 'Someone';
+        showNotification(`🛒 New expense: ${newData.description} by ${memberName}`, 'info');
+    }
+    
+    if (payload.eventType === 'UPDATE' && payload.old?.status === 'pending' && newData?.status !== 'pending') {
+        const emoji = newData.status === 'approved' ? '✅' : '❌';
+        const text = newData.status === 'approved' ? 'Approved' : 'Rejected';
+        showNotification(`${emoji} ${text}: ${newData.description}`, newData.status === 'approved' ? 'success' : 'warning');
+    }
+}
+
+function handleNotificationUpdate(payload, newData) {
+    // Only process if it's for current cycle
+    if (newData?.cycle_id != currentCycleId) return;
+    
+    // Update notification panel if open
+    if (document.getElementById('notifPanel').classList.contains('active')) {
+        debounceRefresh(() => loadNotifications(), 'notifications', 500);
+    }
+    
+    // Update badge count
+    const badge = document.getElementById('notifBadge');
+    const currentCount = parseInt(badge.textContent) || 0;
+    badge.textContent = currentCount + 1;
+    badge.classList.remove('hidden');
+    
+    // Update recent activity on dashboard
+    if (getActivePage() === 'dashboard') {
+        debounceRefresh(() => loadRecentActivity(), 'activity', 800);
+    }
+}
+
+function handleMemberUpdate(activePage) {
+    // Reload global members list
+    debounceRefresh(() => loadMembers(), 'members-global', 1000);
+    
+    // Update Admin page
+    if (activePage === 'admin') {
+        debounceRefresh(() => loadMembersList(), 'members-list', 800);
+    }
+    
+    // Update Summary (member names might have changed)
+    if (activePage === 'summary') {
+        debounceRefresh(() => loadSummary(), 'summary', 1000);
+    }
+}
+
+function handleDueUpdate(activePage, newData, oldData) {
+    // Only update if it's for current cycle
+    if (newData?.to_cycle_id != currentCycleId && oldData?.to_cycle_id != currentCycleId) return;
+    
+    // Update Summary page dues section
+    if (activePage === 'summary') {
+        debounceRefresh(() => loadDueSettlement(), 'dues', 800);
+    }
+    
+    // Update balance indicator if it affects current user
+    if (newData?.member_id === currentUser?.member_id || oldData?.member_id === currentUser?.member_id) {
+        debounceRefresh(() => updateEntryStatusIndicator(), 'status-indicator', 1000);
+    }
+}
+
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
+
+function debounceRefresh(callback, key, delay = 500) {
+    // Clear existing timer for this key
+    if (refreshTimers[key]) {
+        clearTimeout(refreshTimers[key]);
+    }
+    
+    // Set new timer
+    refreshTimers[key] = setTimeout(() => {
+        try {
+            callback();
+        } catch (err) {
+            console.error(`Error in debounced refresh for ${key}:`, err);
+        }
+        delete refreshTimers[key];
+    }, delay);
+}
+
+function getActivePage() {
+    const activePage = document.querySelector('.page-content:not(.hidden)');
+    if (!activePage) return null;
+    return activePage.id.replace('Page', '');
+}
+
+function updateConnectionStatus(status) {
+    const statusEl = document.getElementById('realtimeStatus');
+    if (!statusEl) return;
+    
+    if (status === 'SUBSCRIBED') {
+        statusEl.textContent = '🟢 Live';
+        statusEl.className = 'realtime-status connected';
+    } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        statusEl.textContent = '🔴 Offline';
+        statusEl.className = 'realtime-status disconnected';
+    } else if (status === 'CLOSED') {
+        statusEl.textContent = '⚫ Disconnected';
+        statusEl.className = 'realtime-status disconnected';
+    }
+}
+
+// ============================================
+// VISIBILITY & LIFECYCLE MANAGEMENT
+// ============================================
+
+// Pause/Resume real-time when tab visibility changes
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        console.log("⏸️ Tab hidden - keeping realtime active but pausing UI updates");
+        // Keep realtime channels active but pause status indicator
+        if (statusCycleInterval) {
+            clearInterval(statusCycleInterval);
+            statusCycleInterval = null;
+        }
+    } else {
+        console.log("▶️ Tab visible - resuming UI updates");
+        updateEntryStatusIndicator();
+        checkGlobalBalanceWarning();
+        
+        // Refresh current page to catch up on any missed updates
+        const activePage = getActivePage();
+        if (activePage) {
+            console.log("🔄 Refreshing", activePage, "after tab became visible");
+            debounceRefresh(() => loadPageData(activePage), 'visibility-refresh', 500);
+        }
+    }
+});
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+    console.log("🧹 Cleaning up realtime connections");
+    cleanupRealtimeChannels();
+    if (statusCycleInterval) {
+        clearInterval(statusCycleInterval);
+    }
+});
+
+// Reconnect if connection is lost
+window.addEventListener('online', () => {
+    console.log("🌐 Network reconnected - reinitializing realtime");
+    showNotification("Connection restored", "success");
+    initRealtimeSync();
+});
+
+window.addEventListener('offline', () => {
+    console.log("📡 Network lost");
+    showNotification("Connection lost - changes won't sync", "warning");
+});
+
+
 
 // Optional: Keep this as an alias in case you already changed some calls
 const formatDateTime = formatDate;
@@ -2304,18 +2788,20 @@ window.handleDepositAction = async function(depositId, action) {
 
 async function initializeApp() {
     try {
-        // Load sequentially to prevent network congestion
         await loadCycles();
         await loadAppConfig();
         await loadMembers();
 
         initHeader();
         initNotifications();
-        setupRobustRealtime(); 
 
         updateEntryStatusIndicator();
         setInterval(updateEntryStatusIndicator, 60000); 
-         checkGlobalBalanceWarning();
+        checkGlobalBalanceWarning();
+        
+        // ✅ Initialize real-time sync AFTER everything is loaded
+        initRealtimeSync();
+        
         navigateToPage('dashboard');
     } catch (err) {
         console.error("Critical Init Error:", err);
@@ -2607,59 +3093,58 @@ async function loadScheduler() {
             return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
         };
 
-        for (let i = 0; i < 7; i++) {
-            // These variables are defined INSIDE the loop
-            const dateSession = dates[i];
-            const dateNextDay = dates[i+1];
-            
-            const sessionLabel = fmt(dateSession);
-            const nextDayLabel = fmt(dateNextDay);
-            const isFirstCard = (i === 0);
-            
-            // LOGIC: Use DB value if it exists, otherwise use Member Defaults
-            const nightActive = planMap[dateSession] ? planMap[dateSession].night_count > 0 : defNight;
-            const dayActive = planMap[dateNextDay] ? planMap[dateNextDay].day_count > 0 : defDay;
+for (let i = 0; i < 7; i++) {
+    const dateSession = dates[i];
+    const dateNextDay = dates[i+1];
+    
+    if (!dateSession || !dateNextDay) continue; // Safety check
+    
+    const sessionLabel = fmt(dateSession);
+    const nextDayLabel = fmt(dateNextDay);
+    const isFirstCard = (i === 0);
+    
+    // CRITICAL FIX: Use DB value if exists, otherwise use defaults
+    const nightActive = planMap[dateSession] ? planMap[dateSession].night_count > 0 : defNight;
+    const dayActive = planMap[dateNextDay] ? planMap[dateNextDay].day_count > 0 : defDay;
 
-            const card = document.createElement('div');
-            card.className = `scheduler-card ${isFirstCard ? 'is-today' : ''}`;
-            card.style.minWidth = "160px";
+    const card = document.createElement('div');
+    card.className = `scheduler-card ${isFirstCard ? 'is-today' : ''}`;
+    card.style.minWidth = "160px";
+    
+    card.innerHTML = `
+        <div class="scheduler-date" style="font-size:10px; color:var(--text-secondary); text-transform:uppercase;">
+            ${isFirstCard ? 'Active Session' : 'Upcoming'} <br>
+            <span style="color:var(--primary-color); font-weight:700; font-size:14px;">
+                ${sessionLabel} <span style="background:var(--primary-color); color:white; padding:1px 4px; border-radius:4px; font-size:9px; vertical-align:middle;">BAZAR</span>
+            </span>
+        </div>
+        
+        <div style="display:flex; flex-direction:column; gap:8px; width:100%;">
+            <button class="sched-btn ${nightActive ? 'active' : ''}" 
+                onclick="toggleSchedulerPlan('${dateSession}', 'night', this)">
+                <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
+                    <span style="font-size:14px;">🌙</span> 
+                    <div style="text-align:right;">
+                        <div style="font-weight:700;">Night</div>
+                        <div style="font-size:9px; opacity:0.8;">${sessionLabel}</div>
+                    </div>
+                </div>
+            </button>
             
-            card.innerHTML = `
-                <div class="scheduler-date" style="font-size:10px; color:var(--text-secondary); text-transform:uppercase;">
-                    ${isFirstCard ? 'Active Session' : 'Upcoming'} <br>
-                    <span style="color:var(--primary-color); font-weight:700; font-size:14px;">
-                        ${sessionLabel} <span style="background:var(--primary-color); color:white; padding:1px 4px; border-radius:4px; font-size:9px; vertical-align:middle;">BAZAR</span>
-                    </span>
+            <button class="sched-btn ${dayActive ? 'active' : ''}" 
+                onclick="toggleSchedulerPlan('${dateNextDay}', 'day', this)">
+                <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
+                    <span style="font-size:14px;">🌞</span> 
+                    <div style="text-align:right;">
+                        <div style="font-weight:700;">Day</div>
+                        <div style="font-size:9px; opacity:0.8;">${nextDayLabel}</div>
+                    </div>
                 </div>
-                
-                <div style="display:flex; flex-direction:column; gap:8px; width:100%;">
-                    <!-- Night Plan Button -->
-                    <button class="sched-btn ${nightActive ? 'active' : ''}" 
-                        onclick="toggleSchedulerPlan('${dateSession}', 'night', this)">
-                        <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
-                            <span style="font-size:14px;">🌙</span> 
-                            <div style="text-align:right;">
-                                <div style="font-weight:700;">Night</div>
-                                <div style="font-size:9px; opacity:0.8;">${sessionLabel} (Bazar)</div>
-                            </div>
-                        </div>
-                    </button>
-                    
-                    <!-- Day Plan Button -->
-                    <button class="sched-btn ${dayActive ? 'active' : ''}" 
-                        onclick="toggleSchedulerPlan('${dateNextDay}', 'day', this)">
-                         <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
-                            <span style="font-size:14px;">🌞</span> 
-                            <div style="text-align:right;">
-                                <div style="font-weight:700;">Day</div>
-                                <div style="font-size:9px; opacity:0.8; color:${dayActive ? '#fff' : '#d97706'}">${nextDayLabel} (Next)</div>
-                            </div>
-                        </div>
-                    </button>
-                </div>
-            `;
-            container.appendChild(card);
-        }
+            </button>
+        </div>
+    `;
+    container.appendChild(card);
+}
     } catch (err) {
         console.error("Scheduler Error:", err);
         container.innerHTML = '<div class="loading" style="color:red">Error loading schedule</div>';
@@ -2751,10 +3236,13 @@ async function loadMasterTracker() {
         // CRITICAL FIX: Use 'T00:00:00' to force local midnight
         let currentIter = new Date(cycle.start_date + 'T00:00:00');
         let endIter = new Date(cycle.end_date + 'T00:00:00');
-        
+        let safetyNet = 0; // Prevent infinite loops
+
+
         const todayStr = toLocalISO(new Date());
 
-        while (currentIter <= endIter) {
+while (currentIter <= endIter && safetyNet < 40) { // Safety limit of 40 days
+            safetyNet++;
             const dateSessionStr = toLocalISO(currentIter); // e.g. "2026-01-02"
             
             // Calculate "Tomorrow" for the Day Meal
@@ -3090,7 +3578,10 @@ document.getElementById('cycleSelect').addEventListener('change', (e) => {
     const selectedOption = e.target.options[e.target.selectedIndex];
     document.getElementById('headerCycleName').textContent = selectedOption.text;
     
-    // This triggers the specific refresh logic for whatever page you are currently on
+    // ✅ Restart real-time for new cycle
+    console.log("🔄 Cycle changed, restarting realtime for cycle:", currentCycleId);
+    initRealtimeSync();
+    
     refreshCurrentPage(); 
 });
 
@@ -3166,30 +3657,27 @@ document.getElementById('cycleSelect').addEventListener('change', (e) => {
     // NAVIGATION
     // ============================================
     
-    function navigateToPage(pageName) {
-        // Hide all pages
-        document.querySelectorAll('.page-content').forEach(page => {
-            page.classList.add('hidden');
-        });
-
-        // Show selected page
-        const targetPage = document.getElementById(pageName + 'Page');
-        if (targetPage) {
-            targetPage.classList.remove('hidden');
-        }
-
-        // Update active states
-        document.querySelectorAll('.nav-link, .bottom-nav-link').forEach(link => {
-            link.classList.remove('active');
-        });
-
-        document.querySelectorAll(`[data-page="${pageName}"]`).forEach(link => {
-            link.classList.add('active');
-        });
-
-        // Load page data
-        loadPageData(pageName);
+ async function navigateToPage(pageName) {
+    // NEW: Check session health before navigating
+    const { data: { session }, error } = await supabase.auth.getSession();
+    if (error || !session) {
+        console.warn("Session expired or invalid, redirecting to login");
+        currentUser = null;
+        document.getElementById('authPage').classList.remove('hidden');
+        document.getElementById('mainApp').classList.add('hidden');
+        return;
     }
+
+    // Existing navigation logic...
+    document.querySelectorAll('.page-content').forEach(page => page.classList.add('hidden'));
+    const targetPage = document.getElementById(pageName + 'Page');
+    if (targetPage) targetPage.classList.remove('hidden');
+
+    document.querySelectorAll('.nav-link, .bottom-nav-link').forEach(link => link.classList.remove('active'));
+    document.querySelectorAll(`[data-page="${pageName}"]`).forEach(link => link.classList.add('active'));
+
+    loadPageData(pageName);
+}
 
 
 function refreshCurrentPage() {
@@ -3781,7 +4269,13 @@ document.getElementById('mealForm').addEventListener('submit', async (e) => {
 async function loadSummary() {
     if (!currentCycleId) return;
 
+    const tbody = document.getElementById('summaryTableBody');
+    if (!tbody) return;
+
+    tbody.innerHTML = '<tr><td colspan="8" class="loading">Calculating stats...</td></tr>';
+
     try {
+        // 1. Get Dates
         const sessionDate = await getActiveSessionDate();
         const nightDateStr = toLocalISO(sessionDate);
         const nextDay = new Date(sessionDate);
@@ -3790,86 +4284,80 @@ async function loadSummary() {
 
         const fmt = (d) => d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 
-        // 1. Fetch Data
-        const { data: meals } = await supabase.from('meals').select('*').eq('cycle_id', currentCycleId);
-        const { data: plans } = await supabase.from('meal_plans').select('*').in('plan_date', [nightDateStr, dayDateStr]);
-        const { data: deposits } = await supabase.from('deposits').select('*').eq('cycle_id', currentCycleId).neq('status', 'pending');
-        const { data: expenses } = await supabase.from('expenses').select('*').eq('cycle_id', currentCycleId).eq('status', 'approved');
+        // 2. Fetch Data (Directly from DB for 100% accuracy)
+        const [mealsRes, plansRes, depositsRes, expensesRes] = await Promise.all([
+            supabase.from('meals').select('*').eq('cycle_id', currentCycleId),
+            supabase.from('meal_plans').select('*').in('plan_date', [nightDateStr, dayDateStr]),
+            supabase.from('deposits').select('*').eq('cycle_id', currentCycleId).neq('status', 'pending'),
+            supabase.from('expenses').select('*').eq('cycle_id', currentCycleId).eq('status', 'approved')
+        ]);
 
-        // 2. Map Plans for buttons
-        const planMap = {};
-        plans?.forEach(p => { planMap[`${p.member_id}_${p.plan_date}`] = p; });
+        const meals = mealsRes.data || [];
+        const plans = plansRes.data || [];
+        const deposits = depositsRes.data || [];
+        const expenses = expensesRes.data || [];
 
-        // 3. Create Bazar Count Map (Count approved expenses per member)
+        // 3. Global Calculations
+        const totalExpense = expenses.reduce((sum, e) => sum + parseFloat(e.amount || 0), 0);
+        const allTotalMeals = meals.reduce((sum, m) => sum + (parseFloat(m.day_count || 0) + parseFloat(m.night_count || 0)), 0);
+        const mealRate = allTotalMeals > 0 ? totalExpense / allTotalMeals : 0;
+
+        // 4. Map Bazar Counts
         const bazarCountMap = {};
-        expenses?.forEach(exp => {
+        expenses.forEach(exp => {
             bazarCountMap[exp.member_id] = (bazarCountMap[exp.member_id] || 0) + 1;
         });
 
-        // 4. Calculate Global Rates
-        const totalExpense = expenses?.reduce((sum, e) => sum + parseFloat(e.amount), 0) || 0;
-        const allTotalMeals = meals?.reduce((sum, m) => sum + parseFloat(m.day_count) + parseFloat(m.night_count), 0) || 0;
-        const mealRate = allTotalMeals > 0 ? totalExpense / allTotalMeals : 0;
-
-        // 5. Update Table Header
+        // 5. Update Header Labels
         const tableHead = document.querySelector('#summaryTable thead tr');
-        tableHead.innerHTML = `
-            <th>Member Name</th>
-            <th title="Bazar Night">🌙 ${fmt(sessionDate)}</th>
-            <th title="Next Morning">🌞 ${fmt(nextDay)}</th>
-            <th>Bazar</th> <!-- NEW COLUMN HEADER -->
-            <th>Meals</th>
-            <th>Cost</th>
-            <th>Paid</th>
-            <th>Balance</th>
-        `;
+        if (tableHead) {
+            tableHead.innerHTML = `
+                <th>Member Name</th>
+                <th title="Bazar Night">🌙 ${fmt(sessionDate)}</th>
+                <th title="Next Morning">🌞 ${fmt(nextDay)}</th>
+                <th>Bazar</th>
+                <th>Meals</th>
+                <th>Cost</th>
+                <th>Paid</th>
+                <th>Balance</th>
+            `;
+        }
 
+        // 6. Build Member Rows
         const isAdmin = (currentUser.role === 'admin' || currentUser.role === 'manager');
-        const tbody = document.getElementById('summaryTableBody');
         
         tbody.innerHTML = allMembers.map(member => {
-            // Member specific data
-            const memMeals = meals?.filter(m => m.member_id === member.id).reduce((sum, m) => sum + (parseFloat(m.day_count) + parseFloat(m.night_count)), 0) || 0;
-            const memPaid = deposits?.filter(d => d.member_id === member.id).reduce((sum, d) => sum + parseFloat(d.amount), 0) || 0;
-            const memBazarCount = bazarCountMap[member.id] || 0; // NEW COUNT VALUE
-            
+            const memMeals = meals.filter(m => m.member_id === member.id).reduce((sum, m) => sum + (parseFloat(m.day_count || 0) + parseFloat(m.night_count || 0)), 0);
+            const memPaid = deposits.filter(d => d.member_id === member.id).reduce((sum, d) => sum + parseFloat(d.amount || 0), 0);
+            const memBazarCount = bazarCountMap[member.id] || 0;
             const memCost = memMeals * mealRate;
             const memBal = memPaid - memCost;
 
-            const nPlan = planMap[`${member.id}_${nightDateStr}`]?.night_count ?? (member.default_night_on ? 1 : 0);
-            const dPlan = planMap[`${member.id}_${dayDateStr}`]?.day_count ?? (member.default_day_on ? 1 : 0);
+            const nPlanRow = plans.find(p => p.member_id === member.id && p.plan_date === nightDateStr);
+            const dPlanRow = plans.find(p => p.member_id === member.id && p.plan_date === dayDateStr);
+            
+            const nVal = nPlanRow ? nPlanRow.night_count : (member.default_night_on ? 1 : 0);
+            const dVal = dPlanRow ? dPlanRow.day_count : (member.default_day_on ? 1 : 0);
 
             return `
             <tr>
                 <td><strong>${member.name}</strong></td>
-                <td>
-                    <button class="summary-status-btn ${nPlan > 0 ? 'on' : 'off'}" 
-                        ${isAdmin ? `onclick="quickToggleSummaryMeal(${member.id}, '${nightDateStr}', 'night', ${nPlan})"` : 'disabled'}>
-                        ${nPlan > 0 ? 'ON' : 'OFF'}
-                    </button>
-                </td>
-                <td>
-                    <button class="summary-status-btn ${dPlan > 0 ? 'on' : 'off'}" 
-                        ${isAdmin ? `onclick="quickToggleSummaryMeal(${member.id}, '${dayDateStr}', 'day', ${dPlan})"` : 'disabled'}>
-                        ${dPlan > 0 ? 'ON' : 'OFF'}
-                    </button>
-                </td>
-                <td style="font-weight:700; color:var(--primary-color);">${memBazarCount}</td> <!-- NEW BAZAR COLUMN -->
-                <td>${memMeals.toFixed(1)}</td>
+                <td><button class="summary-status-btn ${nVal > 0 ? 'on' : 'off'}" ${isAdmin ? `onclick="quickToggleSummaryMeal(${member.id}, '${nightDateStr}', 'night', ${nVal})"` : 'disabled'}>${nVal > 0 ? 'ON' : 'OFF'}</button></td>
+                <td><button class="summary-status-btn ${dVal > 0 ? 'on' : 'off'}" ${isAdmin ? `onclick="quickToggleSummaryMeal(${member.id}, '${dayDateStr}', 'day', ${dVal})"` : 'disabled'}>${dVal > 0 ? 'ON' : 'OFF'}</button></td>
+                <td style="font-weight:700; color:var(--primary-color);">${memBazarCount}</td>
+                <td style="font-weight:700;">${memMeals.toFixed(1)}</td>
                 <td style="color: var(--text-secondary);">৳${Math.round(memCost)}</td>
                 <td style="color: var(--success-color); font-weight:600;">৳${Math.round(memPaid)}</td>
-                <td>
-                    <span class="balance-tag ${memBal >= 0 ? 'pos' : 'neg'}">
-                        ${memBal >= 0 ? '+' : ''}${Math.round(memBal)}
-                    </span>
-                </td>
+                <td><span class="balance-tag ${memBal >= 0 ? 'pos' : 'neg'}">${memBal >= 0 ? '+' : ''}${Math.round(memBal)}</span></td>
             </tr>`;
         }).join('');
 
+        // 7. Load Dues
         await loadDueSettlement();
 
     } catch (err) {
         console.error('Error loading summary:', err);
+        tbody.innerHTML = '<tr><td colspan="8" style="color:red">Failed to calculate summary. Check console.</td></tr>';
     }
 }
 // Function to instantly toggle meal from Summary Page
@@ -4848,10 +5336,14 @@ let statusCycleInterval = null;
 
 async function updateEntryStatusIndicator() {
     try {
-        // 1. Gather Data for the Queue
+        // Clear existing interval to prevent memory leaks
+        if (statusCycleInterval) {
+            clearInterval(statusCycleInterval);
+            statusCycleInterval = null;
+        }
+
         const newQueue = [];
         
-        // --- A. DEFAULT: Bazar Target ---
         const sessionDate = await getActiveSessionDate();
         const dateLabel = sessionDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }).toUpperCase();
         const today = new Date();
@@ -4862,9 +5354,7 @@ async function updateEntryStatusIndicator() {
             class: isToday ? 'status-pending' : 'status-done'
         });
 
-        // --- B. Personal Balance Check ---
         if (currentUser && currentUser.member_id) {
-            // Reusing balance calculation logic
             const { data: expenses } = await supabase.from('expenses').select('amount').eq('cycle_id', currentCycleId).eq('status', 'approved');
             const { data: allMeals } = await supabase.from('meals').select('day_count, night_count').eq('cycle_id', currentCycleId);
             const { data: userMeals } = await supabase.from('meals').select('day_count, night_count').eq('member_id', currentUser.member_id).eq('cycle_id', currentCycleId);
@@ -4880,7 +5370,6 @@ async function updateEntryStatusIndicator() {
                 });
             }
 
-            // --- C. Cycle Dues Check ---
             const { data: dues } = await supabase.from('cycle_dues')
                 .select('due_amount, settled_amount')
                 .eq('member_id', currentUser.member_id)
@@ -4898,11 +5387,9 @@ async function updateEntryStatusIndicator() {
             }
         }
 
-        // 2. Update Global Queue & Start Rotation
         statusQueue = newQueue;
-        if (!statusCycleInterval) {
-            startStatusRotation();
-        }
+        currentStatusIndex = 0;
+        startStatusRotation();
 
     } catch (err) {
         console.error("Status Check Error", err);
@@ -5012,75 +5499,6 @@ async function loadSystemStatus() {
 }
 
 
-function setupRobustRealtime() {
-    console.log("🚀 Starting Robust Realtime Engine...");
-
-    const channel = supabase.channel('system-sync-' + Date.now());
-
-    channel
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
-            loadNotifications().then(() => {
-                const badge = document.getElementById('notifBadge');
-                badge.classList.remove('hidden');
-                if (allNotifications.length > 0) {
-                     showNotification(allNotifications[0].message, 'info');
-                }
-            });
-        })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'meals' }, () => handleDataSignal('meals'))
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'meal_plans' }, () => handleDataSignal('plans'))
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, () => handleDataSignal('expenses'))
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'deposits' }, () => handleDataSignal('deposits'))
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'app_config' }, () => {
-             loadAppConfig();
-             if (!document.getElementById('profilePage').classList.contains('hidden')) {
-                 loadScheduler();
-             }
-        })
-
-        // Add this inside the .on('postgres_changes'...) chain
-.on('postgres_changes', { 
-    event: 'INSERT', 
-    schema: 'public', 
-    filter: `member_id=eq.${currentUser.member_id}` 
-}, (payload) => {
-    // This only triggers for the specific user
-    showNotification(payload.new.message, payload.new.type);
-    markNotificationAsRead(payload.new.id);
-})
-        .subscribe((status) => {
-            console.log(`📡 Realtime Status: ${status}`);
-            
-            // REMOVED: showNotification("Live Sync Connected", "success");
-            
-            if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-                console.log("Realtime disconnected. Retrying...");
-                setTimeout(setupRobustRealtime, 5000); 
-            }
-        });
-}
-
-// Helper: Debounce refreshing to prevent flickering if multiple updates come at once
-let isRefreshing = false;
-let refreshTimeout;
-
-function handleDataSignal(source) {
-    if (isRefreshing) return; // Ignore signals if already busy
-
-    if (refreshTimeout) clearTimeout(refreshTimeout);
-
-    refreshTimeout = setTimeout(async () => {
-        isRefreshing = true;
-        try {
-            console.log(`⚡ Syncing UI due to ${source} update...`);
-            await refreshCurrentPage();
-            await checkGlobalBalanceWarning();
-            await updateEntryStatusIndicator();
-        } finally {
-            isRefreshing = false;
-        }
-    }, 800); // Increased to 800ms to allow DB operations to settle
-}
 
 // --- MOBILE MENU LOGIC ---
 const mobileMenuBtn = document.getElementById('mobileMenuBtn');
@@ -5574,6 +5992,29 @@ async function updateDashboardMealPlan() {
         document.getElementById('planDayMenu').textContent = "Error loading";
     }
 }
+
+// Cleanup intervals when page is hidden to prevent background processing
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        // Clear intervals when tab is inactive
+        if (statusCycleInterval) {
+            clearInterval(statusCycleInterval);
+            statusCycleInterval = null;
+        }
+    } else {
+        // Restart when tab becomes active
+        updateEntryStatusIndicator();
+        checkGlobalBalanceWarning();
+    }
+});
+
+// Clear intervals on page unload
+window.addEventListener('beforeunload', () => {
+    if (statusCycleInterval) {
+        clearInterval(statusCycleInterval);
+    }
+});
+
 
 </script>
 </body>
