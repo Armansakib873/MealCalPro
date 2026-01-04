@@ -82,6 +82,140 @@
             box-shadow: var(--shadow);
         }
 
+        /* --- Header Logo Styling --- */
+.header-logo-icon {
+    height: 35px; /* Adjust based on your logo shape */
+    width: auto;
+    margin-right: 5px;
+    object-fit: contain;
+}
+
+/* --- Splash Screen (First Loader) --- */
+.splash-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.7); /* Transparent white */
+    backdrop-filter: blur(15px); /* This creates the "blurred app vision" */
+    -webkit-backdrop-filter: blur(15px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999; /* Top of everything */
+    transition: opacity 0.5s ease, visibility 0.5s;
+}
+
+.splash-content {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.splash-logo-large {
+    width: 120px; /* Adjust size */
+    height: auto;
+    margin-bottom: 20px;
+    animation: pulse-logo 2s infinite ease-in-out;
+}
+
+.splash-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #e2e8f0;
+    border-top: 3px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 15px;
+}
+
+.splash-text {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--primary-color);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Update the splash-hidden class to use visibility instead of removal */
+.splash-hidden {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none;
+    transition: opacity 0.8s ease, visibility 0.8s;
+}
+
+/* Animations */
+@keyframes pulse-logo {
+    0% { transform: scale(1); filter: drop-shadow(0 0 0px rgba(35, 120, 4, 0)); }
+    50% { transform: scale(1.05); filter: drop-shadow(0 0 15px rgba(35, 120, 4, 0.2)); }
+    100% { transform: scale(1); filter: drop-shadow(0 0 0px rgba(35, 120, 4, 0)); }
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+
+/* --- Splash Video Styling --- */
+.splash-video-asset {
+    width: 520px; /* Size of your animation */
+    height: auto;
+    border-radius: 24px; /* Optional: adds rounded corners to video */
+    margin-bottom: 20px;
+    /* Keeps the blurred vision look consistent */
+    /* filter: drop-shadow(0 10px 20px rgba(0,0,0,0.1));  */
+}
+
+/* --- Clean Progress Bar --- */
+.loader-progress-container {
+    width: 150px;
+    height: 3px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-top: 15px;
+}
+
+.loader-progress-bar {
+    width: 0%;
+    height: 100%;
+    background: var(--primary-color);
+    transition: width 0.4s ease;
+}
+
+/* Ensure splash text looks premium under the video */
+.splash-text {
+    font-family: 'Segoe UI', Roboto, sans-serif;
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--text-secondary);
+    letter-spacing: 2px;
+    margin-top: 10px;
+}
+
+
+
+/* Ensure splash is visible by default when the page loads */
+.splash-screen {
+    position: fixed;
+    top: 0; left: 0; 
+    width: 100%; height: 100%;
+   /* Radial gradient */
+    background: radial-gradient(circle, #EFF3F5 0%, #F2F4F3 100%);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    display: flex; justify-content: center; align-items: center;
+    z-index: 9999;
+    opacity: 1;
+    visibility: visible;
+}
+
+
+
      /* --- 1. Position Badge top-right of Logo --- */
 .header-left {
     position: relative;
@@ -1120,81 +1254,80 @@
 
  /*tracker Styles */
 
- /* --- Premium Tracker UI --- */
-.tracker-legend {
-    display: flex;
-    gap: 15px;
-    margin-bottom: 15px;
-    padding: 0 5px;
-}
+/* --- Tracker Sticky Scroll Fixes --- */
+/* --- Tracker Sticky Scroll Fixes --- */
 
-.legend-item {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 10px;
-    font-weight: 800;
-    color: var(--text-muted);
-    text-transform: uppercase;
-}
-
-/* Matrix Table Enhancements */
+/* 1. The Scroll Container */
 .matrix-premium-wrapper {
     background: white;
-    border-radius: 20px;
-    border: 1px solid #f1f5f9;
-    overflow: hidden;
-    box-shadow: 0 4px 25px rgba(0,0,0,0.03);
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    overflow: auto; /* Required for sticky children */
+    max-height: 70vh; /* Limits height to trigger vertical scroll */
+    position: relative;
+    -webkit-overflow-scrolling: touch;
 }
 
 .matrix-table-premium {
     width: 100%;
-    border-collapse: separate;
+    border-collapse: separate; /* Essential for sticky to work correctly with borders */
     border-spacing: 0;
-    font-size: 11px;
 }
 
-.matrix-table-premium th {
+/* 2. Sticky Header (Top Row - Names) */
+.matrix-table-premium thead th {
+    position: sticky;
+    top: 0;
+    z-index: 100; /* Stays above body cells */
     background: #f8fafc;
+    border-bottom: 2px solid #cbd5e1;
     padding: 12px 8px;
-    font-weight: 800;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    font-size: 9px;
-    border-bottom: 1px solid #f1f5f9;
-    text-align: center;
+    font-size: 0.7rem;
+    font-weight: 500;
 }
 
-.matrix-table-premium td {
-    padding: 0;
-    border-bottom: 1px solid #f1f5f9;
-    border-right: 1px solid #f1f5f9;
-    height: 40px;
-}
-
-/* Sticky Column 1 (Bazar Date) */
-.matrix-table-premium th:first-child, 
-.matrix-table-premium td:first-child {
+/* 3. Sticky Column (First Column - Dates) */
+.matrix-table-premium tbody td:first-child {
     position: sticky;
     left: 0;
-    z-index: 20;
-    background: white;
-    min-width: 80px;
-    font-weight: 800;
-    color: #1e293b;
-    border-right: 2px solid #f1f5f9;
+    z-index: 50; /* Higher than other body cells, lower than top header */
+    background: #ffffff;
+    border-right: 2px solid #cbd5e1;
+    font-size: 0.7rem;
+    font-weight: 500;
     text-align: center;
 }
 
-.matrix-table-premium th:first-child { background: #f8fafc; z-index: 30; }
+/* 4. The Intersection (Top-Left BAZAR cell) */
+.matrix-table-premium thead th:first-child {
+    position: sticky;
+    top: 0;
+    left: 0;
+    z-index: 150; /* Highest priority: stays fixed regardless of scroll direction */
+    background: #f1f5f9;
+    border-right: 2px solid #cbd5e1;
+    border-bottom: 2px solid #cbd5e1;
+}
 
-/* Interactive Cells */
+/* 5. Body Styling */
+.matrix-table-premium td {
+    border-bottom: 1px solid #f1f5f9;
+    border-right: 1px solid #f1f5f9;
+    min-width: 80px;
+    height: 45px;
+}
+
+.matrix-table-premium tbody tr:hover td {
+    background-color: #f8fafc;
+}
+
+/* Interactive Split Cells */
 .cell-split-premium {
     display: flex;
     height: 100%;
     width: 100%;
     cursor: pointer;
-    border: 1px solid rgba(117, 114, 109, 0.362);
+    border: 1px solid #60606040;
 }
 
 .cell-val-half {
@@ -1204,13 +1337,17 @@
     justify-content: center;
     font-weight: 800;
     font-family: 'Courier New', monospace;
-    transition: all 0.2s;
+    transition: background 0.2s;
 }
 
-.cell-val-half.night { border-right: 1px solid #f1f5f9; }
+.cell-val-half.night {
+    background: #c0c0c02b;
+}
+
+
 .cell-val-half.active {
-    background: rgba(99, 102, 241, 0.08);
-    color: var(--premium-indigo);
+    background: rgba(99, 102, 241, 0.1);
+    color: #4f46e5;
 }
 .cell-val-half.zero { color: #cbd5e1; font-weight: 400; }
 
@@ -1369,7 +1506,6 @@
 /* Meal Plan Card Specific Styling */
 .meal-plan-main-card {
     background-color: #387869;
-    text-col
     padding: 15px !important;
     display: flex;
     flex-direction: column;
@@ -1936,6 +2072,26 @@
         </script>
 </head>
 <body>
+
+  <!-- The Splash Screen Loader with Video -->
+<div id="initial-loader" class="splash-screen">
+    <div class="splash-content">
+        <!-- Replace the logo/spinner with this video tag -->
+        <video id="splash-video" playsinline autoplay muted loop class="splash-video-asset">
+            <source src="logoanime.mp4" type="video/mp4">
+            <!-- Fallback image if video fails to load -->
+            <img src="Mealcal_logo.png" alt="MealCal Logo">
+        </video>
+        
+        <p class="splash-text">Preparing your kitchen...</p>
+        
+        <!-- Optional: A slim progress bar instead of a spinning circle -->
+        <div class="loader-progress-container">
+            <div class="loader-progress-bar" id="load-progress"></div>
+        </div>
+    </div>
+</div>
+
    <!-- Auth Page (Updated for Supabase Auth) -->
 <div id="authPage" class="auth-container">
     <div class="auth-card">
@@ -1982,10 +2138,12 @@
     <div id="mainApp" class="app-container hidden">
 
            <!-- FIXED HEADER -->
-    <header class="app-header">
-        <div class="header-left">
-            <div class="app-logo">MealCal Pro</div>
-            <div class="cycle-badge" id="headerCycleName">Loading...</div>
+<header class="app-header">
+    <div class="header-left">
+        <!-- New logo image before the name -->
+        <img src="Mealcal_logo.png" alt="Logo" class="header-logo-icon">
+        <div class="app-logo">MealCal Pro</div>
+        <div class="cycle-badge" id="headerCycleName">Loading...</div>
           
         </div>
 
@@ -2253,12 +2411,6 @@
         <button class="btn btn-sm btn-secondary" onclick="loadMasterTracker()" style="font-size: 10px; border-radius: 20px;">🔄 Sync</button>
     </div>
 
-    <!-- Graphical Legend -->
-    <div class="tracker-legend">
-        <div class="legend-item"><span>🌙</span> Night</div>
-        <div class="legend-item"><span>🌞</span> Next Day</div>
-        <div class="legend-item" style="margin-left: auto; color: var(--premium-indigo);">[ Row Date = Bazar ]</div>
-    </div>
 
     <!-- Main Matrix -->
     <div class="matrix-premium-wrapper">
@@ -2768,7 +2920,6 @@ const pageLoaded = {
     admin: false
 };
 
-
 async function syncFullState() {
     console.log("🔄 Syncing local state with database...");
     
@@ -2821,34 +2972,34 @@ let isLoginMode = true; // Toggle between Login and Signup
 
 // 1. Initialize Auth State Listener (Runs automatically on load)
 async function initAuth() {
-    // Check if user is already logged in
+    // Check session
     const { data: { session } } = await supabase.auth.getSession();
     
     if (session) {
+        // Logged in: handleSession will call initializeApp which eventually hides splash
         await handleUserSession(session.user);
     } else {
+        // Not logged in: Show Login Page
         document.getElementById('authPage').classList.remove('hidden');
         document.getElementById('mainApp').classList.add('hidden');
+        
+        // --- MANUAL RELOAD FIX ---
+        // Give the video 2 seconds to play before showing the login form
+        setTimeout(() => {
+            hideSplash();
+            console.log("Unauthenticated: Splash hidden, Login ready.");
+        }, 2000);
     }
 
-    // Listen for changes (Login, Logout, Auto-refresh)
     supabase.auth.onAuthStateChange(async (_event, session) => {
         if (session) {
             await handleUserSession(session.user);
         } else {
-            currentUser = null;
             document.getElementById('authPage').classList.remove('hidden');
             document.getElementById('mainApp').classList.add('hidden');
+            hideSplash();
         }
     });
-
-    // Force refresh session every 10 minutes to keep the socket alive
-setInterval(async () => {
-    if (document.visibilityState === 'visible') {
-        const { data } = await supabase.auth.getSession();
-        console.log("Session heartbeat check...");
-    }
-}, 1000 * 60 * 10);
 }
 
 // 2. Fetch Member Profile based on Login ID
@@ -2925,47 +3076,40 @@ document.getElementById('authToggleBtn').addEventListener('click', (e) => {
 // 2. Handle Submission (Improved with better debugging)
 document.getElementById('authForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const btn = document.getElementById('authBtn');
-    const originalText = btn.textContent;
     const emailOrUser = document.getElementById('authEmail').value.trim();
     const password = document.getElementById('authPassword').value;
-    const username = document.getElementById('authUsername').value.trim();
     const errorDiv = document.getElementById('authError');
     
     errorDiv.style.display = 'none';
-    btn.textContent = 'Verifying...';
-    btn.disabled = true;
+
+    // --- TRIGGER VIDEO LOADER ON LOGIN CLICK ---
+    showSplash("Verifying Credentials...");
 
     try {
-        if (isLoginMode) {
-            let finalEmail = emailOrUser;
-            if (!emailOrUser.includes('@')) {
-                const { data, error } = await supabase.from('members').select('email').eq('name', emailOrUser).maybeSingle();
-                if (error || !data || !data.email) throw new Error("Username not found.");
-                finalEmail = data.email;
-            }
-            const { data, error } = await supabase.auth.signInWithPassword({ email: finalEmail, password: password });
-            if (error) throw error;
-            await handleUserSession(data.user);
-        } else {
-            const { data, error } = await supabase.auth.signUp({
-                email: emailOrUser,
-                password: password,
-                options: { data: { username: username } }
-            });
-            if (error) throw error;
-            alert("Account created! Please log in.");
-            document.getElementById('authToggleBtn').click();
+        let finalEmail = emailOrUser;
+        if (!emailOrUser.includes('@')) {
+            const { data } = await supabase.from('members').select('email').eq('name', emailOrUser).maybeSingle();
+            if (!data || !data.email) throw new Error("Username not found.");
+            finalEmail = data.email;
         }
+
+        const { data, error } = await supabase.auth.signInWithPassword({ 
+            email: finalEmail, 
+            password: password 
+        });
+
+        if (error) throw error;
+        
+        // Success: handleUserSession will be triggered by onAuthStateChange
+        // which calls initializeApp(), which eventually calls hideSplash().
+
     } catch (err) {
+        // If login fails, hide splash so user can see error message
+        hideSplash(100); 
         errorDiv.textContent = err.message;
         errorDiv.style.display = 'block';
-    } finally {
-        btn.disabled = false;
-        btn.textContent = originalText;
     }
 });
-
 // 5. Update Logout
 document.getElementById('logoutBtn').addEventListener('click', async () => {
     await supabase.auth.signOut();
@@ -3009,6 +3153,47 @@ async function loadLoginUserDropdown() {
         console.error("Error loading user dropdown:", err);
         // If error (e.g., RLS policy prevents reading), just hide the dropdown
         dropdown.style.display = 'none';
+    }
+}
+
+// --- CORRECTED loadPageData (Async) ---
+async function loadPageData(pageName, forceRefresh = false) {
+    // 1. If page is already loaded and no force refresh, exit immediately.
+    // This makes switching to the page 0-second lag.
+    if (pageLoaded[pageName] && !forceRefresh) {
+        return; 
+    }
+
+    try {
+        switch(pageName) {
+            case 'expenses':
+                await loadExpenses();
+                break;
+            case 'profile':
+                await Promise.all([loadProfile(), loadScheduler()]);
+                break;
+            case 'dashboard':
+                await loadDashboard();
+                break;
+            case 'tracker':
+                await Promise.all([loadMasterTracker(), loadWeeklyMenuEditor()]);
+                break;
+            case 'summary':
+                await loadSummary();
+                break;
+            case 'deposits':
+                await loadDeposits();
+                break;
+            case 'admin':
+                await loadAdmin();
+                break;
+        }
+        
+        // Mark as loaded
+        pageLoaded[pageName] = true;
+        
+    } catch (err) {
+        console.error(`❌ Failed to load ${pageName}:`, err);
     }
 }
 
@@ -3206,53 +3391,43 @@ function handleRealtimeUpdate(table, payload) {
 // ============================================
 
 function handleMealPlanUpdate(activePage, payload) {
-    // Update Profile scheduler
-    if (activePage === 'profile') {
+    // Check if the update belongs to the CURRENT USER
+    const isMe = payload.new?.member_id === currentUser?.member_id || 
+                 payload.old?.member_id === currentUser?.member_id;
+
+    // ONLY refresh scheduler if it's MY data that changed
+    if (activePage === 'profile' && isMe) {
         debounceRefresh(() => loadScheduler(), 'scheduler', 500);
     }
     
-    // Update Summary table
-    if (activePage === 'summary') {
-        debounceRefresh(() => loadSummary(), 'summary', 800);
-    }
-    
-    // Update Dashboard meal plan card
-    if (activePage === 'dashboard') {
-        debounceRefresh(() => {
-            updateDashboardMealPlan();
-            loadDashboard();
-        }, 'dashboard', 1000);
-    } else {
-        // Even if not on dashboard, update the meal plan card for next visit
-        debounceRefresh(() => updateDashboardMealPlan(), 'dashboard-plan', 1500);
-    }
-    
-    // Always update status badge
+    // Dashboard and Summary still need to refresh for everyone because totals change
+    if (activePage === 'dashboard') debounceRefresh(() => updateDashboardMealPlan(), 'dash-plan', 1000);
+    if (activePage === 'summary') debounceRefresh(() => loadSummary(), 'summary', 800);
+
     updateEntryStatusIndicator();
 }
 
 function handleMealUpdate(activePage, payload) {
-    // Update Tracker matrix
+    const isMe = payload.new?.member_id === currentUser?.member_id || 
+                 payload.old?.member_id === currentUser?.member_id;
+
+    // Tracker and Summary need updates for everyone
     if (activePage === 'tracker') {
         debounceRefresh(() => loadMasterTracker(), 'tracker', 800);
     }
-    
-    // Update Summary
     if (activePage === 'summary') {
         debounceRefresh(() => loadSummary(), 'summary', 1000);
     }
     
-    // Update Dashboard stats
-    if (activePage === 'dashboard') {
-        debounceRefresh(() => loadDashboard(), 'dashboard', 1000);
-    }
-    
-    // Update Profile if it's current user's meal
-    if (activePage === 'profile' && 
-        (payload.new?.member_id === currentUser?.member_id || payload.old?.member_id === currentUser?.member_id)) {
+    // ONLY refresh profile stats if the update belongs to the current user
+    if (activePage === 'profile' && isMe) {
         debounceRefresh(() => loadProfile(), 'profile', 800);
+        // Also refresh scheduler if actual meal records change
+        debounceRefresh(() => loadScheduler(), 'scheduler', 800);
     }
 }
+
+
 
 function handleDepositUpdate(activePage, payload, newData, oldData) {
     const isCurrentUser = newData?.member_id === currentUser?.member_id || 
@@ -3296,31 +3471,26 @@ function handleDepositUpdate(activePage, payload, newData, oldData) {
 }
 
 function handleExpenseUpdate(activePage, payload, newData) {
-    // Update Expenses page
+    // 1. If we are currently looking at the expenses page, update the list.
     if (activePage === 'expenses') {
-        debounceRefresh(() => loadExpenses(), 'expenses', 500);
+        // We set forceRefresh to true here because data actually changed in the DB
+        debounceRefresh(() => loadExpenses(), 'expenses-ui', 500);
     }
     
-    // Update Summary (affects meal rate)
+    // 2. Summary needs update because meal rate depends on expenses
     if (activePage === 'summary') {
-        debounceRefresh(() => loadSummary(), 'summary', 1000);
+        debounceRefresh(() => loadSummary(), 'summary-ui', 1000);
     }
     
-    // Update Dashboard stats
+    // 3. Dashboard stats
     if (activePage === 'dashboard') {
-        debounceRefresh(() => loadDashboard(), 'dashboard', 1000);
+        debounceRefresh(() => loadDashboard(), 'dash-ui', 1000);
     }
     
-    // Show notifications
+    // 4. Show a toast notification for everyone
     if (payload.eventType === 'INSERT' && newData) {
         const memberName = allMembers.find(m => m.id === newData.member_id)?.name || 'Someone';
-        showNotification(`🛒 New expense: ${newData.description} by ${memberName}`, 'info');
-    }
-    
-    if (payload.eventType === 'UPDATE' && payload.old?.status === 'pending' && newData?.status !== 'pending') {
-        const emoji = newData.status === 'approved' ? '✅' : '❌';
-        const text = newData.status === 'approved' ? 'Approved' : 'Rejected';
-        showNotification(`${emoji} ${text}: ${newData.description}`, newData.status === 'approved' ? 'success' : 'warning');
+        showNotification(`🛒 New Bazar: ${newData.description} (৳${newData.amount}) by ${memberName}`, 'info');
     }
 }
 
@@ -3560,16 +3730,20 @@ window.addEventListener('DOMContentLoaded', () => {
 
 // Explicitly attach to 'window' to ensure HTML buttons can find it
 window.handleExpenseApproval = async function(expenseId, newStatus) {
-    console.log("Click triggered:", expenseId, newStatus); // Debugging check
+    // --- CRITICAL SECURITY CHECK ---
+    const userRole = currentUser?.role;
+    if (userRole !== 'admin' && userRole !== 'manager') {
+        showNotification("Security: You do not have permission to perform this action.", "error");
+        console.error("Unauthorized approval attempt blocked.");
+        return; 
+    }
 
-    // Visual feedback on the button immediately
     const btn = event.target;
     const originalText = btn.textContent;
     btn.textContent = "...";
     btn.disabled = true;
 
     try {
-        // 1. Update Database
         const { error } = await supabase
             .from('expenses')
             .update({ status: newStatus })
@@ -3577,37 +3751,33 @@ window.handleExpenseApproval = async function(expenseId, newStatus) {
 
         if (error) throw error;
 
-        // 2. Fetch details for Logging (Optional, but good for history)
+        // Fetch details for the log
         const { data: expense } = await supabase
             .from('expenses')
             .select('description, amount, members(name)')
             .eq('id', expenseId)
             .maybeSingle();
 
-        // 3. Log Activity
-        const actor = currentUser.members ? currentUser.members.name : "Admin";
-        const actionLabel = newStatus === 'approved' ? 'APPROVED' : 'REJECTED';
-        
-        await logActivity(
-            `Expense ${actionLabel}: ${expense.description} (${formatCurrency(expense.amount)}) - Action by ${actor}`, 
-            'expense'
-        );
+// Get specific details for the message
+const actorName = currentUser.name || "Unknown";
+const actorRole = currentUser.role === 'manager' ? 'Manager' : 'Admin';
+const actionLabel = newStatus === 'approved' ? 'APPROVED' : 'REJECTED';
 
-        // 4. Refresh List
+await logActivity(
+    `Expense ${actionLabel}: ${expense.description} (${formatCurrency(expense.amount)}) - Action by ${actorRole} (${actorName})`, 
+    'expense'
+);
+
         await loadExpenses();
-
         showNotification(`Expense ${newStatus} successfully`, 'success');
 
     } catch (err) {
         console.error('Approval Error:', err);
-        showNotification(`Failed to ${newStatus} expense: ${err.message}`, 'error');
-        
-        // Revert button state on error
+        showNotification(`Failed: ${err.message}`, 'error');
         btn.textContent = originalText;
         btn.disabled = false;
     }
 };
-
 
 window.handleDepositApproval = async function(depositId) {
     if (!confirm("Approve this deposit? This will apply the balance and trigger due settlements.")) return;
@@ -3668,6 +3838,11 @@ window.handleDepositRejection = async function(depositId) {
 
 
 window.handleDepositAction = async function(depositId, action) {
+    // --- SECURITY CHECK ---
+    if (currentUser?.role !== 'admin' && currentUser?.role !== 'manager') {
+        showNotification("Permission Denied", "error");
+        return;
+    }
     console.log(`Action: ${action} triggered for ID: ${depositId}`);
     
     // Disable the button to prevent double-clicks
@@ -3718,7 +3893,17 @@ window.handleDepositAction = async function(depositId, action) {
 
 
             
-            showNotification("Request Approved", "success");
+            const actorName = currentUser.name || "Unknown";
+    const actorRole = currentUser.role === 'manager' ? 'Manager' : 'Admin';
+
+    // LOG THE APPROVAL ACT
+    await logActivity(
+        `Deposit Approved: ${dep.members.name}'s request for ${formatCurrency(dep.amount)} was approved by ${actorRole} (${actorName})`, 
+        'deposit'
+    );
+    showNotification("Request Approved", "success");
+
+
 
         } else if (action === 'reject') {
             const { error: delError } = await supabase
@@ -3744,66 +3929,128 @@ window.handleDepositAction = async function(depositId, action) {
 };
 
 async function initializeApp() {
+    const progress = document.getElementById('load-progress');
+    const setProgress = (p) => { if(progress) progress.style.width = p + '%'; };
+
     try {
+        // Step 1: Initialize DB connection
+        setProgress(20);
         await loadCycles();
+        
+        // Step 2: Load Config and Members
+        setProgress(40);
         await loadAppConfig();
         await loadMembers();
 
         initHeader();
         initNotifications();
 
+        // Step 3: Priority Data Load (Dashboard)
+        setProgress(70);
+        await loadPageData('dashboard');
+        
+        // Finalize internal settings
         updateEntryStatusIndicator();
-        setInterval(updateEntryStatusIndicator, 60000); 
-        checkGlobalBalanceWarning();
-        
-        // ✅ Initialize real-time sync AFTER everything is loaded
         initRealtimeSync();
+        setProgress(100);
+
+             // Final Progress
+        const progress = document.getElementById('load-progress');
+        if(progress) progress.style.width = '100%';
+
+        // --- HIDE SPLASH ---
+        setTimeout(() => {
+            hideSplash();
+        }, 1000); // Small delay to let the animation be seen
+
+        // --- COORDINATED FADE OUT ---
+        // We wait for the animation to feel "complete" (approx 1.5 - 2 seconds total)
+        setTimeout(() => {
+            const loader = document.getElementById('initial-loader');
+            if (loader) {
+                loader.classList.add('splash-hidden');
+                
+                // Remove from DOM to keep it light
+                setTimeout(() => loader.remove(), 800);
+            }
+        }, 1200); // Adjust this delay based on your video length
+
+        // Background loading begins after the app is visible
+        setTimeout(() => preLoadAllPages(), 2000);
         
-        navigateToPage('dashboard');
     } catch (err) {
         console.error("Critical Init Error:", err);
+        const splashText = document.querySelector('.splash-text');
+        if(splashText) splashText.textContent = "Connection Error. Please check internet.";
+        if(progress) progress.style.background = "var(--danger-color)";
     }
 }
 
-    function loadPageData(pageName) {
-    // Only load the data if it hasn't been loaded yet
-    if (pageLoaded[pageName]) {
-        console.log(`Page ${pageName} is already loaded, skipping fetch.`);
+async function preLoadAllPages() {
+    // List all pages except dashboard
+    const pages = ['profile', 'tracker', 'summary', 'expenses', 'deposits'];
+    if (currentUser.role === 'admin' || currentUser.role === 'manager') pages.push('admin');
+
+    for (const page of pages) {
+        // We await each one to keep the network requests orderly
+        await loadPageData(page);
+    }
+    console.log("✅ All pages pre-rendered successfully.");
+}
+
+function loadPageData(pageName) {
+    // If it's already loaded, we only refresh if the user is actually LOOKING at the page
+    // This allows background loading to happen once, but manual refreshes still work.
+    const isVisible = !document.getElementById(pageName + 'Page').classList.contains('hidden');
+    
+    if (pageLoaded[pageName] && !isVisible) {
         return; 
     }
 
-    console.log(`First time loading ${pageName}...`);
-
     switch(pageName) {
         case 'dashboard':
-            loadDashboard();
-            break;
+            // Returning the promise so initializeApp can await it
+            return loadDashboard();
         case 'profile':
-            loadProfile();
-            loadScheduler(); 
-            break;
+            // Combined profile and scheduler into one flow
+            return Promise.all([loadProfile(), loadScheduler()]);
         case 'tracker':
-            loadMasterTracker();
-            loadWeeklyMenuEditor();
-            break;
+            return Promise.all([loadMasterTracker(), loadWeeklyMenuEditor()]);
         case 'summary':
-            loadSummary();
-            break;
+            return loadSummary();
         case 'expenses':
-            loadExpenses();
-            break;
+            return loadExpenses();
         case 'deposits':
-            loadDeposits();
-            break;
+            return loadDeposits();
         case 'admin':
-            loadAdmin();
-            break;
+            return loadAdmin();
     }
 
-    // Mark as loaded
     pageLoaded[pageName] = true;
 }
 
+// --- SPLASH CONTROL HELPERS ---
+
+function hideSplash(delay = 800) {
+    const loader = document.getElementById('initial-loader');
+    if (loader) {
+        setTimeout(() => {
+            loader.classList.add('splash-hidden');
+        }, delay);
+    }
+}
+
+function showSplash(text = "Preparing your kitchen...") {
+    const loader = document.getElementById('initial-loader');
+    const splashText = document.querySelector('.splash-text');
+    const progress = document.getElementById('load-progress');
+    
+    if (loader) {
+        if(splashText) splashText.textContent = text;
+        if(progress) progress.style.width = '0%';
+        loader.classList.remove('splash-hidden');
+    }
+}
     // Add Handler for Admin Settings Form
 document.getElementById('adminSettingsForm').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -4017,13 +4264,23 @@ async function loadScheduler() {
     if (!currentUser.member_id || !currentCycleId) return;
     
     const container = document.getElementById('schedulerList');
-    container.innerHTML = '<div class="loading">Loading schedule...</div>';
+    
+    // 1. CACHE CHECK: If cards exist and we aren't forcing a reload, skip.
+    // This prevents the scheduler from re-rendering when you switch tabs.
+    if (container.querySelector('.scheduler-card') && pageLoaded.profile) {
+        return; 
+    }
+
+    // 2. Only show loading text if the container is empty.
+    if (!container.innerHTML || container.innerHTML.includes('loading')) {
+        container.innerHTML = '<div class="loading">Syncing your schedule...</div>';
+    }
 
     try {
-        // 1. Fetch Member Defaults
+        // Fetch Member Defaults
         const { data: memberData } = await supabase
             .from('members')
-            .select('*')
+            .select('default_day_on, default_night_on')
             .eq('id', currentUser.member_id)
             .maybeSingle();
 
@@ -4032,16 +4289,16 @@ async function loadScheduler() {
         const defDay = memberData?.default_day_on || false;
         const defNight = memberData?.default_night_on || false;
 
-        // 2. Calculate Dates (8 Days range)
+        // Calculate 8-day date range (Today + next 7 days)
         const startDate = await getActiveSessionDate();
         const dates = [];
         for(let i=0; i<=8; i++) { 
             const d = new Date(startDate);
             d.setDate(startDate.getDate() + i); 
-            dates.push(d.toLocaleDateString('en-CA'));
+            dates.push(toLocalISO(d));
         }
 
-        // 3. Fetch Existing Plans from DB
+        // Fetch user's specific meal plans
         const { data: plans } = await supabase
             .from('meal_plans')
             .select('*')
@@ -4051,72 +4308,69 @@ async function loadScheduler() {
         const planMap = {};
         plans?.forEach(p => planMap[p.plan_date] = p);
 
-        // --- REMOVED: The old "Auto-Upsert" logic that was causing the freeze ---
-
-        // 4. Render Cards
-        container.innerHTML = '';
+        // 3. BUILD HTML STRING (Avoids multiple DOM reflows/flickers)
+        let newHTML = '';
         const fmt = (dStr) => {
-            const d = new Date(dStr);
+            const d = parseLocalDate(dStr);
             return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
         };
 
-for (let i = 0; i < 7; i++) {
-    const dateSession = dates[i];
-    const dateNextDay = dates[i+1];
-    
-    if (!dateSession || !dateNextDay) continue; // Safety check
-    
-    const sessionLabel = fmt(dateSession);
-    const nextDayLabel = fmt(dateNextDay);
-    const isFirstCard = (i === 0);
-    
-    // CRITICAL FIX: Use DB value if exists, otherwise use defaults
-    const nightActive = planMap[dateSession] ? planMap[dateSession].night_count > 0 : defNight;
-    const dayActive = planMap[dateNextDay] ? planMap[dateNextDay].day_count > 0 : defDay;
-
-    const card = document.createElement('div');
-    card.className = `scheduler-card ${isFirstCard ? 'is-today' : ''}`;
-    card.style.minWidth = "160px";
-    
-    card.innerHTML = `
-        <div class="scheduler-date" style="font-size:10px; color:var(--text-secondary); text-transform:uppercase;">
-            ${isFirstCard ? 'Active Session' : 'Upcoming'} <br>
-            <span style="color:var(--primary-color); font-weight:700; font-size:14px;">
-                ${sessionLabel} <span style="background:var(--primary-color); color:white; padding:1px 4px; border-radius:4px; font-size:9px; vertical-align:middle;">BAZAR</span>
-            </span>
-        </div>
-        
-        <div style="display:flex; flex-direction:column; gap:8px; width:100%;">
-            <button class="sched-btn ${nightActive ? 'active' : ''}" 
-                onclick="toggleSchedulerPlan('${dateSession}', 'night', this)">
-                <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
-                    <span style="font-size:14px;">🌙</span> 
-                    <div style="text-align:right;">
-                        <div style="font-weight:700;">Night</div>
-                        <div style="font-size:9px; opacity:0.8;">${sessionLabel}</div>
-                    </div>
-                </div>
-            </button>
+        for (let i = 0; i < 7; i++) {
+            const dateSession = dates[i];
+            const dateNextDay = dates[i+1];
             
-            <button class="sched-btn ${dayActive ? 'active' : ''}" 
-                onclick="toggleSchedulerPlan('${dateNextDay}', 'day', this)">
-                <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
-                    <span style="font-size:14px;">🌞</span> 
-                    <div style="text-align:right;">
-                        <div style="font-weight:700;">Day</div>
-                        <div style="font-size:9px; opacity:0.8;">${nextDayLabel}</div>
+            const sessionLabel = fmt(dateSession);
+            const nextDayLabel = fmt(dateNextDay);
+            const isFirstCard = (i === 0);
+            
+            const nightActive = planMap[dateSession] ? planMap[dateSession].night_count > 0 : defNight;
+            const dayActive = planMap[dateNextDay] ? planMap[dateNextDay].day_count > 0 : defDay;
+
+            newHTML += `
+                <div class="scheduler-card ${isFirstCard ? 'is-today' : ''}" style="min-width: 160px;">
+                    <div class="scheduler-date" style="font-size:10px; color:var(--text-secondary); text-transform:uppercase;">
+                        ${isFirstCard ? 'Active Session' : 'Upcoming'} <br>
+                        <span style="color:var(--primary-color); font-weight:700; font-size:14px;">
+                            ${sessionLabel} <span style="background:var(--primary-color); color:white; padding:1px 4px; border-radius:4px; font-size:9px; vertical-align:middle;">BAZAR</span>
+                        </span>
                     </div>
-                </div>
-            </button>
-        </div>
-    `;
-    container.appendChild(card);
-}
+                    
+                    <div style="display:flex; flex-direction:column; gap:8px; width:100%;">
+                        <button class="sched-btn ${nightActive ? 'active' : ''}" 
+                            onclick="toggleSchedulerPlan('${dateSession}', 'night', this)">
+                            <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
+                                <span style="font-size:14px;">🌙</span> 
+                                <div style="text-align:right;">
+                                    <div style="font-weight:700;">Night</div>
+                                    <div style="font-size:9px; opacity:0.8;">${sessionLabel}</div>
+                                </div>
+                            </div>
+                        </button>
+                        
+                        <button class="sched-btn ${dayActive ? 'active' : ''}" 
+                            onclick="toggleSchedulerPlan('${dateNextDay}', 'day', this)">
+                            <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
+                                <span style="font-size:14px;">🌞</span> 
+                                <div style="text-align:right;">
+                                    <div style="font-weight:700;">Day</div>
+                                    <div style="font-size:9px; opacity:0.8;">${nextDayLabel}</div>
+                                </div>
+                            </div>
+                        </button>
+                    </div>
+                </div>`;
+        }
+        
+        // 4. Update the DOM only once
+        container.innerHTML = newHTML;
+
     } catch (err) {
         console.error("Scheduler Error:", err);
         container.innerHTML = '<div class="loading" style="color:red">Error loading schedule</div>';
     }
 }
+
+
 // Function triggered by clicking scheduler buttons
 async function toggleSchedulerPlan(date, type, btnElement) {
     const wasActive = btnElement.classList.contains('active');
@@ -4163,74 +4417,68 @@ async function toggleSchedulerPlan(date, type, btnElement) {
 async function loadMasterTracker() {
     if (!currentCycleId) return;
     
-    const tableHead = document.querySelector('#masterMatrixTable thead');
-    const tableBody = document.querySelector('#masterMatrixTable tbody');
-    if (!tableHead || !tableBody) return;
+    const table = document.getElementById('masterMatrixTable');
+    if (!table) return;
 
     try {
-        // Find current cycle details
         const cycle = allCycles.find(c => c.id == currentCycleId);
-        if (!cycle) return;
-
         const { data: meals } = await supabase.from('meals').select('*').eq('cycle_id', currentCycleId);
+        
         const matrixData = {};
         meals?.forEach(m => {
             if (!matrixData[m.meal_date]) matrixData[m.meal_date] = {};
             matrixData[m.meal_date][m.member_id] = { d: m.day_count, n: m.night_count };
         });
 
-        // FIXED: Using 'cycle' variable defined above
         let currentIter = parseLocalDate(cycle.start_date);
         let endIter = parseLocalDate(cycle.end_date);
         const todayStr = toLocalISO(new Date());
 
-        // Header (Names)
-        let headerHTML = '<tr><th class="matrix-sticky-header">BAZAR</th>';
-        allMembers.forEach(m => {
-            headerHTML += `<th>${m.name.split(' ')[0]}</th>`; 
-        });
-        headerHTML += '</tr>';
-        tableHead.innerHTML = headerHTML;
+        // 1. Generate Header Row
+        let headerHTML = `
+            <thead>
+                <tr>
+                    <th>BAZAR</th>
+                    ${allMembers.map(m => `<th>${m.name.split(' ')[0]}</th>`).join('')}
+                </tr>
+            </thead>`;
 
-        // Body
-        let bodyHTML = '';
-        
-        // Use .getTime() for exact numerical comparison to handle year transitions
+
+        // 2. Generate Body Rows
+        let bodyHTML = '<tbody>';
         while (currentIter.getTime() <= endIter.getTime()) {
             const dateSessionStr = toLocalISO(currentIter);
-            
-            // Calculate Tomorrow
-            const dNext = new Date(currentIter.getTime()); 
-            dNext.setDate(dNext.getDate() + 1);
+            const dNext = new Date(currentIter);
+            dNext.setDate(currentIter.getDate() + 1);
             const dateNextStr = toLocalISO(dNext);
 
-            const isToday = (dateSessionStr === todayStr);
             const displayDate = currentIter.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+            const isTodayRow = (dateSessionStr === todayStr);
 
-            bodyHTML += `<tr ${isToday ? 'style="background: rgba(99, 102, 241, 0.05);"' : ''}>
-                <td>${displayDate}</td>`;
-
-            allMembers.forEach(m => {
-                const nVal = matrixData[dateSessionStr]?.[m.id]?.n || 0;
-                const dVal = matrixData[dateNextStr]?.[m.id]?.d || 0;
-                
-                bodyHTML += `
-                    <td>
-                        <div class="cell-split-premium" onclick="openMealModal('${m.id}', '${dateSessionStr}', ${nVal}, ${dVal})">
-                            <div class="cell-val-half night ${nVal > 0 ? 'active' : 'zero'}">${nVal > 0 ? nVal : '-'}</div>
-                            <div class="cell-val-half ${dVal > 0 ? 'active' : 'zero'}">${dVal > 0 ? dVal : '-'}</div>
-                        </div>
-                    </td>`;
-            });
-            bodyHTML += '</tr>';
+            bodyHTML += `<tr ${isTodayRow ? 'style="background: #f0f9ff;"' : ''}>
+                <td>${displayDate}</td>
+                ${allMembers.map(m => {
+                    const nVal = matrixData[dateSessionStr]?.[m.id]?.n || 0;
+                    const dVal = matrixData[dateNextStr]?.[m.id]?.d || 0;
+                    return `
+                        <td>
+                            <div class="cell-split-premium" onclick="openMealModal('${m.id}', '${dateSessionStr}', ${nVal}, ${dVal})">
+                                <div class="cell-val-half night ${nVal > 0 ? 'active' : 'zero'}">${nVal > 0 ? nVal : '-'}</div>
+                                <div class="cell-val-half ${dVal > 0 ? 'active' : 'zero'}">${dVal > 0 ? dVal : '-'}</div>
+                            </div>
+                        </td>`;
+                }).join('')}
+            </tr>`;
             
-            // Advance by exactly 1 day
             currentIter.setDate(currentIter.getDate() + 1);
         }
-        tableBody.innerHTML = bodyHTML;
+        bodyHTML += '</tbody>';
+
+        // 3. Update Table
+        table.innerHTML = headerHTML + bodyHTML;
         pageLoaded.tracker = true;
-    } catch (err) { 
-        console.error("Tracker Load Error:", err); 
+    } catch (err) {
+        console.error("Tracker Sync Error:", err);
     }
 }
 
@@ -4440,17 +4688,22 @@ function renderNotifications() {
         const displayTime = dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + 
                           ' • ' + dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
-        // AUTHOR LOGIC: Handle NULL members (System logs)
-        let authorMarkup = '<span style="color:var(--text-secondary)">System</span>';
-        
-        if (notif.members) {
-            if (notif.members.role === 'admin' || notif.members.role === 'manager') {
-                authorMarkup = `<span style="color:var(--primary-color); font-weight:800;">Admin</span>`;
-            } else {
-                authorMarkup = `<span style="font-weight:600;">${notif.members.name}</span>`;
-            }
-        }
+// --- FIXED AUTHOR LOGIC IN renderNotifications ---
+let authorMarkup = '<span style="color:var(--text-secondary)">System</span>';
 
+if (notif.members) {
+    const role = notif.members.role;
+    const name = notif.members.name;
+
+    if (role === 'admin') {
+        authorMarkup = `<span style="color:var(--primary-color); font-weight:800;">Admin</span>`;
+    } else if (role === 'manager') {
+        // Show Manager + their name for clarity
+        authorMarkup = `<span style="color:var(--secondary-color); font-weight:800;">Manager (${name.split(' ')[0]})</span>`;
+    } else {
+        authorMarkup = `<span style="font-weight:600;">${name}</span>`;
+    }
+}
         return `
         <div class="notif-item ${typeClass}" onclick="handleNotifClick('${notif.type}')">
             <div style="display:flex; gap:10px; align-items:flex-start;">
@@ -4474,20 +4727,30 @@ function renderNotifications() {
 // Updated Log Activity (Uses member_id)
 async function logActivity(message, type = 'info') {
     if (!currentCycleId) return;
+    
     try {
-        await supabase
+        // Use the member_id from our currentUser object
+        const actorMemberId = currentUser?.member_id;
+
+        const { error } = await supabase
             .from('notifications')
             .insert({
-                cycle_id: currentCycleId,
+                cycle_id: parseInt(currentCycleId),
                 message: message,
                 type: type,
-                member_id: currentUser?.member_id // FIXED: Use member_id
+                member_id: actorMemberId // This links the name/role to the log
             });
+
+        if (error) throw error;
+        
+        // Refresh local view
+        if (document.getElementById('notifPanel').classList.contains('active')) {
+            loadNotifications();
+        }
     } catch (err) {
-        console.error('Error logging activity:', err);
+        console.error('Logging Error:', err.message);
     }
 }
-
 
 
 // --- Deep Linking Action ---
@@ -4560,6 +4823,8 @@ document.getElementById('cycleSelect').addEventListener('change', (e) => {
     initRealtimeSync();
     
     refreshCurrentPage(); 
+     updateEntryStatusIndicator();
+    checkGlobalBalanceWarning();
 });
 
         // FIND THE ACTIVE ONE OR FALLBACK TO THE NEWEST
@@ -4645,37 +4910,26 @@ if (currentUser && currentUser.member_id) {
     // ============================================
     
 async function navigateToPage(pageName) {
-    // 1. Session Safety
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) { location.reload(); return; }
+    if (!pageName) return;
 
-    // 2. Hide/Show Pages
+    // Show the page container immediately (it will show old data or loading state)
     document.querySelectorAll('.page-content').forEach(p => p.classList.add('hidden'));
     const target = document.getElementById(pageName + 'Page');
     if (target) target.classList.remove('hidden');
 
-    // 3. Update ALL Nav Link active classes (Bottom Nav + Sidebar)
+    // Update Nav UI
     document.querySelectorAll('.bottom-nav-link, .nav-link').forEach(link => {
-        if (link.getAttribute('data-page') === pageName) {
-            link.classList.add('active');
-        } else {
-            link.classList.remove('active');
-        }
+        link.classList.toggle('active', link.getAttribute('data-page') === pageName);
     });
 
-    // 4. Persistence Trigger
-    loadPageData(pageName);
+    // Check cache/load data (This will return instantly if pre-loaded)
+    await loadPageData(pageName);
 
-    // 5. Sidebar Cleanup (Mobile)
+    // Sidebar Close
     if (window.innerWidth <= 768) {
-        const sidebar = document.getElementById('sidebar');
-        const overlay = document.getElementById('sidebarOverlay');
-        if (sidebar) sidebar.classList.remove('mobile-active');
-        if (overlay) overlay.classList.remove('active');
+        document.getElementById('sidebar').classList.remove('mobile-active');
+        document.getElementById('sidebarOverlay').classList.remove('active');
     }
-    
-    // 6. Scroll to top on page change
-    window.scrollTo(0, 0);
 }
 
 // Ensure the Menu button (sidebar trigger) works
@@ -5606,30 +5860,23 @@ async function loadDeposits() {
     }
 }
 
-
 async function loadExpenses() {
-
-       // 1. Set default date to Today
-    const today = new Date();
-    const localDate = today.getFullYear() + '-' + 
-                      String(today.getMonth() + 1).padStart(2, '0') + '-' + 
-                      String(today.getDate()).padStart(2, '0');
-    
-    const dateInput = document.getElementById('expenseDate');
-    if (dateInput) dateInput.value = localDate;
-    
-    // 1. Ensure the Add Card is visible
-    const addCard = document.getElementById('addExpenseCard');
-    if (addCard) addCard.style.display = 'block';
-    
-    const isUser = currentUser.role === 'user';
     if (!currentCycleId) return;
 
     const expenseListContainer = document.getElementById('expenseList');
-    expenseListContainer.innerHTML = '<div class="loading">Loading expenses...</div>';
+    
+    // 1. CACHE CHECK: If items already exist and the page was marked loaded, stop.
+    if (expenseListContainer.querySelector('.expense-card-modern') && pageLoaded.expenses) {
+        return;
+    }
+
+    // 2. Only show loading spinner if the container is empty (First load).
+    if (!expenseListContainer.innerHTML || expenseListContainer.innerHTML.includes('loading')) {
+        expenseListContainer.innerHTML = '<div class="loading">Syncing ledger...</div>';
+    }
 
     try {
-        // 2. Fetch Data with Shopper Name Join
+        // Fetch Data with Shopper Name Join
         const { data, error } = await supabase
             .from('expenses')
             .select('*, members(name)')
@@ -5643,63 +5890,55 @@ async function loadExpenses() {
             return;
         }
 
-        // 3. Separate Data
+        const isAuthorized = (currentUser.role === 'admin' || currentUser.role === 'manager');
         const pendingItems = data.filter(e => e.status === 'pending');
         const historyItems = data.filter(e => e.status !== 'pending'); 
 
-        // 4. Helper to Render Row
-// Inside loadExpenses() loop...
-// Replace the renderRow return with this structure:
-
-const renderRow = (expense, showButtons) => {
-    let statusPill = '';
-    let icon = '🛒';
-    
-    if (expense.status === 'pending') {
-        statusPill = '<span class="status-pill pending">Pending</span>';
-    } else if (expense.status === 'approved') {
-        statusPill = '<span class="status-pill approved">Approved</span>';
-    }
-
-    const shopperName = expense.members?.name?.split(' ')[0] || 'User'; // Get first name
-    const dateStr = new Date(expense.expense_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-
-    return `
-    <div class="expense-card-modern">
-        <div class="exp-info-left">
-            <div class="exp-icon-box">${icon}</div>
-            <div class="exp-details">
-                <div class="title">${expense.description || 'General Expense'}</div>
-                <div class="meta">${dateStr} • By ${shopperName}</div>
-            </div>
-        </div>
-        <div class="exp-amount-right">
-            <div class="val">৳${Math.round(expense.amount)}</div>
-            ${statusPill}
-            ${showButtons ? `
-                <div style="margin-top: 5px; display:flex; gap:5px; justify-content: flex-end;">
-                    <button class="btn btn-sm btn-success" onclick="handleExpenseApproval('${expense.id}', 'approved')" style="padding:2px 8px;">✓</button>
-                    <button class="btn btn-sm btn-danger" onclick="handleExpenseApproval('${expense.id}', 'rejected')" style="padding:2px 8px;">✕</button>
-                </div>` : ''}
-        </div>
-    </div>`;
-};
-
-        // 5. Build HTML Sections
+        // 3. BUILD HTML STRING IN MEMORY
         let finalHTML = '';
 
+        const renderRow = (expense, showButtons) => {
+            let statusPill = '';
+            if (expense.status === 'pending') statusPill = '<span class="status-pill pending">Pending</span>';
+            else if (expense.status === 'approved') statusPill = '<span class="status-pill approved">Approved</span>';
+
+            const shopperName = expense.members?.name?.split(' ')[0] || 'User';
+            const dateStr = new Date(expense.expense_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+
+            return `
+            <div class="expense-card-modern">
+                <div class="exp-info-left">
+                    <div class="exp-icon-box">🛒</div>
+                    <div class="exp-details">
+                        <div class="title">${expense.description || 'Bazar'}</div>
+                        <div class="meta">${dateStr} • By ${shopperName}</div>
+                    </div>
+                </div>
+                <div class="exp-amount-right">
+                    <div class="val">৳${Math.round(expense.amount)}</div>
+                    ${statusPill}
+                    ${(showButtons && isAuthorized) ? `
+                        <div style="margin-top: 5px; display:flex; gap:5px; justify-content: flex-end;">
+                            <button class="btn btn-sm btn-success" onclick="handleExpenseApproval('${expense.id}', 'approved')">✓</button>
+                            <button class="btn btn-sm btn-danger" onclick="handleExpenseApproval('${expense.id}', 'rejected')">✕</button>
+                        </div>` : ''}
+                </div>
+            </div>`;
+        };
+
         if (pendingItems.length > 0) {
-            finalHTML += `<div style="font-size:11px; font-weight:800; color:var(--warning-color); margin: 10px 0; text-transform:uppercase; letter-spacing:1px;">⚠️ Needs Approval</div>`;
-            pendingItems.forEach(item => finalHTML += renderRow(item, !isUser));
-            finalHTML += `<div style="border-bottom: 2px dashed var(--border-color); margin: 20px 0;"></div>`;
+            finalHTML += `<h3 style="font-size: 11px; font-weight: 800; color: #b91c1c; margin-bottom: 10px; text-transform: uppercase;">⏳ Needs Approval</h3>`;
+            pendingItems.forEach(item => finalHTML += renderRow(item, true));
+            finalHTML += `<div style="border-bottom: 2px dashed #f1f5f9; margin: 20px 0;"></div>`;
         }
 
         if (historyItems.length > 0) {
+            finalHTML += `<h3 style="font-size: 11px; font-weight: 800; color: #64748b; margin-bottom: 10px; text-transform: uppercase;">History</h3>`;
             historyItems.forEach(item => finalHTML += renderRow(item, false));
         }
 
+        // 4. UPDATE DOM ONLY ONCE
         expenseListContainer.innerHTML = finalHTML;
-           pageLoaded.expenses = true; // Mark as done
 
     } catch (err) {
         console.error('Error loading expenses:', err);
@@ -6313,8 +6552,17 @@ let currentStatusIndex = 0;
 let statusCycleInterval = null;
 
 async function updateEntryStatusIndicator() {
+    const badge = document.getElementById('entryStatusBadge');
+    if (!badge) return;
+
+    // 1. Safety Guard: If core data isn't ready yet, don't break, just wait.
+    if (!currentCycleId || !currentUser || !currentUser.member_id || allMembers.length === 0) {
+        badge.textContent = "Syncing...";
+        return;
+    }
+
     try {
-        // Clear existing interval to prevent memory leaks
+        // Clear existing interval to prevent "speeding up" animations
         if (statusCycleInterval) {
             clearInterval(statusCycleInterval);
             statusCycleInterval = null;
@@ -6322,55 +6570,64 @@ async function updateEntryStatusIndicator() {
 
         const newQueue = [];
         
+        // A. Target Bazar Date logic
         const sessionDate = await getActiveSessionDate();
         const dateLabel = sessionDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }).toUpperCase();
         const today = new Date();
-        const isToday = sessionDate.getDate() === today.getDate();
+        const isToday = sessionDate.getDate() === today.getDate() && sessionDate.getMonth() === today.getMonth();
         
         newQueue.push({
             text: `TARGET: ${dateLabel} BAZAR`,
             class: isToday ? 'status-pending' : 'status-done'
         });
 
-        if (currentUser && currentUser.member_id) {
-            const { data: expenses } = await supabase.from('expenses').select('amount').eq('cycle_id', currentCycleId).eq('status', 'approved');
-            const { data: allMeals } = await supabase.from('meals').select('day_count, night_count').eq('cycle_id', currentCycleId);
-            const { data: userMeals } = await supabase.from('meals').select('day_count, night_count').eq('member_id', currentUser.member_id).eq('cycle_id', currentCycleId);
-            const { data: userDeps } = await supabase.from('deposits').select('amount').eq('member_id', currentUser.member_id).eq('cycle_id', currentCycleId).neq('status', 'pending');
+        // B. Fetch Data for Balance & Dues
+        const [expRes, allMealsRes, myMealsRes, myDepsRes, duesRes] = await Promise.all([
+            supabase.from('expenses').select('amount').eq('cycle_id', currentCycleId).eq('status', 'approved'),
+            supabase.from('meals').select('day_count, night_count').eq('cycle_id', currentCycleId),
+            supabase.from('meals').select('day_count, night_count').eq('member_id', currentUser.member_id).eq('cycle_id', currentCycleId),
+            supabase.from('deposits').select('amount').eq('member_id', currentUser.member_id).eq('cycle_id', currentCycleId).neq('status', 'pending'),
+            supabase.from('cycle_dues').select('due_amount, settled_amount').eq('member_id', currentUser.member_id).eq('to_cycle_id', currentCycleId).neq('status', 'settled')
+        ]);
 
-            const rate = (expenses?.reduce((s, e) => s + parseFloat(e.amount), 0) || 0) / (allMeals?.reduce((s, m) => s + parseFloat(m.day_count) + parseFloat(m.night_count), 0) || 1);
-            const bal = (userDeps?.reduce((s, d) => s + parseFloat(d.amount), 0) || 0) - ((userMeals?.reduce((s, m) => s + parseFloat(m.day_count) + parseFloat(m.night_count), 0) || 0) * rate);
+        // C. Calculate Balance Warning
+        const totalExp = expRes.data?.reduce((s, e) => s + parseFloat(e.amount), 0) || 0;
+        const totalGlobalMeals = allMealsRes.data?.reduce((s, m) => s + (parseFloat(m.day_count) + parseFloat(m.night_count)), 0) || 1;
+        const mealRate = totalExp / totalGlobalMeals;
 
-            if (bal < 0) {
+        const myTotalMeals = myMealsRes.data?.reduce((s, m) => s + (parseFloat(m.day_count) + parseFloat(m.night_count)), 0) || 0;
+        const myTotalPaid = myDepsRes.data?.reduce((s, d) => s + parseFloat(d.amount), 0) || 0;
+        const myBalance = myTotalPaid - (myTotalMeals * mealRate);
+
+        if (myBalance < -1) { // Show if debt is more than 1tk
+            newQueue.push({
+                text: `WARN: BALANCE ৳${Math.abs(myBalance).toFixed(0)}`,
+                class: 'status-debt'
+            });
+        }
+
+        // D. Calculate Dues Warning
+        if (duesRes.data && duesRes.data.length > 0) {
+            const totalDue = duesRes.data.reduce((s, d) => s + (Math.abs(d.due_amount) - Math.abs(d.settled_amount)), 0);
+            if (totalDue > 1) {
                 newQueue.push({
-                    text: `WARN: BALANCE ৳${Math.abs(bal).toFixed(0)}`,
-                    class: 'status-debt'
+                    text: `DUE: ৳${totalDue.toFixed(0)}`,
+                    class: 'status-due'
                 });
-            }
-
-            const { data: dues } = await supabase.from('cycle_dues')
-                .select('due_amount, settled_amount')
-                .eq('member_id', currentUser.member_id)
-                .eq('to_cycle_id', currentCycleId)
-                .neq('status', 'settled');
-
-            if (dues && dues.length > 0) {
-                const totalDue = dues.reduce((s, d) => s + (Math.abs(d.due_amount) - Math.abs(d.settled_amount)), 0);
-                if (totalDue > 1) {
-                    newQueue.push({
-                        text: `DUE: ৳${totalDue.toFixed(0)}`,
-                        class: 'status-due'
-                    });
-                }
             }
         }
 
+        // 2. Set the global queue and start rotation
         statusQueue = newQueue;
         currentStatusIndex = 0;
-        startStatusRotation();
+        
+        if (statusQueue.length > 0) {
+            startStatusRotation();
+        }
 
     } catch (err) {
-        console.error("Status Check Error", err);
+        console.error("Status Indicator Error:", err);
+        badge.textContent = "Offline";
     }
 }
 
