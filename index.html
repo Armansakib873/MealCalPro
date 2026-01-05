@@ -232,8 +232,8 @@
 
 .cycle-badge {
     position: absolute;
-    top: 20px;
-    right: 20px;
+        top: 2px;
+    right: -60px;
     font-size: 9px;
     padding: 1px 4px;
     border-radius: 8px;
@@ -245,6 +245,8 @@
     z-index: 10;
 }
 
+
+
 .header-right{
     display: flex;
     align-items: center;
@@ -253,6 +255,14 @@
 
 /* --- 2. Manage User Info in Mobile View --- */
 @media (max-width: 768px) {
+
+    .cycle-badge {
+        font-size: 8px;
+            top: 25px;
+    right: 20px;
+    }
+
+
     /* REMOVE the display:none and manage it instead */
     .user-info { 
         display: flex !important; /* Force display */
@@ -446,7 +456,7 @@
 
 
 .defaults-toggles{
-    display: flex; gap: 10px; margin-top: 10px;
+    display: flex; gap: 10px;
     border-radius: 15px;;
 }
         /* =========================================
@@ -604,7 +614,7 @@
             -webkit-overflow-scrolling: touch; /* Smooth iOS scroll */
             scrollbar-width: none;
         }
-        .scheduler-card {
+        /* .scheduler-card {
             min-width: 120px;
             background: var(--card-bg);
             border: 1px solid var(--border-color);
@@ -617,7 +627,7 @@
             width: 100%; padding: 6px; border-radius: 6px; border: 1px solid var(--border-color);
             background: var(--bg-color); font-size: 11px; cursor: pointer;
         }
-        .sched-btn.active { background-color: var(--success-color); color: white; border-color: var(--success-color); }
+        .sched-btn.active { background-color: var(--success-color); color: white; border-color: var(--success-color); } */
 
         /* Matrix Table */
         .matrix-wrapper {
@@ -705,7 +715,7 @@
 /* --- Professional Profile Enhancements --- */
 .profile-header-banner {
     height: 100px;
-   background: linear-gradient(135deg, #d8d8db, #fde787);
+    background: radial-gradient(circle at top right, #069095, #021f2e);
     border-radius: 12px 12px 0 0;
     margin-bottom: -50px;
     padding: 15px;
@@ -716,20 +726,29 @@
 }
 
 .profile-avatar-circle {
-    width: 100px;
-    height: 100px;
-    background: white;
-    border-radius: 50%;
-    margin: 0 auto 10px;
-    border: 4px solid var(--card-bg);
+    position: relative;
+    overflow: hidden; /* Ensures image doesn't leak out of circle */
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 36px;
-    font-weight: 800;
-    color: var(--primary-color);
-    box-shadow: var(--shadow-lg);
-    position: relative;
+}
+
+/* This class will be added by JS if a photo exists */
+.profile-avatar-circle.has-image {
+    color: transparent !important; /* Hide initials */
+    border: 3px solid white;
+}
+
+.profile-avatar-circle img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    position: absolute;
+    top: 0;
+    left: 0;
 }
 
 .profile-status-online {
@@ -770,7 +789,7 @@
 
 /* Timeline Scheduler */
 .scheduler-scroll {
-    padding: 15px 5px;
+    padding: 5px 5px;
     gap: 12px;
 }
 
@@ -855,32 +874,117 @@
 }
 
 /* --- Premium Scheduler --- */
+/* --- Smart Scheduler Cards --- */
 .scheduler-card {
-    min-width: 120px;
-    border: none;
-    background: #fff;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-    border-radius: 14px;
+    min-width: 155px;
+    padding: 16px;
+    background: #ffffff;
+    border-radius: 28px;
+    border: 1px solid #edf2f7;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.02);
+    transition: transform 0.3s ease;
 }
 
 .scheduler-card.is-today {
-    background: var(--soft-emerald);
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1);
+    border: 2px solid #10b981;
+    background: linear-gradient(to bottom, #f0fdf4, #ffffff);
 }
 
+.sched-date-main { font-size: 16px; font-weight: 800; color: #1a202c; margin-bottom: 2px;}
+.sched-sub-label { font-size: 8px; font-weight: 700; color: #a0aec0; letter-spacing: 1.2px; margin-bottom: 15px; text-transform: uppercase; }
+
+/* The "Smart" Buttons */
 .sched-btn {
-    border: 1px solid #f1f5f9;
-    padding: 8px;
-    background: #f8fafc;
-    border-radius: 10px;
-    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 14px;
+    height: 46px;
+    border-radius: 16px;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1.5px solid transparent;
+    cursor: pointer;
 }
 
-.sched-btn.active {
-    background: #10b981;
-    color: white;
-    border-color: #10b981;
+/* Night Button: Midnight Glass Style (No more solid black) */
+.night-btn { 
+    background: #f8fafc; 
+    color: #64748b; 
+    border-color: #e2e8f0; 
 }
+
+.night-btn.active { 
+    background: #0f172a; /* Deep Midnight */
+    color: #10b981; 
+    border-color: #0f172a;
+    box-shadow: 0 8px 20px -6px rgba(15, 23, 42, 0.4);
+}
+
+/* Day Button: Soft Emerald Style */
+.day-btn { 
+    background: #f8fafc; 
+    color: #64748b; 
+    border-color: #e2e8f0; 
+}
+
+.day-btn.active { 
+    background: #ffffff; 
+    color: #059669; 
+    border-color: #10b981;
+    box-shadow: 0 8px 20px -6px rgba(16, 185, 129, 0.2);
+}
+
+/* The Status "Pill" */
+.status-text {
+    font-size: 9px;
+    font-weight: 900;
+    width: 34px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background: #e2e8f0;
+    color: #64748b;
+    transition: all 0.2s ease;
+}
+
+/* Active Pill Colors */
+.night-btn.active .status-text { 
+    background: #10b981; 
+    color: #ffffff; 
+}
+
+.day-btn.active .status-text { 
+    background: #d1fae5; 
+    color: #059669; 
+}
+
+.btn-label { font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+
+/* Restricted Warning Logic Redesign */
+.lock-badge {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.lock-badge.is-restricted {
+    background: #fff1f2 !important;
+    border-color: #fecaca !important;
+    color: #e11d48 !important;
+    animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-2px); }
+    75% { transform: translateX(2px); }
+}
+
+
+
+
 
 /* Mobile Adjustments */
 @media (max-width: 768px) {
@@ -905,7 +1009,387 @@
         border-radius: 8px;
         text-align: center;
     }
+
 }
+
+
+/* =========================================
+   PREMIUM MOBILE PROFILE REDESIGN
+   ========================================= */
+@media (max-width: 768px) {
+    /* 1. Sophisticated Background & Banner */
+    .profile-header-banner {
+        height: 130px;
+        background: radial-gradient(circle at top right, #237804, #0b2e02);
+        border-radius: 0 0 40px 40px;
+        margin-bottom: -60px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    /* Abstract decorative element for uniqueness */
+    .profile-header-banner::after {
+        content: '';
+        position: absolute;
+        top: -20px;
+        right: -20px;
+        width: 150px;
+        height: 150px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+    }
+
+    /* 2. Asymmetrical Profile Section */
+    .profile-info-section {
+        display: flex;
+        align-items: flex-end;
+        padding: 0 20px;
+        text-align: left;
+        gap: 15px;
+        margin-bottom: 15px;
+    }
+
+    .profile-avatar-circle {
+        width: 85px !important;
+        height: 85px !important;
+        margin: 0 !important; /* Remove centering */
+        border: 4px solid var(--bg-color);
+        background: white;
+        font-size: 32px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        z-index: 2;
+    }
+
+    .profile-main-name {
+        font-size: 24px;
+        color: white;
+        margin-bottom: 12px;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .profile-main-meta {
+        backdrop-filter: blur(5px);
+        color: white;
+        padding: 3px 12px;
+        border-radius: 20px;
+        font-size: 10px;
+        display: inline-block;
+    }
+
+    /* Make avatar look interactive */
+.profile-avatar-circle {
+    cursor: pointer;
+    transition: transform 0.2s ease, filter 0.2s ease;
+    position: relative;
+}
+
+.profile-avatar-circle:hover {
+    transform: scale(1.05);
+    filter: brightness(0.9);
+}
+
+/* Subtle "Edit" label that appears on hover */
+.profile-avatar-circle::after {
+    content: 'EDIT';
+    position: absolute;
+    bottom: 5px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.6);
+    color: white;
+    font-size: 8px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.profile-avatar-circle:hover::after {
+    opacity: 1;
+}
+
+.profile-avatar-circle {
+    cursor: pointer; /* Indicates it can be clicked */
+    transition: transform 0.2s ease;
+}
+.profile-avatar-circle:active {
+    transform: scale(0.95); /* Slight "press" effect */
+}
+
+    /* 3. Metric Capsules (Replacing the simple grid) */
+    .profile-stats-mini {
+   display: flex;
+        justify-content: space-evenly;
+        background: #1d1c1af2;
+        margin: 0 20px 20px 20px;
+        padding: 15px;
+        border-radius: 24px;
+        box-shadow: 0 4px 15px rgb(51 47 47 / 5%);
+        border: 1px solid var(--border-color);
+    }
+
+    .stat-mini-value{
+        font-size: 16px !important;
+        font-weight: 800 !important;
+        color: #ced090 !important;
+    }
+
+    .profile-stat-item {
+        background: transparent !important;
+        border-right: 1px solid var(--border-color);
+        padding: 0 !important;
+        flex: 1;
+    }
+
+    .profile-stat-item:last-child { border-right: none; }
+
+    .profile-stat-item div:first-child {
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-weight: 800;
+        font-size: 8px !important;
+        color: var(--text-secondary);
+    }
+   /* background: #725b00 !important;  */
+    /* 4. The "Neo-Wallet" Hero Card */
+   #profileBalanceCard {
+        background: linear-gradient(135deg, #a3a041 0%, #020617 100%) !important;
+        border-radius: 28px !important;
+        padding: 25px !important;
+        display: flex !important; /* Switch to side-by-side */
+        justify-content: space-between !important;
+        align-items: center !important;
+        border: 1px solid rgba(255,255,255,0.1) !important;
+        position: relative !important;
+        color: white !important;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.2) !important;
+        min-height: 120px !important;
+    }
+
+    /* Floating card label */
+    #profileBalanceCard::before {
+        content: 'PREMIUM MEALCARD';
+        position: absolute;
+        top: 15px;
+        right: 25px;
+        font-size: 7px;
+        font-weight: 900;
+        letter-spacing: 2px;
+        color: #475569;
+        opacity: 0.8;
+    }
+
+    /* Left Side: Labels and Amount */
+    .balance-card-left {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    #profileBalanceCard .stat-label {
+        color: #94a3b8 !important;
+        font-size: 10px !important;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin: 0 !important;
+    }
+
+    #profileBalanceCard .stat-value {
+        color: #10b981 !important; /* Emerald Green */
+        font-size: 30px !important;
+        font-weight: 800 !important;
+        font-family: 'Segoe UI', Roboto, sans-serif !important;
+        margin: 0 !important;
+    }
+
+    /* Right Side: Button and Cycle */
+    .balance-card-right {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 12px;
+    }
+
+    /* Premium Add Cash Button */
+    #profileBalanceCard .btn-primary {
+        background: white !important;
+        color: #0f172a !important;
+        font-weight: 800 !important;
+        font-size: 12px !important;
+        padding: 8px 16px !important;
+        border-radius: 12px !important;
+        border: none !important;
+        box-shadow: 0 4px 12px rgba(255,255,255,0.15) !important;
+        text-transform: none !important;
+    }
+
+    .cycle-info-text {
+        font-size: 9px !important;
+        color: #64748b !important;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+}
+
+
+
+/* ============================================================
+   CLEANED PREMIUM PROFILE COMPONENTS (MOBILE)
+   ============================================================ */
+
+@media (max-width: 768px) {
+
+    /* --- 1. Restricted Time Indicator --- */
+    .lock-badge {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px;
+        border-radius: 12px;
+        font-size: 10px;
+        font-weight: 800;
+        background: #f8fafc;
+        color: #64748b;
+        border: 1px solid #e2e8f0;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Active restricted state (Flashes Red) */
+    .lock-badge.is-restricted {
+        background: #fff1f2 !important;
+        color: #e11d48 !important;
+        border-color: #fecaca !important;
+        box-shadow: 0 0 15px rgba(225, 29, 72, 0.1);
+    }
+
+    .lock-badge .dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #cbd5e1;
+    }
+
+    .lock-badge.is-restricted .dot {
+        background: #e11d48;
+        animation: pulse-red-ring 1.5s infinite;
+    }
+
+    @keyframes pulse-red-ring {
+        0% { transform: scale(1); opacity: 1; }
+        100% { transform: scale(2.8); opacity: 0; }
+    }
+
+    /* --- 2. Default Meal Hub --- */
+    .defaults-container {
+        background: #f1f5f9;
+        padding: 15px 20px;
+        border-radius: 24px;
+        margin: 5px 0;
+        display: flex;
+        gap: 12px;
+        border: 1px solid rgba(0,0,0,0.02);
+    }
+
+    .def-btn {
+        border-radius: 14px;
+        font-size: 11px;
+        font-weight: 800;
+        border: 1px solid #cbd5e1;
+        background: white;
+        color: #475569;
+        transition: all 0.2s ease;
+    }
+
+    .def-btn.active {
+        background: #006620;
+        color: white;
+        border-color: #3b3b3bd1;
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
+    }
+
+    /* --- 3. Smart Scheduler Cards --- */
+    .scheduler-card {
+        min-width: 155px;
+        padding: 18px;
+        background: white;
+        border-radius: 28px;
+        border: 1px solid #c6cacd;
+        box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.03);
+        text-align: center;
+    }
+
+    .scheduler-card.is-today {
+        border: 2px solid #10b981;
+        background: linear-gradient(to bottom, #f0fdf4, #ffffff);
+        box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.1);
+    }
+
+    .sched-date-main { font-size: 17px; font-weight: 900; color: #1e293b; margin-bottom: 2px; }
+    .sched-sub-label { font-size: 8px; font-weight: 800; color: #94a3b8; letter-spacing: 1.2px; margin-bottom: 15px; text-transform: uppercase; }
+
+    .sched-actions { display: flex; flex-direction: column; gap: 10px; }
+
+    /* The Master Button Style */
+    .sched-btn {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 12px;
+        height: 48px;
+        border-radius: 16px;
+        border: 1.5px solid transparent;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+    }
+
+    /* Night Button (Midnight Navy Style) */
+    .night-btn { background: #f8fafc; color: #64748b; border-color: #e2e8f0; }
+    .night-btn.active { 
+        background: #1a2439 !important; 
+        color: #10b981 !important; 
+        border-color: #0f172a !important;
+        box-shadow: 0 8px 20px -6px rgba(15, 23, 42, 0.4);
+    }
+
+    /* Day Button (Emerald Soft Style) */
+    .day-btn { background: #f8fafc; color: #64748b; border-color: #e2e8f0; }
+    .day-btn.active { 
+        background: #f6f9d4 !important; 
+        color: #059669 !important; 
+        border-color: #10b981 !important;
+        box-shadow: 0 8px 20px -6px rgba(16, 185, 129, 0.15);
+    }
+
+    /* The Status Pill (Fixed immediate toggle indicator) */
+    .status-text {
+        font-size: 9px;
+        font-weight: 900;
+        width: 36px;
+        height: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        background: #e2e8f0;
+        color: #64748b;
+        transition: all 0.2s ease;
+    }
+
+    .night-btn.active .status-text { 
+        background: #10b981; 
+        color: white; 
+    }
+
+    .day-btn.active .status-text { 
+        background: #d1fae5; 
+        color: #059669; 
+    }
+
+    .btn-label { font-size: 11px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+
+}
+
 
 
 /* --- Professional expense Enhancements --- */
@@ -1428,7 +1912,7 @@
 .pulse-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
 
 .pulse-item {
-    background: #f8fafc;
+    background: #d2f9efad;
     padding: 12px;
     border-radius: 14px;
     text-align: center;
@@ -1436,9 +1920,9 @@
 }
 
 .pulse-icon { font-size: 18px; margin-bottom: 4px; display: block; }
-.pulse-label { font-size: 9px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; }
+.pulse-label { font-size: 12px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; }
 .pulse-val { font-size: 18px; font-weight: 900; color: #1e293b; margin: 2px 0; }
-.pulse-menu { font-size: 10px; color: var(--premium-indigo); font-weight: 600; font-style: italic; }
+.pulse-menu { font-size: 10px; color: var(--premium-indigo); font-weight: 600; font-style: normal; }
 
 /* 2x2 Stats Grid */
 .dash-stats-grid {
@@ -1449,10 +1933,10 @@
 }
 
 .stat-pill-card {
-    background: white;
+    background: #e3e4933b;
     padding: 12px;
     border-radius: 16px;
-    border: 1px solid #f1f5f9;
+    border: 1px solid #8a8a4d32;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -2317,11 +2801,27 @@
             <!-- Profile Page -->
 <!-- Profile Page -->
 <div id="profilePage" class="page-content hidden">
+    <!-- Premium Banner -->
     <div class="profile-header-banner">
-          <h2 class="profile-main-name" id="profileName">Loading...</h2>
-        <div class="profile-main-meta" id="profileRoleDisplay">Member</div>
+        <!-- Text container moved here for asymmetrical look, IDs preserved -->
+        <div style="display: flex;" class="profile-text-container">
+            <h2 class="profile-main-name" id="profileName">Loading...</h2>
+            <div class="profile-main-meta" id="profileRoleDisplay">Member</div>
+
+                <!-- Quick Stats Overview -->
+    <div class="profile-stats-mini">
+        <div class="profile-stat-item">
+            <div class="stat-mini-label">Total Meals</div>
+            <div class="stat-mini-value" id="profileTotalMeals">0</div>
+        </div>
+        <div class="profile-stat-item">
+            <div style="margin-bottom: 15px;" class="stat-mini-label">Total Paid</div>
+            <div class="stat-mini-value" id="profileTotalDeposit" style="color: var(--success-color);">৳0</div>
+        </div>
+    </div>
 
 
+        </div>
     </div>
     
     <div class="profile-info-section">
@@ -2329,56 +2829,47 @@
             U
             <div class="profile-status-online"></div>
         </div>
-      
     </div>
 
-    <!-- Quick Stats Overview -->
-    <div class="profile-stats-mini" style="margin-bottom: 20px;">
-        <div class="profile-stat-item">
-            <div style="font-size: 10px; color: var(--text-secondary);">Total Meals</div>
-            <div style="font-size: 18px; font-weight: 800;" id="profileTotalMeals">0</div>
-        </div>
-        <div class="profile-stat-item">
-            <div style="font-size: 10px; color: var(--text-secondary);">Total Paid</div>
-            <div style="font-size: 18px; font-weight: 800; color: var(--success-color);" id="profileTotalDeposit">৳0</div>
-        </div>
+
+
+    <!-- Balance Focus Card (Fintech Style) -->
+<div class="card balance-card-modern" id="profileBalanceCard">
+    <!-- Left Side -->
+    <div class="balance-card-left">
+        <div class="stat-label">Wallet Balance</div>
+        <div class="stat-value" id="profileBalance">৳0</div>
     </div>
 
-    <!-- Balance Focus Card -->
-    <div class="card balance-card-modern" id="profileBalanceCard">
-        <div>
-            <div class="stat-label" style="color: var(--text-secondary);">Current Wallet Balance</div>
-            <div class="stat-value" id="profileBalance" style="font-size: 28px;">৳0</div>
-        </div>
-        <div style="text-align: right;">
-            <button class="btn btn-sm btn-primary" onclick="navigateToPage('deposits')">Add Cash</button>
-            <div style="font-size: 9px; margin-top: 5px; color: var(--text-secondary);">Cycle: <span id="profileCycleName">...</span></div>
-        </div>
+    <!-- Right Side -->
+    <div class="balance-card-right">
+        <button class="btn btn-sm btn-primary" onclick="navigateToPage('deposits')">Add Cash</button>
+        <div class="cycle-info-text">Cycle: <span id="profileCycleName">...</span></div>
     </div>
+</div>
 
-    <!-- Schedule Section -->
-    <div class="card">
+    <!-- Attendance Section -->
+    <div class="card premium-card-shadow">
         <div class="card-header">
             <h3 class="card-title">🗓️ Meal Attendance</h3>
-            <div id="lockTimeDisplay" style="font-size: 10px; background: #FFF7ED; color: #C2410C; padding: 2px 8px; border-radius: 10px;">
-                Lock: 05:00 PM
+            <div id="lockTimeDisplay" class="lock-badge">
+                Restricted: 05:00 PM - 07:00 PM
             </div>
         </div>
 
-            <!-- 3. System Health Card -->
-    <div class="system-status-pulse">
-        <div id="systemStatusContent">
-            <!-- Content injected by loadSystemStatus -->
-            <div class="status-row">
-                <div class="status-indicator" style="background: #fbbf24;"></div>
-                <div style="font-size: 12px; font-weight: 700; color: #92400e;">Checking system logs...</div>
+        <!-- System Health Card (Injected by loadSystemStatus) -->
+        <div class="system-status-pulse">
+            <div id="systemStatusContent">
+                <div class="status-row">
+                    <div class="status-indicator" style="background: #fbbf24;"></div>
+                    <div style="font-size: 12px; font-weight: 700; color: #92400e;">Checking system logs...</div>
+                </div>
             </div>
         </div>
-    </div>
         
-        <div class="defaults-container" style="border: 1px dashed var(--border-color); background: transparent;">
+        <div class="defaults-container">
             <div class="defaults-label">
-                <span style="font-weight: 700;">Default Meal</span>
+                <span style="font-size: 0.8rem; font-weight: 700;">Default Meal</span>
             </div>
             <div class="defaults-toggles">
                 <button id="defDayBtn" class="def-btn" onclick="toggleDefaultPreference('day')">Day</button>
@@ -2394,16 +2885,19 @@
     </div>
 
     <!-- Financial History -->
-    <div class="card">
+    <div class="card premium-card-shadow">
         <div class="card-header">
             <h3 class="card-title">💳 Recent Transactions</h3>
-            <span style="font-size: 11px; color: var(--primary-color); cursor: pointer;" onclick="navigateToPage('deposits')">View Ledger</span>
+            <span class="view-ledger-link" onclick="navigateToPage('deposits')">View Ledger</span>
         </div>
         <div id="profileDepositHistory">
             <div class="loading">Syncing history...</div>
         </div>
     </div>
 </div>
+
+
+
 <!-- Tracker Page -->
 <div id="trackerPage" class="page-content hidden">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding: 0 5px;">
@@ -3931,6 +4425,34 @@ window.handleDepositAction = async function(depositId, action) {
 async function initializeApp() {
     const progress = document.getElementById('load-progress');
     const setProgress = (p) => { if(progress) progress.style.width = p + '%'; };
+function updateRestrictedUI() {
+    const badge = document.getElementById('lockTimeDisplay');
+    if (!badge || !appConfig.lock_time_start) return;
+
+    const now = new Date();
+    const [sH, sM] = appConfig.lock_time_start.split(':').map(Number);
+    const [eH, eM] = appConfig.lock_time_end.split(':').map(Number);
+    
+    const start = new Date(); start.setHours(sH, sM, 0);
+    const end = new Date(); end.setHours(eH, eM, 0);
+
+    const isLocked = now >= start && now <= end;
+
+    if (isLocked) {
+        badge.classList.add('is-restricted');
+        badge.innerHTML = `<span class="dot"></span> RESTRICTED NOW: ${convertTo12Hour(appConfig.lock_time_start)} - ${convertTo12Hour(appConfig.lock_time_end)}`;
+    } else {
+        badge.classList.remove('is-restricted');
+        badge.innerHTML = `<span class="dot"></span> Restricted: ${convertTo12Hour(appConfig.lock_time_start)} - ${convertTo12Hour(appConfig.lock_time_end)}`;
+    }
+}
+
+// Call it once and set interval
+updateRestrictedUI();
+setInterval(updateRestrictedUI, 30000); // Check every 30 seconds
+
+
+
 
     try {
         // Step 1: Initialize DB connection
@@ -4326,39 +4848,25 @@ async function loadScheduler() {
             const nightActive = planMap[dateSession] ? planMap[dateSession].night_count > 0 : defNight;
             const dayActive = planMap[dateNextDay] ? planMap[dateNextDay].day_count > 0 : defDay;
 
-            newHTML += `
-                <div class="scheduler-card ${isFirstCard ? 'is-today' : ''}" style="min-width: 160px;">
-                    <div class="scheduler-date" style="font-size:10px; color:var(--text-secondary); text-transform:uppercase;">
-                        ${isFirstCard ? 'Active Session' : 'Upcoming'} <br>
-                        <span style="color:var(--primary-color); font-weight:700; font-size:14px;">
-                            ${sessionLabel} <span style="background:var(--primary-color); color:white; padding:1px 4px; border-radius:4px; font-size:9px; vertical-align:middle;">BAZAR</span>
-                        </span>
-                    </div>
-                    
-                    <div style="display:flex; flex-direction:column; gap:8px; width:100%;">
-                        <button class="sched-btn ${nightActive ? 'active' : ''}" 
-                            onclick="toggleSchedulerPlan('${dateSession}', 'night', this)">
-                            <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
-                                <span style="font-size:14px;">🌙</span> 
-                                <div style="text-align:right;">
-                                    <div style="font-weight:700;">Night</div>
-                                    <div style="font-size:9px; opacity:0.8;">${sessionLabel}</div>
-                                </div>
-                            </div>
-                        </button>
-                        
-                        <button class="sched-btn ${dayActive ? 'active' : ''}" 
-                            onclick="toggleSchedulerPlan('${dateNextDay}', 'day', this)">
-                            <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
-                                <span style="font-size:14px;">🌞</span> 
-                                <div style="text-align:right;">
-                                    <div style="font-weight:700;">Day</div>
-                                    <div style="font-size:9px; opacity:0.8;">${nextDayLabel}</div>
-                                </div>
-                            </div>
-                        </button>
-                    </div>
-                </div>`;
+          newHTML += `
+    <div class="scheduler-card ${isFirstCard ? 'is-today' : ''}">
+        <div class="sched-date-main">${sessionLabel}</div>
+        <div class="sched-sub-label">${isFirstCard ? 'ACTIVE SESSION' : 'UPCOMING'}</div>
+        
+        <div class="sched-actions">
+            <button class="sched-btn night-btn ${nightActive ? 'active' : ''}" 
+                onclick="toggleSchedulerPlan('${dateSession}', 'night', this)">
+                <span class="status-text">${nightActive ? 'ON' : 'OFF'}</span>
+                <span class="btn-label">🌙 Night</span>
+            </button>
+            
+            <button class="sched-btn day-btn ${dayActive ? 'active' : ''}" 
+                onclick="toggleSchedulerPlan('${dateNextDay}', 'day', this)">
+                <span class="status-text">${dayActive ? 'ON' : 'OFF'}</span>
+                <span class="btn-label">🌞 Day</span>
+            </button>
+        </div>
+    </div>`;
         }
         
         // 4. Update the DOM only once
@@ -4373,13 +4881,23 @@ async function loadScheduler() {
 
 // Function triggered by clicking scheduler buttons
 async function toggleSchedulerPlan(date, type, btnElement) {
+    // 1. IMMEDIATE UI UPDATE (Optimistic)
+    const statusLabel = btnElement.querySelector('.status-text');
     const wasActive = btnElement.classList.contains('active');
-    if (wasActive) btnElement.classList.remove('active');
-    else btnElement.classList.add('active');
+    
+    // Flip classes and text immediately
+    if (wasActive) {
+        btnElement.classList.remove('active');
+        if (statusLabel) statusLabel.textContent = 'OFF';
+    } else {
+        btnElement.classList.add('active');
+        if (statusLabel) statusLabel.textContent = 'ON';
+    }
 
     const newCount = wasActive ? 0 : 1;
 
     try {
+        // 2. DATABASE SYNC
         const { data: existing } = await supabase
             .from('meal_plans')
             .select('*')
@@ -4400,15 +4918,13 @@ async function toggleSchedulerPlan(date, type, btnElement) {
         const { error } = await supabase.from('meal_plans').upsert(updateData, { onConflict: 'member_id, plan_date' });
         if (error) throw error;
 
-        // LOG INDIVIDUAL MEAL TOGGLE
-        const actor = currentUser.members ? currentUser.members.name : "User";
-        await logActivity(`${actor} updated their ${type} plan for ${new Date(date).toLocaleDateString('en-GB')} to ${newCount > 0 ? 'ON' : 'OFF'}`, 'meal');
-
     } catch (err) {
         console.error("Plan update failed", err);
         showNotification("Failed to save plan", "error");
-        if (wasActive) btnElement.classList.add('active');
-        else btnElement.classList.remove('active');
+        
+        // REVERT UI on error
+        btnElement.classList.toggle('active', wasActive);
+        if (statusLabel) statusLabel.textContent = wasActive ? 'ON' : 'OFF';
     }
 }
 
@@ -5060,19 +5576,37 @@ async function loadRecentActivity() {
     // PROFILE PAGE
     // ============================================
     
- async function loadProfile() {
+async function loadProfile() {
     if (!currentUser || !currentUser.member_id) return;
-    if (!currentCycleId) return;
 
     try {
         const member = allMembers.find(m => m.id === currentUser.member_id);
         if (member) {
+            const avatarCircle = document.getElementById('profileAvatar');
+
+                avatarCircle.onclick = changeProfilePicture; 
+            
+            // 1. Set Name and Role
             document.getElementById('profileName').textContent = member.name;
             document.getElementById('profileRoleDisplay').textContent = member.role || 'Member';
             
-            // Set Avatar Initials
-            const initials = member.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-            document.getElementById('profileAvatar').firstChild.textContent = initials;
+            // 2. Profile Picture Logic
+            if (member.avatar_url && member.avatar_url.trim() !== "") {
+                // If there is a URL, show the image and hide initials
+                avatarCircle.innerHTML = `
+                    <img src="${member.avatar_url}" alt="Profile">
+                    <div class="profile-status-online"></div>
+                `;
+                avatarCircle.classList.add('has-image');
+            } else {
+                // Fallback: Show Initials
+                const initials = member.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                avatarCircle.innerHTML = `
+                    ${initials}
+                    <div class="profile-status-online"></div>
+                `;
+                avatarCircle.classList.remove('has-image');
+            }
         }
 
         // Fetch user data
@@ -5118,6 +5652,46 @@ async function loadRecentActivity() {
         console.error('Error loading profile:', err);
     }
 }
+
+
+
+// Function to update the Avatar Link
+async function changeProfilePicture() {
+    // 1. Ask the user for the URL
+    const currentUrl = allMembers.find(m => m.id === currentUser.member_id)?.avatar_url || "";
+    const newUrl = prompt("Enter the direct link to your new profile picture:", currentUrl);
+
+    // 2. If user didn't cancel and entered something (or cleared it)
+    if (newUrl !== null) {
+        try {
+            // Show a loading notification
+            showNotification("Updating photo...", "info");
+
+            // 3. Update Supabase
+            const { error } = await supabase
+                .from('members')
+                .update({ avatar_url: newUrl.trim() })
+                .eq('id', currentUser.member_id);
+
+            if (error) throw error;
+
+            // 4. Update local state so UI reflects change immediately
+            const memberIndex = allMembers.findIndex(m => m.id === currentUser.member_id);
+            if (memberIndex !== -1) allMembers[memberIndex].avatar_url = newUrl.trim();
+
+            // 5. Refresh the Profile UI
+            loadProfile();
+            showNotification("Profile picture updated!", "success");
+
+        } catch (err) {
+            console.error("Update failed:", err);
+            showNotification("Failed to update photo.", "error");
+        }
+    }
+}
+
+
+
 
     async function loadTodayMealStatus() {
         if (!currentUser.member_id) return;
@@ -6303,12 +6877,12 @@ document.getElementById('depositForm').addEventListener('submit', async (e) => {
         }
     });
 
-  async function loadMembersList() {
+ async function loadMembersList() {
     const container = document.getElementById('membersList');
+    if (!container) return;
     container.innerHTML = '<div class="loading">Loading members...</div>';
 
     try {
-        // FIXED: Only fetch members. All info (role, user_id) is now in this table.
         const { data: members, error } = await supabase
             .from('members')
             .select('*')
@@ -6326,30 +6900,44 @@ document.getElementById('depositForm').addEventListener('submit', async (e) => {
             const isAdmin = member.role === 'admin';
             const hasLogin = member.user_id !== null;
 
+            // --- FIXED AVATAR LOGIC (Inside the loop) ---
+            const avatarHtml = (member.avatar_url && member.avatar_url.trim() !== "") 
+                ? `<img src="${member.avatar_url}" style="width:45px; height:45px; border-radius:50%; object-fit:cover; border: 2px solid #e2e8f0;">`
+                : `<div style="width:45px; height:45px; border-radius:50%; background:#f1f5f9; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:16px; color:#64748b; border: 2px solid #cbd5e1;">${member.name[0].toUpperCase()}</div>`;
+
             return `
-            <div class="list-item" style="flex-wrap: wrap; gap: 10px;">
-                <div class="list-item-info" style="min-width: 200px;">
-                    <div class="list-item-title">
+            <div class="list-item" style="flex-wrap: wrap; gap: 12px; align-items: center; padding: 15px; background: white; border-radius: 16px; margin-bottom: 10px; border: 1px solid #f1f5f9;">
+                
+                <!-- Avatar column -->
+                <div style="flex-shrink: 0;">
+                    ${avatarHtml}
+                </div>
+
+                <!-- Info column -->
+                <div class="list-item-info" style="flex: 1; min-width: 150px;">
+                    <div class="list-item-title" style="font-size: 15px; font-weight: 800;">
                         ${member.name} 
-                        ${isAdmin ? '<span style="font-size:10px; background:#4F46E5; color:white; padding:2px 6px; border-radius:4px;">ADMIN</span>' : ''}
-                        ${isManager ? '<span style="font-size:10px; background:#10B981; color:white; padding:2px 6px; border-radius:4px;">MANAGER</span>' : ''}
+                        ${isAdmin ? '<span style="font-size:9px; background:#0f172a; color:white; padding:2px 6px; border-radius:6px; margin-left:5px;">ADMIN</span>' : ''}
+                        ${isManager ? '<span style="font-size:9px; background:#10b981; color:white; padding:2px 6px; border-radius:6px; margin-left:5px;">MANAGER</span>' : ''}
                     </div>
-                    <div class="list-item-subtitle">
-                        Status: ${hasLogin ? '<span style="color:var(--success-color)">Active User</span>' : '<span style="color:var(--warning-color)">No Login Linked</span>'}
-                        <br>${member.email || ''}
+                    <div class="list-item-subtitle" style="font-size: 11px;">
+                        ${hasLogin ? '<span style="color:#10b981">● Active User</span>' : '<span style="color:#f59e0b">○ No Login Linked</span>'}
                     </div>
                 </div>
                 
+                <!-- Actions column -->
                 <div style="display: flex; gap: 8px;">
                     ${!isAdmin ? `
                     <button class="btn btn-sm ${isManager ? 'btn-secondary' : 'btn-success'}" 
+                            style="font-size: 10px; padding: 6px 10px;"
                             onclick="toggleManagerRole('${member.id}', '${member.role}')">
-                        ${isManager ? 'Demote' : 'Make Manager'}
+                        ${isManager ? 'Demote' : 'Promote'}
                     </button>
                     ` : ''}
                     
                     <button class="btn btn-sm btn-primary" 
-                            onclick="openEditMemberModal('${member.id}', '${member.name}', '')">
+                            style="font-size: 10px; padding: 6px 10px;"
+                            onclick="openEditMemberModal('${member.id}', '${member.name}', '${member.user_id || ''}')">
                         Edit
                     </button>
                 </div>
@@ -7200,8 +7788,11 @@ async function updateDashboardMealPlan() {
 
         // 4. Update the UI
         if (document.getElementById('planNightDate')) {
-            document.getElementById('planNightDate').textContent = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-            document.getElementById('planDayDate').textContent = tomorrow.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+          document.getElementById('planNightDate').textContent =
+  `${now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} Night`;
+
+document.getElementById('planDayDate').textContent =
+  `${tomorrow.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} Day`;
 
             document.getElementById('planNightTotal').textContent = nightTotal;
             document.getElementById('planDayTotal').textContent = dayTotal;
