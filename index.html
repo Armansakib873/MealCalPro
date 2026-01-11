@@ -1339,7 +1339,73 @@
     }
 }
 
+/* --- 1. Wallet Balance Card States (Mobile & PC) --- */
+#profileBalanceCard.status-pos {
+    background: linear-gradient(135deg, #0f172a 0%, #020617 100%) !important;
+}
+#profileBalanceCard.status-pos .stat-value {
+    color: #10b981 !important;
+}
 
+#profileBalanceCard.status-neg {
+    background: linear-gradient(135deg, #450a0a 0%, #020617 100%) !important;
+    border: 1px solid rgba(239, 68, 68, 0.3) !important;
+}
+#profileBalanceCard.status-neg .stat-value {
+    color: #f87171 !important; /* Soft Red for contrast on black */
+}
+
+/* --- 2. Desktop View Profile Fix --- */
+@media (min-width: 769px) {
+    #profilePage .profile-header-banner {
+        height: 180px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        padding: 0 60px 0 240px; 
+        justify-content: space-between;
+        border-radius: 16px;
+        position: relative; /* Essential parent for absolute avatar */
+    }
+
+    #profilePage .profile-info-section {
+        position: absolute;
+        top: 100px; 
+        left: 60px;
+        margin: 0;
+        z-index: 100;
+        display: block !important; /* Ensure it stays visible */
+    }
+
+    #profilePage .profile-avatar-circle {
+        width: 140px !important;
+        height: 140px !important;
+        font-size: 48px !important;
+        border: 6px solid var(--card-bg) !important;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.2) !important;
+        background-color: #fff;
+    }
+
+    #profilePage .profile-avatar-circle img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 50%;
+    }
+
+    /* Fixed the overlapping banner text */
+    #profilePage .profile-text-container {
+        padding: 0;
+        text-align: left;
+        display: block !important;
+    }
+
+    #profilePage .profile-main-name {
+        font-size: 32px !important;
+        color: white !important;
+        margin: 0 !important;
+    }
+}
 
 
 
@@ -6012,81 +6078,82 @@ async function loadRecentActivity() {
     
 async function loadProfile() {
     if (!currentUser || !currentUser.member_id) return;
+    if (!currentCycleId) return;
 
     try {
         const member = allMembers.find(m => m.id === currentUser.member_id);
         if (member) {
             const avatarCircle = document.getElementById('profileAvatar');
-
-                avatarCircle.onclick = changeProfilePicture; 
+            avatarCircle.onclick = changeProfilePicture; 
             
-            // 1. Set Name and Role
             document.getElementById('profileName').textContent = member.name;
             document.getElementById('profileRoleDisplay').textContent = member.role || 'Member';
             
-            // 2. Profile Picture Logic
             if (member.avatar_url && member.avatar_url.trim() !== "") {
-                // If there is a URL, show the image and hide initials
                 avatarCircle.innerHTML = `
                     <img src="${member.avatar_url}" alt="Profile">
                     <div class="profile-status-online"></div>
                 `;
                 avatarCircle.classList.add('has-image');
             } else {
-                // Fallback: Show Initials
                 const initials = member.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-                avatarCircle.innerHTML = `
-                    ${initials}
-                    <div class="profile-status-online"></div>
-                `;
+                avatarCircle.innerHTML = `${initials}<div class="profile-status-online"></div>`;
                 avatarCircle.classList.remove('has-image');
             }
         }
 
-        // Fetch user data
-        const { data: userMeals } = await supabase.from('meals').select('day_count, night_count').eq('member_id', currentUser.member_id).eq('cycle_id', currentCycleId);
-        const { data: userDeps } = await supabase.from('deposits').select('amount').eq('member_id', currentUser.member_id).eq('cycle_id', currentCycleId).neq('status', 'pending');
-        
-        // Fetch global data for Rate
-        const { data: allExp } = await supabase.from('expenses').select('amount').eq('cycle_id', currentCycleId).eq('status', 'approved');
-        const { data: allMeals } = await supabase.from('meals').select('day_count, night_count').eq('cycle_id', currentCycleId);
+        // Fetch calculation data
+        const [userMeals, userDeps, allExp, allMeals] = await Promise.all([
+            supabase.from('meals').select('day_count, night_count').eq('member_id', currentUser.member_id).eq('cycle_id', currentCycleId),
+            supabase.from('deposits').select('amount').eq('member_id', currentUser.member_id).eq('cycle_id', currentCycleId).neq('status', 'pending'),
+            supabase.from('expenses').select('amount').eq('cycle_id', currentCycleId).eq('status', 'approved'),
+            supabase.from('meals').select('day_count, night_count').eq('cycle_id', currentCycleId)
+        ]);
 
-        // Calculations
-        const totalUserMeals = userMeals?.reduce((s, m) => s + parseFloat(m.day_count + m.night_count), 0) || 0;
-        const totalUserPaid = userDeps?.reduce((s, d) => s + parseFloat(d.amount), 0) || 0;
-        const totalGlobalExp = allExp?.reduce((s, e) => s + parseFloat(e.amount), 0) || 0;
-        const totalGlobalMeals = allMeals?.reduce((s, m) => s + parseFloat(m.day_count + m.night_count), 0) || 1;
+        const totalUserMeals = userMeals.data?.reduce((s, m) => s + (parseFloat(m.day_count) + parseFloat(m.night_count)), 0) || 0;
+        const totalUserPaid = userDeps.data?.reduce((s, d) => s + parseFloat(d.amount), 0) || 0;
+        const totalGlobalExp = allExp.data?.reduce((s, e) => s + parseFloat(e.amount), 0) || 0;
+        const totalGlobalMeals = allMeals.data?.reduce((s, m) => s + (parseFloat(m.day_count) + parseFloat(m.night_count)), 0) || 1;
+        
         const rate = totalGlobalExp / totalGlobalMeals;
-        const balance = totalUserPaid - (totalUserMeals * rate);
+        const currentBalance = totalUserPaid - (totalUserMeals * rate);
 
         // Update UI
-        document.getElementById('profileTotalMeals').textContent = totalUserMeals.toFixed(1);
-        document.getElementById('profileTotalDeposit').textContent = formatCurrency(totalUserPaid);
-        
-        const balEl = document.getElementById('profileBalance');
-        const balCard = document.getElementById('profileBalanceCard');
-        balEl.textContent = formatCurrency(balance);
-        
-        // Dynamic styling for balance
-        if (balance < 0) {
-            balEl.style.color = 'var(--danger-color)';
-            balCard.classList.add('warning');
+        const miniBal = document.getElementById('profileBalanceMini');
+        const miniCard = document.getElementById('miniBalanceCard'); // Top small card
+        const heroBal = document.getElementById('profileBalance');   // Main big card amount
+        const heroCard = document.getElementById('profileBalanceCard'); // Main big card container
+
+        if (miniBal) miniBal.textContent = `৳${Math.round(currentBalance)}`;
+        if (heroBal) heroBal.textContent = `৳${currentBalance.toFixed(2)}`;
+        document.getElementById('profileTotalDeposit').textContent = `৳${Math.round(totalUserPaid)}`;
+
+        // --- APPLY NEGATIVE/POSITIVE CLASSES TO BOTH ---
+        if (currentBalance < 0) {
+            // Mini Card at Top
+            if(miniBal) miniBal.className = "stat-mini-value balance-neg";
+            if(miniCard) { miniCard.classList.add('status-neg'); miniCard.classList.remove('status-pos'); }
+            
+            // Big Fintech Card
+            if(heroCard) { heroCard.classList.add('status-neg'); heroCard.classList.remove('status-pos'); }
         } else {
-            balEl.style.color = 'var(--success-color)';
-            balCard.classList.remove('warning');
+            // Mini Card at Top
+            if(miniBal) miniBal.className = "stat-mini-value balance-pos";
+            if(miniCard) { miniCard.classList.add('status-pos'); miniCard.classList.remove('status-neg'); }
+            
+            // Big Fintech Card
+            if(heroCard) { heroCard.classList.add('status-pos'); heroCard.classList.remove('status-neg'); }
         }
 
         const cycleObj = allCycles.find(c => c.id == currentCycleId);
         document.getElementById('profileCycleName').textContent = cycleObj ? cycleObj.name : 'Unknown';
 
         await loadProfileDepositHistory();
-
-         pageLoaded.profile = true; 
+        pageLoaded.profile = true; 
     } catch (err) {
         console.error('Error loading profile:', err);
     }
 }
-
 
 
 // Function to update the Avatar Link
