@@ -5,6 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MealCal Pro</title>
    <style>
+
+    /* At the top of your <style> tag */
+@import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;700&display=swap');
+
+body {
+    font-family: 'Hind Siliguri', -apple-system, sans-serif;
+}
+
+/* Ensure numeric values use the font */
+.stat-value, .pulse-val, .log-amount, .balance-tag {
+    font-family: 'Hind Siliguri', sans-serif !important;
+    font-weight: 700;
+}
+
+
         /* =========================================
            1. THEME VARIABLES
            ========================================= */
@@ -779,6 +794,28 @@
         .defaults-container { background: var(--bg-color); padding: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;}
         .def-btn { padding: 4px 8px; font-size: 10px; border: 1px solid var(--border-color); background: var(--card-bg); border-radius: 4px; cursor: pointer; }
         .def-btn.active { background: var(--primary-color); color: white; }
+
+
+
+        /* Styling for the main amount */
+.amt-whole {
+    font-weight: 800;
+    color: #10b981; /* Current Green */
+    font-size: 1.1em;
+}
+
+/* Styling for the decimals (.০০) */
+.amt-decimal {
+    font-weight: 400;
+    color: #94a3b8; /* Faded Grey */
+    font-size: 0.85em;
+    opacity: 0.7;
+}
+
+/* If the amount is negative, we can style it red automatically */
+.balance-negative .amt-whole {
+    color: #ef4444; /* Red */
+}
 
 
         /* =========================================
@@ -2709,7 +2746,75 @@
 .balance-tag.pos { background: #ECFDF5; color: #047857; }
 .balance-tag.neg { background: #FEF2F2; color: #B91C1C; }
 
+/* --- Premium Mess Balance Card (Dashboard) --- */
+.balance-glass-card {
+    background: #1e293b; /* Deep Slate Base */
+    border-radius: 24px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease;
+}
 
+/* Aurora Glow behind glass */
+.balance-glass-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle at center, rgb(247 0 0 / 23%) 0%, #000000cc 70%);
+    z-index: 0;
+}
+
+.glass-card-inner { position: relative; z-index: 1; }
+
+.glass-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+.glass-label { font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
+
+/* Status Pill */
+.status-pill-fintech {
+    font-size: 8px;
+    font-weight: 900;
+    padding: 3px 8px;
+    border-radius: 20px;
+    text-transform: uppercase;
+}
+
+.status-pill-fintech.pos { background: #064e3b; color: #34d399; border: 1px solid #065f46; }
+.status-pill-fintech.neg { background: #450a0a; color: #f87171; border: 1px solid #7f1d1d; animation: pulse-red-border 2s infinite; }
+
+.glass-body { display: flex; align-items: baseline; gap: 5px; margin-bottom: 15px; }
+.glass-currency { font-size: 20px; font-weight: 400; color: #94a3b8; }
+.glass-value { font-size: 34px; font-weight: 900; color: white; font-family: 'Inter', sans-serif; letter-spacing: -1px; }
+
+/* Safety Bar (Visual Buffer) */
+.safety-bar-container {
+    height: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    margin-bottom: 6px;
+    overflow: hidden;
+}
+.safety-bar-fill { height: 100%; width: 0%; transition: width 1s ease, background 0.5s; }
+.safety-text { font-size: 9px; color: #64748b; font-weight: 700; }
+
+@keyframes pulse-red-border {
+    0% { border-color: #7f1d1d; }
+    50% { border-color: #ef4444; }
+    100% { border-color: #7f1d1d; }
+}
+
+/* Responsive adjustment for Dashboard Grid */
+@media (max-width: 768px) {
+    .dash-stats-grid {
+        grid-template-columns: 1fr; /* Make balance card full width on mobile for impact */
+    }
+    .balance-glass-card { grid-column: span 1; }
+}
 
 /* Dashboard Balance Indicator Colors */
 #statMessBalance.pos {
@@ -2782,6 +2887,25 @@
         font-size: 20px;
         padding: 4px 15px;
     }
+}
+.log-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    margin-bottom: 8px;
+    border: 1px dashed rgba(149, 149, 149, 0.593);
+    border-radius: 8px;
+}
+.log-main {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.log-amount {
+    font-weight: bold;
+    white-space: nowrap;
 }
 
 /* Floating Real-time Status Indicator */
@@ -3264,14 +3388,36 @@
 
     <!-- 2. Stats Grid (2x2) -->
     <div class="dash-stats-grid">
+
+        
+<!-- Premium Cash in Hand Card -->
+<div class="balance-glass-card" id="messBalanceContainer">
+    <div class="glass-card-inner">
+        <div class="glass-header">
+            <span class="glass-label">Mess Liquidity</span>
+            <div id="balanceStatusPill" class="status-pill-fintech">Checking...</div>
+        </div>
+        
+        <div class="glass-body">
+            <span class="glass-currency">৳</span>
+            <span class="glass-value" id="statMessBalance">0</span>
+        </div>
+        
+        <div class="glass-footer">
+            <div class="safety-bar-container">
+                <div id="safetyProgress" class="safety-bar-fill"></div>
+            </div>
+            <span class="safety-text">Threshold: ৳1,000</span>
+        </div>
+    </div>
+</div>
+
         <div class="stat-pill-card">
             <div class="label">Meal Rate</div>
             <div class="val" id="statMealRate">৳0.00</div>
         </div>
- <div class="stat-pill-card" id="messBalanceContainer">
-    <div class="label">Cash in Hand</div>
-    <div class="val" id="statMessBalance">৳0</div>
-</div>
+
+
         <div class="stat-pill-card">
             <div class="label">Deposits</div>
             <div class="val" id="statTotalDeposit" style="color: #059669;">৳0</div>
@@ -3939,12 +4085,19 @@ async function syncFullState() {
     console.log("✅ Local state is now current.");
 }
 
+// Helper to convert English numbers to Bengali digits
+function toBn(num) {
+    if (num === null || num === undefined) return "০";
+    const bnDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+    return num.toString().replace(/\d/g, d => bnDigits[d]);
+}
+
 // Helper to get YYYY-MM-DD in LOCAL time (prevents Dec 31st bug)
 function toLocalISO(date) {
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, '0');
     const d = String(date.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
+    return `${y}-${m}-${d}`; // Returns YYYY-MM-DD
 }
 
 function parseLocalDate(dateStr) {
@@ -4280,10 +4433,15 @@ async function loadPageData(pageName, forceRefresh = false) {
         const hashArray = Array.from(new Uint8Array(hashBuffer));
         return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
     }
-
-    function formatCurrency(amount) {
-         return `৳${parseFloat(amount || 0).toFixed(2)}`;
-    }
+function formatCurrency(amount) {
+    const isNegative = amount < 0;
+    const val = Math.abs(parseFloat(amount || 0)).toFixed(2);
+    const [integerPart, decimalPart] = val.split('.');
+    const sign = isNegative ? '-' : '+';
+    
+    // sign is hidden but available if needed. Here we style the currency symbol and amounts
+    return `৳ <span class="amt-whole">${toBn(integerPart)}</span><span class="amt-decimal">.${toBn(decimalPart)}</span>`;
+}
 
 // This function handles both the name 'formatDate' and adds the Time
 function formatDate(dateString) {
@@ -4463,21 +4621,26 @@ function handleRealtimeUpdate(table, payload) {
 // ============================================
 
 function handleMealPlanUpdate(activePage, payload) {
-    // Check if the update belongs to the CURRENT USER
+    console.log("🔄 Real-time Update Received:", payload.eventType);
+    
+    // Update Dashboard immediately regardless of current page
+    updateDashboardMealPlan();
+
+    // Specific UI updates based on where the user is looking
     const isMe = payload.new?.member_id === currentUser?.member_id || 
                  payload.old?.member_id === currentUser?.member_id;
 
-    // ONLY refresh scheduler if it's MY data that changed
     if (activePage === 'profile' && isMe) {
-        debounceRefresh(() => loadScheduler(), 'scheduler', 500);
+        loadScheduler(); // Refresh the dots/buttons on profile
     }
     
-    // Dashboard and Summary still need to refresh for everyone because totals change
-    if (activePage === 'dashboard') debounceRefresh(() => updateDashboardMealPlan(), 'dash-plan', 1000);
-    if (activePage === 'summary') debounceRefresh(() => loadSummary(), 'summary', 800);
+    if (activePage === 'summary') {
+        loadSummary(); // Refresh the table
+    }
 
     updateEntryStatusIndicator();
 }
+
 
 function handleMealUpdate(activePage, payload) {
     const isMe = payload.new?.member_id === currentUser?.member_id || 
@@ -6080,65 +6243,30 @@ function refreshCurrentPage() {
 async function loadDashboard() {
     if (!currentCycleId) return;
 
-    // 1. Welcome Greeting
-    if (currentUser) {
-        const fullName = currentUser.members ? currentUser.members.name : 'User';
-        const firstName = fullName.split(' ')[0];
-        const welcomeEl = document.getElementById('welcomeName');
-        if (welcomeEl) welcomeEl.textContent = `Hello, ${firstName}!`;
-    }
-
     try {
-        // 2. Fetch All Required Data in Parallel
         const [expRes, mealRes, depRes] = await Promise.all([
-            // Only approved expenses
             supabase.from('expenses').select('amount').eq('cycle_id', currentCycleId).eq('status', 'approved'),
-            // All meals to calculate Meal Rate
             supabase.from('meals').select('day_count, night_count').eq('cycle_id', currentCycleId),
-            // Only approved/completed deposits (ignore pending)
             supabase.from('deposits').select('amount').eq('cycle_id', currentCycleId).neq('status', 'pending')
         ]);
 
-        // 3. Process Calculations
         const totalExpense = expRes.data?.reduce((sum, e) => sum + parseFloat(e.amount), 0) || 0;
         const totalMeals = mealRes.data?.reduce((sum, m) => sum + (parseFloat(m.day_count) + parseFloat(m.night_count)), 0) || 0;
         const totalDeposit = depRes.data?.reduce((sum, d) => sum + parseFloat(d.amount), 0) || 0;
-        
-        const cashInHand = totalDeposit - totalExpense;
         const mealRate = totalMeals > 0 ? totalExpense / totalMeals : 0;
+        const cashInHand = totalDeposit - totalExpense;
 
-        // 4. Update Main Stats
-        document.getElementById('statMealRate').textContent = `৳${mealRate.toFixed(2)}`;
-        document.getElementById('statTotalExpense').textContent = `৳${Math.round(totalExpense)}`;
-        document.getElementById('statTotalDeposit').textContent = `৳${Math.round(totalDeposit)}`;
-        
-        // 5. Update Cash in Hand with Threshold Logic (৳1000 Warning)
-        const balVal = document.getElementById('statMessBalance');
-        const balCont = document.getElementById('messBalanceContainer');
-        
-        // Format the rounded text first
-        const displayAmount = `৳${Math.round(cashInHand)}`;
-        
-        if (cashInHand >= 1000) {
-            // Healthy State (Green)
-            balVal.textContent = displayAmount;
-            balVal.className = "val pos";
-            balCont.className = "stat-pill-card bg-tint-pos";
-        } else {
-            // Warning State (Red) - Below 1000
-            balVal.innerHTML = `<span style="font-size: 12px; vertical-align: middle;">⚠️</span> ${displayAmount}`;
-            balVal.className = "val neg";
-            balCont.className = "stat-pill-card bg-tint-neg";
-        }
+        // CRITICAL: Change these from .textContent to .innerHTML
+        document.getElementById('statMealRate').innerHTML = formatCurrency(mealRate);
+        document.getElementById('statTotalExpense').innerHTML = formatCurrency(totalExpense);
+        document.getElementById('statTotalDeposit').innerHTML = formatCurrency(totalDeposit);
+        document.getElementById('statMessBalance').textContent = toBn(Math.round(cashInHand).toLocaleString());
 
-        // 6. Trigger Child Components
         loadSystemStatus();
         updateDashboardMealPlan();
         loadRecentActivity();
-
     } catch (err) {
-        console.error('Dashboard Stats Sync Error:', err);
-        showNotification("Failed to sync dashboard stats", "error");
+        console.error('Dashboard Load Error:', err);
     }
 }
 
@@ -6239,7 +6367,7 @@ async function loadProfile() {
 
         if (miniBal) miniBal.textContent = `৳${Math.round(currentBalance)}`;
         if (heroBal) heroBal.textContent = `৳${currentBalance.toFixed(2)}`;
-        document.getElementById('profileTotalDeposit').textContent = `৳${Math.round(totalUserPaid)}`;
+        document.getElementById('profileTotalDeposit').textContent = `৳${toBn(Math.round(totalUserPaid))}`;
 
         // --- APPLY NEGATIVE/POSITIVE CLASSES TO BOTH ---
         if (currentBalance < 0) {
@@ -6742,15 +6870,15 @@ const dayDateStr = toLocalISO(nextDay);
             const nVal = nPlan ? nPlan.night_count : (member.default_night_on ? 1 : 0);
             const dVal = dPlan ? dPlan.day_count : (member.default_day_on ? 1 : 0);
 
-            return `
+           return `
             <tr>
                 <td><strong>${member.name.split(' ')[0]}</strong></td>
                 <td><button class="summary-status-btn ${nVal > 0 ? 'on' : 'off'}" ${isAdmin ? `onclick="quickToggleSummaryMeal(${member.id}, '${nightDateStr}', 'night', ${nVal})"` : 'disabled'}>${nVal > 0 ? 'ON' : 'OFF'}</button></td>
                 <td><button class="summary-status-btn ${dVal > 0 ? 'on' : 'off'}" ${isAdmin ? `onclick="quickToggleSummaryMeal(${member.id}, '${dayDateStr}', 'day', ${dVal})"` : 'disabled'}>${dVal > 0 ? 'ON' : 'OFF'}</button></td>
-                <td style="font-weight:700; color:var(--premium-indigo);">${bazarCountMap[member.id] || 0}</td>
-                <td>${memMeals.toFixed(1)}</td>
-                <td><span class="balance-tag ${memBal >= 0 ? 'pos' : 'neg'}">${Math.round(memBal)}</span></td>
-            </tr>`;
+               <td style="font-weight:700; color:var(--premium-indigo);">${toBn(bazarCountMap[member.id] || 0)}</td>
+    <td>${toBn(memMeals.toFixed(1))}</td>
+    <td><span class="balance-tag ${memBal >= 0 ? 'pos' : 'neg'}">${toBn(Math.round(memBal))}</span></td>
+</tr>`;
         }).join('');
 
         await loadDueSettlement();
@@ -7019,26 +7147,38 @@ async function loadDeposits() {
          const dateStr = formatDateTime(t.created_at);
 
             return `
-            <div class="log-item">
-                <div class="log-main">
-                    <div class="log-icon ${iconClass}">${icon}</div>
-                    <div class="log-details">
-                        <div class="log-member">
-                            ${t.members?.name || 'Unknown'}
-                            <span class="log-type-tag ${tagClass}">${typeLabel}</span>
-                        </div>
-                        <div class="log-meta">
-                            ${dateStr} ${t.notes ? `• ${t.notes}` : ''}
-                        </div>
-                        ${isSettlement && t.notes ? `<div class="transfer-info">📌 ${t.notes}</div>` : ''}
-                    </div>
+           <div class="log-item">
+    <div class="log-content">
+        <!-- Left side -->
+        <div class="log-main">
+            <div class="log-icon ${iconClass}">${icon}</div>
+
+            <div class="log-details">
+                <div class="log-member">
+                    ${t.members?.name || 'Unknown'}
+                    <span class="log-type-tag ${tagClass}">
+                        ${typeLabel}
+                    </span>
                 </div>
-                <div class="log-amount-area">
-                    <div class="log-amount ${isNegative ? 'balance-negative' : 'balance-positive'}">
-                        ${isNegative ? '-' : '+'}${formatCurrency(Math.abs(t.amount))}
-                    </div>
+
+                <div class="log-meta">
+                    ${dateStr} ${t.notes ? `• ${t.notes}` : ''}
                 </div>
+
+                ${isSettlement && t.notes
+                    ? `<div class="transfer-info">📌 ${t.notes}</div>`
+                    : ''}
             </div>
+        </div>
+
+        <!-- Right side (balance) -->
+        <div class="log-amount
+            ${isNegative ? 'balance-negative' : 'balance-positive'}">
+            ${isNegative ? '-' : '+'}${formatCurrency(Math.abs(t.amount))}
+        </div>
+    </div>
+</div>
+
             `;
         }).join('');
 
@@ -8363,56 +8503,50 @@ async function saveDayMenu(dayIndex) {
 
 async function updateDashboardMealPlan() {
     const now = new Date();
-    const dayIndex = now.getDay(); 
-    
-    // Use the local timezone safe helper
     const todayStr = toLocalISO(now);
     const tomorrow = new Date(now);
     tomorrow.setDate(now.getDate() + 1);
     const tomorrowStr = toLocalISO(tomorrow);
 
     try {
-        // 1. Fetch the Fixed Weekly Menu
-        const { data: menu, error: menuError } = await supabase
-            .from('weekly_menus')
-            .select('*')
-            .eq('day_index', dayIndex)
-            .single();
+        // Fetch fresh members and overrides simultaneously
+        const [menuRes, membersRes, plansRes] = await Promise.all([
+            supabase.from('weekly_menus').select('*').eq('day_index', now.getDay()).maybeSingle(),
+            supabase.from('members').select('id, default_day_on, default_night_on'),
+            supabase.from('meal_plans').select('*').in('plan_date', [todayStr, tomorrowStr])
+        ]);
 
-        if (menuError) throw menuError;
+        const members = membersRes.data || [];
+        const plans = plansRes.data || [];
+        const menu = menuRes.data;
 
-        // 2. Fetch Live Totals from meal_plans
-        const { data: plans, error: planError } = await supabase
-            .from('meal_plans')
-            .select('plan_date, night_count, day_count')
-            .in('plan_date', [todayStr, tomorrowStr]);
+        let nightSum = 0;
+        let daySum = 0;
 
-        if (planError) throw planError;
+        members.forEach(m => {
+            // Check for tonight's override
+            const nPlan = plans.find(p => p.member_id === m.id && p.plan_date === todayStr);
+            // Check for tomorrow morning's override
+            const dPlan = plans.find(p => p.member_id === m.id && p.plan_date === tomorrowStr);
 
-        // 3. Calculate Totals
-        const nightTotal = plans?.filter(p => p.plan_date === todayStr).reduce((s, p) => s + (p.night_count || 0), 0) || 0;
-        const dayTotal = plans?.filter(p => p.plan_date === tomorrowStr).reduce((s, p) => s + (p.day_count || 0), 0) || 0;
+            nightSum += (nPlan ? Number(nPlan.night_count) : (m.default_night_on ? 1 : 0));
+            daySum += (dPlan ? Number(dPlan.day_count) : (m.default_day_on ? 1 : 0));
+        });
 
-        // 4. Update the UI
-        if (document.getElementById('planNightDate')) {
-          document.getElementById('planNightDate').textContent =
-  `${now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} Night`;
+        // UI Updates
+        document.getElementById('planNightTotal').textContent = toBn(nightSum);
+        document.getElementById('planDayTotal').textContent = toBn(daySum);
 
-document.getElementById('planDayDate').textContent =
-  `${tomorrow.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} Day`;
+        document.getElementById('planNightDate').textContent = toBn(now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })) + " Night";
+        document.getElementById('planDayDate').textContent = toBn(tomorrow.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })) + " Day";
 
-            document.getElementById('planNightTotal').textContent = nightTotal;
-            document.getElementById('planDayTotal').textContent = dayTotal;
-
+        if (menu) {
             document.getElementById('planNightMenu').textContent = menu.night_menu || "Not set";
             document.getElementById('planDayMenu').textContent = menu.day_menu || "Not set";
-            
-            if(document.getElementById('planDayTitle')) {
-                document.getElementById('planDayTitle').textContent = `${menu.day_name}'s Status`;
-            }
+            document.getElementById('planDayTitle').textContent = `${menu.day_name}'s Status`;
         }
     } catch (err) {
-        console.error("Dashboard Plan Error:", err);
+        console.error("Dashboard calculation failed:", err);
     }
 }
 
