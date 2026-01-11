@@ -130,6 +130,17 @@
     transition: opacity 0.5s ease, visibility 0.5s;
 }
 
+/* Prevent anything from showing behind the loader during auth check */
+#authPage.hidden, #mainApp.hidden {
+    display: none !important;
+}
+
+/* Ensure Splash is the absolute top layer */
+.splash-screen {
+    z-index: 10000; /* Higher than auth wrapper (9999) */
+    background: #21122e; /* Match your app background to prevent white flashes */
+}
+
 .splash-content {
     text-align: center;
     display: flex;
@@ -1861,6 +1872,9 @@
     transition: all 0.2s;
 }
 
+
+
+
 .exp-field:focus { border-color: var(--premium-indigo); outline: none; background: white; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
 
 /* Compact Row 3 (Amount + Button) */
@@ -3035,7 +3049,7 @@
 </div>
 
 <!-- Enhanced Auth Page -->
-<div id="authPage" class="auth-page-wrapper">
+<div id="authPage" class="auth-page-wrapper hidden">    
     <!-- Animated Background Glows -->
     <div class="auth-bg-glow glow-1"></div>
     <div class="auth-bg-glow glow-2"></div>
@@ -3553,7 +3567,7 @@
             </div>
             <div class="exp-input-group">
                 <label>Amount (৳)</label>
-                <input type="number" id="depositAmount" class="exp-field" placeholder="0" required oninput="this.value = Math.round(this.value)">
+                <input type="number" style="border: 2px solid rgb(176, 0, 0);" id="depositAmount" class="exp-field" placeholder="0" required oninput="this.value = Math.round(this.value)">
             </div>
             <div class="exp-input-group">
                 <label>Label</label>
@@ -3570,7 +3584,7 @@
     </div>
 
     <!-- 3. SELECTED MEMBER HISTORY (The Part I skipped) -->
-    <div class="card" style="margin-top: 20px; padding: 15px; border: 1px solid var(--premium-indigo); background: #bcd4d1b5;">
+    <div class="card" style="margin-top: 20px; padding: 15px; border: 1px solid var(--premium-indigo); background: #e2b7b7b5;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
             <h3 style="font-size: 13px; font-weight: 800; color: rgb(33, 33, 33);">Individual Ledger</h3>
             <span id="historyMemberName" style="font-size: 11px; font-weight: 700; color: var(--premium-indigo); background: #000000b5; padding: 2px 8px; border-radius: 10px;">No member selected</span>
@@ -3948,32 +3962,38 @@ let isLoginMode = true; // Toggle between Login and Signup
 
 // 1. Initialize Auth State Listener (Runs automatically on load)
 async function initAuth() {
-    // Check session
+    // 1. Check for current session
     const { data: { session } } = await supabase.auth.getSession();
     
     if (session) {
-        // Logged in: handleSession will call initializeApp which eventually hides splash
+        // User is logged in: Keep splash visible and load the app
         await handleUserSession(session.user);
     } else {
-        // Not logged in: Show Login Page
-        document.getElementById('authPage').classList.remove('hidden');
-        document.getElementById('mainApp').classList.add('hidden');
+        // User is logged out:
+        // Hide the loader and show the login page simultaneously for a smooth swap
+        const authPage = document.getElementById('authPage');
+        const mainApp = document.getElementById('mainApp');
         
-        // --- MANUAL RELOAD FIX ---
-        // Give the video 2 seconds to play before showing the login form
+        mainApp.classList.add('hidden');
+        authPage.classList.remove('hidden');
+        
+        // Short delay to let the UI render behind the splash before fading it out
         setTimeout(() => {
-            hideSplash();
-            console.log("Unauthenticated: Splash hidden, Login ready.");
-        }, 2000);
+            hideSplash(600); 
+            console.log("Unauthenticated: Transitioning to Login.");
+        }, 500);
     }
 
+    // Listen for Auth changes (Login/Logout)
     supabase.auth.onAuthStateChange(async (_event, session) => {
         if (session) {
+            // Transition handled by handleUserSession -> initializeApp
             await handleUserSession(session.user);
         } else {
+            // If logged out, reset visibility
             document.getElementById('authPage').classList.remove('hidden');
             document.getElementById('mainApp').classList.add('hidden');
-            hideSplash();
+            hideSplash(400);
         }
     });
 }
@@ -3981,35 +4001,35 @@ async function initAuth() {
 // 2. Fetch Member Profile based on Login ID
 async function handleUserSession(user) {
     try {
-        // Fetch the profile linked to this Login ID
+        // 1. Try to fetch the profile from the 'members' table
         let { data: member, error } = await supabase
             .from('members')
             .select('*')
             .eq('user_id', user.id)
-             .maybeSingle();  
+            .maybeSingle();
 
         if (member) {
-            // Success: User is linked to a Member
+            // Success: User is a recognized member
             currentUser = { 
                 ...user, 
                 member_id: member.id,
                 name: member.name, 
-                role: member.role || 'user' // Read role from DB!
+                role: member.role || 'user'
             };
         } else {
-            // Unlinked User (Just signed up, not connected yet)
-            console.log("User not linked to member profile");
+            // New Signup Fallback: Use metadata from the Auth system
+            // This ensures the header shows the name immediately after account creation
             currentUser = { 
                 ...user, 
-                role: 'guest',
-                name: user.email 
+                name: user.user_metadata?.display_name || user.email.split('@')[0], 
+                role: 'user' 
             };
         }
 
         // Redirect logic
         showApp();
         
-        // Show/Hide Admin Tab based on REAL role
+        // Admin Tab Logic
         if (currentUser.role === 'admin' || currentUser.role === 'manager') {
             document.getElementById('adminMenuItem').style.display = 'block';
         } else {
@@ -4020,64 +4040,148 @@ async function handleUserSession(user) {
         console.error("Session handling error:", err);
     }
 }
-
 // 3. Handle Form Submit (Login / Signup)
 // --- NEW AUTH LOGIC (Supports Username) ---
 
 // 1. Toggle Login / Sign Up UI
 // Add/Update this in your existing toggle listener
+// Locate this in your script
 document.getElementById('authToggleBtn').addEventListener('click', (e) => {
     e.preventDefault();
     isLoginMode = !isLoginMode;
     
     const title = isLoginMode ? 'Login to Kitchen' : 'Create Account';
-    const subtitle = isLoginMode ? 'Your kitchen, professionally managed.' : 'Start your new mess cycle today.';
-    const emailLabel = isLoginMode ? 'Email or Username' : 'Your Email Address';
-    
+    const subtitle = isLoginMode ? 'Your kitchen, professionally managed.' : 'Join the mess and track your meals.';
+    const emailLabel = isLoginMode ? 'Email or Username' : 'Email Address';
+    const btnText = isLoginMode ? 'Login to Kitchen' : 'Sign Up Now';
+    const toggleText = isLoginMode ? 'New to the mess?' : 'Already have an account?';
+    const linkText = isLoginMode ? 'Create Account' : 'Login';
+
     document.getElementById('authSubtitle').textContent = subtitle;
     document.getElementById('emailLabel').textContent = emailLabel;
-    document.getElementById('authBtn').querySelector('span').textContent = title;
-    
-    // Toggle Username field and link text as before...
+    document.getElementById('authBtn').querySelector('span').textContent = btnText;
+    document.getElementById('authToggleText').textContent = toggleText;
+    document.getElementById('authToggleBtn').textContent = linkText;
+
+    // Show/Hide Full Name field for Signup
+    const userField = document.getElementById('usernameField');
+    if (isLoginMode) {
+        userField.classList.add('hidden');
+        document.getElementById('authUsername').removeAttribute('required');
+    } else {
+        userField.classList.remove('hidden');
+        document.getElementById('authUsername').setAttribute('required', 'true');
+    }
 });
 
 // 2. Handle Submission (Improved with better debugging)
 document.getElementById('authForm').addEventListener('submit', async (e) => {
     e.preventDefault();
+    
+    // 1. Collect inputs
     const emailOrUser = document.getElementById('authEmail').value.trim();
     const password = document.getElementById('authPassword').value;
+    const fullName = document.getElementById('authUsername').value.trim(); // Only for Signup
     const errorDiv = document.getElementById('authError');
     
     errorDiv.style.display = 'none';
-
-    // --- TRIGGER VIDEO LOADER ON LOGIN CLICK ---
-    showSplash("Verifying Credentials...");
+    
+    // Show the splash loader
+    showSplash(isLoginMode ? "Securing Kitchen..." : "Setting up your Account...");
 
     try {
-        let finalEmail = emailOrUser;
-        if (!emailOrUser.includes('@')) {
-            const { data } = await supabase.from('members').select('email').eq('name', emailOrUser).maybeSingle();
-            if (!data || !data.email) throw new Error("Username not found.");
-            finalEmail = data.email;
+        if (isLoginMode) {
+            // ==========================================
+            // LOG IN LOGIC
+            // ==========================================
+            let finalEmail = emailOrUser;
+
+            // Handle Username Login (if no @ is present)
+            if (!emailOrUser.includes('@')) {
+                const { data: member, error: findError } = await supabase
+                    .from('members')
+                    .select('email')
+                    .eq('name', emailOrUser)
+                    .maybeSingle();
+
+                if (findError || !member || !member.email) {
+                    throw new Error("Username not found. Please use your email.");
+                }
+                finalEmail = member.email;
+            }
+
+            const { error: loginError } = await supabase.auth.signInWithPassword({ 
+                email: finalEmail, 
+                password: password 
+            });
+
+            if (loginError) throw loginError;
+            // Success: supabase.auth.onAuthStateChange will automatically trigger initializeApp()
+
+        } else {
+            // ==========================================
+            // SIGN UP LOGIC
+            // ==========================================
+            
+            // Validation
+            if (!emailOrUser.includes('@')) throw new Error("A valid email is required for registration.");
+            if (fullName.length < 2) throw new Error("Please enter your full name.");
+            if (password.length < 6) throw new Error("Password must be at least 6 characters.");
+
+            // 1. Create the Auth User
+            // ... inside authForm listener, in the 'else' (Signup) block:
+const { data: authData, error: signupError } = await supabase.auth.signUp({
+    email: emailOrUser,
+    password: password,
+    options: {
+        // This 'display_name' is what currentUser.user_metadata looks for
+        data: { display_name: fullName } 
+    }
+});
+
+            if (signupError) throw signupError;
+
+            // 2. Check if Email Confirmation is required
+            // (If session is null, it means the user must click the link in their email)
+            if (authData.user && !authData.session) {
+                hideSplash(100);
+                alert("Signup successful! Please check your email inbox to confirm your account before logging in.");
+                // Switch back to login mode automatically
+                document.getElementById('authToggleBtn').click(); 
+                return;
+            }
+
+            // 3. Link Auth User to 'members' table
+            // This is the most important part for your app to show the user's name
+            if (authData.user) {
+                const { error: memberError } = await supabase.from('members').insert({
+                    user_id: authData.user.id,
+                    name: fullName,
+                    email: emailOrUser,
+                    role: 'user' // Default role for new signups
+                });
+
+                if (memberError) {
+                    console.error("Member Link Error:", memberError);
+                    throw new Error("Account created but profile sync failed. Please contact Admin.");
+                }
+
+                showNotification("Welcome to MealCal Pro!", "success");
+            }
         }
 
-        const { data, error } = await supabase.auth.signInWithPassword({ 
-            email: finalEmail, 
-            password: password 
-        });
-
-        if (error) throw error;
-        
-        // Success: handleUserSession will be triggered by onAuthStateChange
-        // which calls initializeApp(), which eventually calls hideSplash().
-
     } catch (err) {
-        // If login fails, hide splash so user can see error message
+        // Hide splash and show error
         hideSplash(100); 
         errorDiv.textContent = err.message;
         errorDiv.style.display = 'block';
+        console.error("Auth Failure:", err);
     }
 });
+
+
+
+
 // 5. Update Logout
 document.getElementById('logoutBtn').addEventListener('click', async () => {
     await supabase.auth.signOut();
@@ -4662,19 +4766,23 @@ function removeToast(toastElement) {
         hideApp();
     });
 
-    function showApp() {
-        document.getElementById('authPage').classList.add('hidden');
-        document.getElementById('mainApp').classList.remove('hidden');
-        
-        // Show admin menu if user is admin
-        if (currentUser.role === 'admin' || currentUser.role === 'manager') {
-            document.getElementById('adminMenuItem').style.display = 'block';
-        } else {
-            document.getElementById('adminMenuItem').style.display = 'none';
-        }
-        
-        initializeApp();
+ function showApp() {
+    document.getElementById('authPage').classList.add('hidden');
+    document.getElementById('mainApp').classList.remove('hidden');
+    
+    // RE-ENABLE SCROLLING
+    document.body.style.overflow = "auto";
+    document.documentElement.style.overflow = "auto";
+    
+    // Show admin menu if applicable
+    if (currentUser.role === 'admin' || currentUser.role === 'manager') {
+        document.getElementById('adminMenuItem').style.display = 'block';
+    } else {
+        document.getElementById('adminMenuItem').style.display = 'none';
     }
+    
+    initializeApp();
+}
 
     function hideApp() {
         document.getElementById('authPage').classList.remove('hidden');
@@ -5507,27 +5615,32 @@ async function loadWeeklyMenuEditor() {
 function initHeader() {
     // 1. Set User Info
     if (currentUser) {
-        // Use member name if available, else username from auth
-        const displayName = currentUser.members ? currentUser.members.name : (currentUser.user_metadata?.username || "User");
+        // Use the 'name' property defined in handleUserSession
+        const displayName = currentUser.name || "User";
         const role = currentUser.role || 'user';
         
         // Update header with format: Name (ROLE)
         document.getElementById('headerUserName').textContent = `${displayName} (${role.toUpperCase()})`;
         
-        // Clear the secondary role line since it's now combined
-        document.getElementById('headerUserRole').textContent = "";
+        // Clear old secondary role field
+        const subRole = document.getElementById('headerUserRole');
+        if(subRole) subRole.textContent = "";
     }
 
     // 2. Start Clock
     updateClock();
-    setInterval(updateClock, 1000);
+    if (!window.clockInterval) {
+        window.clockInterval = setInterval(updateClock, 1000);
+    }
 
     // 3. Update Cycle Name Badge
     const cycleSelect = document.getElementById('cycleSelect');
-    if (cycleSelect.options[cycleSelect.selectedIndex]) {
+    if (cycleSelect && cycleSelect.options[cycleSelect.selectedIndex]) {
         document.getElementById('headerCycleName').textContent = cycleSelect.options[cycleSelect.selectedIndex].text;
     }
 }
+
+
 function updateClock() {
     const now = new Date();
     
