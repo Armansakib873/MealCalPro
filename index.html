@@ -404,7 +404,7 @@ body {
     display: none; /* Hidden on Desktop */
     position: fixed;
     bottom: 0; left: 0; right: 0;
-    background-color: var(--card-bg);
+    background-color: #4e8297;
     border-top: 1px solid var(--border-color);
     height: 65px; /* Slightly shorter to feel tighter */
     z-index: 1000;
@@ -434,7 +434,7 @@ body {
     justify-content: center;
     height: 100%;
     text-decoration: none;
-    color: var(--text-muted);
+    color: #ffffff;
     transition: all 0.2s ease;
 }
 
@@ -1484,6 +1484,33 @@ body {
 }
 
 
+
+/* 1. Critical State (Low Funds) */
+.balance-glass-card.state-critical {
+    background: linear-gradient(135deg, #450a0a 0%, #1a0505 100%) !important; /* Deep Red BG */
+    border: 1px solid #ef4444 !important; /* Bright Red Border */
+    box-shadow: 0 10px 30px -5px rgba(239, 68, 68, 0.3); /* Red Glow */
+}
+.balance-glass-card.state-critical .glass-value {
+    color: #c70000 !important; /* Light Red Text */
+}
+
+/* 2. Healthy State (Good Funds) */
+.balance-glass-card.state-healthy {
+    background: linear-gradient(135deg, #064e3b 0%, #022c22 100%) !important; /* Deep Green BG */
+    border: 1px solid #10b981 !important; /* Emerald Border */
+    box-shadow: 0 10px 30px -5px rgba(16, 185, 129, 0.3); /* Green Glow */
+}
+.balance-glass-card.state-healthy .glass-value {
+   color: #00620c !important;
+}
+
+/* 3. Bar Transitions */
+.safety-bar-fill {
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease;
+}
+
+
 /* =========================================
    PREMIUM MOBILE PROFILE REDESIGN
    ========================================= */
@@ -2472,93 +2499,191 @@ body {
 
 
 
+/* =========================
+   Design Tokens (Professional Palette)
+========================= */
+:root {
+    --brand-primary: #1fa97a;
+    --bg-card: #ffffff;
+    --border-soft: #e5e7eb;
+    --text-dark: #1f2937;
+    --text-muted: #6b7280;
 
-/* Meal Plan Card Specific Styling */
-.meal-plan-main-card {
-    background-color: #387869;
-    padding: 15px !important;
+    --night-bg-start: #0f172a;
+    --night-bg-end: #1e293b;
+
+    --day-bg-start: #f8fafc;
+    --day-bg-end: #e0f2fe;
+}
+
+/* --- Modern Meal Plan Card --- */
+.meal-pulse-card {
+    background: var(--bg-card);
+    border-radius: 22px;
+    padding: 0;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+    margin-bottom: 20px;
+    border: 1px solid var(--border-soft);
+    overflow: hidden;
+}
+
+/* Header */
+.pulse-header-modern {
+    padding: 14px 20px;
+    background: #ffff;
+    
+    border: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-soft);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.pulse-header-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-dark);
+    font-family: 'Hind Siliguri', sans-serif;
+    letter-spacing: 0.2px;
+}
+
+/* Grid */
+.pulse-grid-modern {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+}
+
+/* Slots */
+.plan-slot {
+    padding: 22px 14px;
     display: flex;
     flex-direction: column;
-    justify-content: center;
-}
-
-/* .card meal-plan-main-card */
-
-.meal-plan-inner {
-    display: flex;
-    justify-content: space-around;
     align-items: center;
-    padding: 5px 0;
-}
-
-.meal-plan-segment {
-    flex: 1;
+    justify-content: center;
     text-align: center;
 }
 
-.segment-label {
-    font-size: 16px;
-    font-weight: 800;
-    color: white;
+/* =========================
+   NIGHT SLOT (Calm Dark)
+========================= */
+.slot-night {
+     background-image: url(img2.jpg);
+    background-size: cover;
+    color: #e5e7eb;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.segment-date {
-    font-size: 10px;
-    font-weight: 700;
-    color: #EF4444;
-    text-transform: uppercase;
+.slot-night .slot-label {
+    background: rgba(255, 255, 255, 0.12);
+    color: #e2e8f0;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.slot-night .slot-date {
+    color: #cbd5f5;
+}
+
+.slot-night .slot-count {
+    color: #ffffff;
+    text-shadow: 0 4px 18px rgba(129, 140, 248, 0.35);
+}
+
+/* =========================
+   DAY SLOT (Clean Light)
+========================= */
+.slot-day {
+    background-image: url(img1.jpg);
+    background-size: cover;
+    color: #0f172a;
+}
+
+.slot-day .slot-label {
+    background: #e0f2fe;
+    color: #0369a1;
+    border: 1px solid #bae6fd;
+}
+
+.slot-day .slot-date {
+    color: #075985;
+}
+
+.slot-day .slot-count {
+    color: #0284c7;
+}
+
+/* =========================
+   Typography
+========================= */
+.slot-date {
+    font-family: 'Hind Siliguri', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
     margin-bottom: 8px;
+    line-height: 1.4;
 }
 
-.segment-count {
-    background: rgb(135, 167, 122);
-    border-radius: 50%;
-    font-size: 24px;
-    font-weight: 900;
-    padding: 10px;
-    width: 70px;
-    margin: 0 auto 8px;
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
-}
-
-.segment-menu {
+.slot-label {
+    font-family: 'Hind Siliguri', sans-serif;
     font-size: 11px;
-    color: white;
-    font-style: italic;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 999px;
+    margin-bottom: 12px;
+    letter-spacing: 0.3px;
 }
 
-.segment-divider {
-    width: 1px;
-    height: 80px;
-    background: var(--border-color);
-    margin: 0 10px;
+.slot-count {
+    font-family: 'Hind Siliguri', sans-serif;
+    font-size: 34px;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 6px;
 }
 
-/* Adjusting Stat Cards for the Subgrid */
+.slot-menu {
+    font-family: 'Hind Siliguri', sans-serif;
+    font-size: 11px;
+    color: #ffffff;
+    background: #807d82c2;
+    padding: 2px 5px;
+    border-radius: 8px;
+    opacity: 0.85;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+/* =========================
+   Stat Cards Cleanup
+========================= */
 .stat-card {
-    margin-bottom: 0 !important; /* Override global margin */
-    padding: 20px;
+    margin-bottom: 0 !important;
+    padding: 22px;
     min-height: 120px;
     display: flex;
     flex-direction: column;
     justify-content: center;
 }
 
+/* =========================
+   Weekly Menu Input (Premium)
+========================= */
 .weekly-menu-input {
     border: 1px solid transparent !important;
     background: transparent !important;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
 }
 
-.weekly-menu-input:hover, .weekly-menu-input:focus {
-    border: 1px solid var(--border-color) !important;
-    background: var(--bg-color) !important;
+.weekly-menu-input:hover,
+.weekly-menu-input:focus {
+    border: 1px solid var(--border-soft) !important;
+    background: #f8fafc !important;
 }
 
-/* Flash feedback during save */
 .weekly-menu-input:focus {
     outline: none;
-    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
+    box-shadow: 0 0 0 3px rgba(31, 169, 122, 0.15);
 }
 
 
@@ -2766,7 +2891,7 @@ body {
     left: -50%;
     width: 200%;
     height: 200%;
-    background: radial-gradient(circle at center, rgb(247 0 0 / 23%) 0%, #000000cc 70%);
+    background: #fafff6;
     z-index: 0;
 }
 
@@ -2794,7 +2919,7 @@ body {
 /* Safety Bar (Visual Buffer) */
 .safety-bar-container {
     height: 4px;
-    background: rgba(255, 255, 255, 0.05);
+    background: rgb(41 92 24);
     border-radius: 10px;
     margin-bottom: 6px;
     overflow: hidden;
@@ -3364,27 +3489,31 @@ body {
         <h2 id="welcomeName">Hello!</h2>
     </div>
 
-    <!-- 1. The Meal Pulse (Live Status) -->
-    <div class="meal-pulse-card">
-        <div class="pulse-header">
-            <h3 id="planDayTitle">Daily Meal Attendance</h3>
-            <span class="pulse-badge">LIVE TRACKING</span>
+ <!-- Modern Meal Plan Card -->
+<div class="meal-pulse-card">
+    <div class="pulse-header-modern">
+        <span class="pulse-header-title">📅 আজকের মিল শিডিউল</span>
+        <span class="pulse-badge">LIVE</span>
+    </div>
+    
+    <div class="pulse-grid-modern">
+        <!-- Night Slot (Today) -->
+        <div class="plan-slot slot-night">
+            <div class="slot-date" id="planNightDate">-- জানুয়ারি --</div>
+            <div class="slot-label">রাত</div>
+            <div class="slot-count" id="planNightTotal">০</div>
+            <div class="slot-menu" id="planNightMenu">менু নেই</div>
         </div>
-        <div class="pulse-grid">
-            <div class="pulse-item">
-                <span class="pulse-icon">🌙</span>
-                <div class="pulse-label" id="planNightDate">-- ---</div>
-                <div class="pulse-val" id="planNightTotal">0</div>
-                <div class="pulse-menu" id="planNightMenu">Loading...</div>
-            </div>
-            <div class="pulse-item">
-                <span class="pulse-icon">🌞</span>
-                <div class="pulse-label" id="planDayDate">-- ---</div>
-                <div class="pulse-val" id="planDayTotal">0</div>
-                <div class="pulse-menu" id="planDayMenu">Loading...</div>
-            </div>
+
+        <!-- Day Slot (Tomorrow) -->
+        <div class="plan-slot slot-day">
+            <div class="slot-date" id="planDayDate">-- জানুয়ারি --</div>
+            <div class="slot-label">দুপুর</div>
+            <div class="slot-count" id="planDayTotal">০</div>
+            <div class="slot-menu" id="planDayMenu">মেনু নেই</div>
         </div>
     </div>
+</div>
 
     <!-- 2. Stats Grid (2x2) -->
     <div class="dash-stats-grid">
@@ -5625,6 +5754,7 @@ async function loadScheduler() {
 
 
 // Function triggered by clicking scheduler buttons
+// Function triggered by clicking scheduler buttons (Profile Page)
 async function toggleSchedulerPlan(date, type, btnElement) {
     // 1. IMMEDIATE UI UPDATE (Optimistic)
     const statusLabel = btnElement.querySelector('.status-text');
@@ -5662,6 +5792,20 @@ async function toggleSchedulerPlan(date, type, btnElement) {
 
         const { error } = await supabase.from('meal_plans').upsert(updateData, { onConflict: 'member_id, plan_date' });
         if (error) throw error;
+
+        // 3. LOG ACTIVITY (New Addition)
+        const actorName = currentUser.name || "User";
+        const actionText = newCount > 0 ? "turned ON" : "turned OFF";
+        const typeLabel = type.charAt(0).toUpperCase() + type.slice(1); // "Day" or "Night"
+        
+        // Format date to look nice (e.g., "12 Jan")
+        const dateObj = new Date(date);
+        const niceDate = dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+
+        // Message: "Ayan turned ON his 12 Jan Night meal"
+        const logMsg = `${actorName} ${actionText} their ${niceDate} ${typeLabel} meal`;
+        
+        await logActivity(logMsg, 'meal');
 
     } catch (err) {
         console.error("Plan update failed", err);
@@ -6253,18 +6397,65 @@ async function loadDashboard() {
         const totalExpense = expRes.data?.reduce((sum, e) => sum + parseFloat(e.amount), 0) || 0;
         const totalMeals = mealRes.data?.reduce((sum, m) => sum + (parseFloat(m.day_count) + parseFloat(m.night_count)), 0) || 0;
         const totalDeposit = depRes.data?.reduce((sum, d) => sum + parseFloat(d.amount), 0) || 0;
+        
         const mealRate = totalMeals > 0 ? totalExpense / totalMeals : 0;
         const cashInHand = totalDeposit - totalExpense;
 
-        // CRITICAL: Change these from .textContent to .innerHTML
+        // --- UPDATE STATS ---
         document.getElementById('statMealRate').innerHTML = formatCurrency(mealRate);
         document.getElementById('statTotalExpense').innerHTML = formatCurrency(totalExpense);
         document.getElementById('statTotalDeposit').innerHTML = formatCurrency(totalDeposit);
-        document.getElementById('statMessBalance').textContent = toBn(Math.round(cashInHand).toLocaleString());
+
+        // --- MESS LIQUIDITY CARD LOGIC ---
+        const THRESHOLD = 1000; // ৳1,000 Safety Limit
+        
+        // Elements
+        const balanceCard = document.getElementById('messBalanceContainer');
+        const balanceValue = document.getElementById('statMessBalance');
+        const statusPill = document.getElementById('balanceStatusPill');
+        const progressBar = document.getElementById('safetyProgress');
+
+        // 1. Set Value
+        balanceValue.textContent = toBn(Math.round(cashInHand).toLocaleString());
+
+        // 2. Logic for Visuals
+        if (cashInHand >= THRESHOLD) {
+            // === HEALTHY STATE ===
+            balanceCard.classList.add('state-healthy');
+            balanceCard.classList.remove('state-critical');
+
+            statusPill.textContent = "HEALTHY";
+            statusPill.className = "status-pill-fintech pos"; // Green Pill
+
+            // Full Green Bar
+            progressBar.style.width = "100%";
+            progressBar.style.backgroundColor = "#10b981"; // Emerald
+        } 
+        else {
+            // === CRITICAL / WARNING STATE ===
+            balanceCard.classList.add('state-critical');
+            balanceCard.classList.remove('state-healthy');
+
+            statusPill.className = "status-pill-fintech neg"; // Red Pill
+            progressBar.style.backgroundColor = "#ef4444"; // Red Bar
+
+            if (cashInHand < 0) {
+                // Deficit
+                statusPill.textContent = "DEFICIT";
+                progressBar.style.width = "5%"; // Empty Bar
+            } else {
+                // Low Funds (Between 0 and 1000)
+                statusPill.textContent = "LOW FUNDS";
+                // Calculate percentage (e.g., 500 is 50%)
+                const percent = (cashInHand / THRESHOLD) * 100;
+                progressBar.style.width = `${Math.max(5, percent)}%`;
+            }
+        }
 
         loadSystemStatus();
         updateDashboardMealPlan();
         loadRecentActivity();
+
     } catch (err) {
         console.error('Dashboard Load Error:', err);
     }
@@ -6889,7 +7080,7 @@ const dayDateStr = toLocalISO(nextDay);
     }
 }
 // Function to instantly toggle meal from Summary Page
-// Function to toggle meal from Summary Page (STRICTLY PLANS)
+// Function to instantly toggle meal from Summary Page
 async function quickToggleSummaryMeal(memberId, dateStr, type, currentVal) {
     const btn = event.target; // Optimistic UI
     const originalText = btn.textContent;
@@ -6901,7 +7092,6 @@ async function quickToggleSummaryMeal(memberId, dateStr, type, currentVal) {
 
     try {
         // 2. Fetch existing PLAN to preserve the 'other' side (Day/Night)
-        // We do NOT check the 'meals' (Tracker) table.
         const { data: existingPlan } = await supabase
             .from('meal_plans')
             .select('*')
@@ -6913,29 +7103,41 @@ async function quickToggleSummaryMeal(memberId, dateStr, type, currentVal) {
         const upsertPlan = {
             member_id: memberId,
             plan_date: dateStr,
-            // If plan exists, keep existing values, otherwise default to 0
             day_count: existingPlan ? existingPlan.day_count : 0,
             night_count: existingPlan ? existingPlan.night_count : 0
         };
 
-        // 4. Update the specific field we clicked
         if (type === 'night') {
             upsertPlan.night_count = newVal;
         } else {
             upsertPlan.day_count = newVal;
         }
 
-        // 5. Send to Database (meal_plans only)
+        // 4. Send to Database
         const { error } = await supabase
             .from('meal_plans')
             .upsert(upsertPlan, { onConflict: 'member_id, plan_date' });
 
         if (error) throw error;
 
-        // 6. Log and Refresh
-        const actor = currentUser.members ? currentUser.members.name : "Admin";
-        // We don't need to fetch member name again, logic is fast enough
-        await logActivity(`Plan Updated: ${type} for ${dateStr} set to ${newVal ? 'ON' : 'OFF'} by ${actor}`, 'meal');
+        // 5. IMPROVED LOGGING LOGIC
+        // Get the target member's name from the global list
+        const targetMember = allMembers.find(m => m.id === memberId);
+        const targetName = targetMember ? targetMember.name : "Member";
+        
+        // Get Actor's name
+        const actorName = currentUser.members ? currentUser.members.name : currentUser.name;
+        
+        // Format details
+        const actionText = newVal > 0 ? "enabled" : "disabled";
+        const typeLabel = type.charAt(0).toUpperCase() + type.slice(1); // "Day" or "Night"
+        const dateObj = new Date(dateStr);
+        const niceDate = dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+
+        // Message: "Day meal for 12 Jan enabled for John by Admin"
+        const logMsg = `${typeLabel} meal for ${niceDate} ${actionText} for "${targetName}" by "${actorName}"`;
+
+        await logActivity(logMsg, 'meal');
 
         await loadSummary();
         showNotification("Schedule updated successfully", "success");
@@ -7890,34 +8092,21 @@ async function triggerManualAutoEntry() {
 // ==========================================
 
 // Global rotation variable
+// Global variables for Badge Rotation
 let statusCycleInterval = null;
 let statusQueue = [];
 let currentStatusIndex = 0;
 
 async function updateEntryStatusIndicator() {
     const badge = document.getElementById('entryStatusBadge');
-    if (!badge) return;
-
-    // Clear any existing rotation immediately to prevent overlapping timers
-    if (statusCycleInterval) {
-        clearInterval(statusCycleInterval);
-        statusCycleInterval = null;
-    }
+    if (!badge || !currentCycleId || !currentUser?.member_id) return;
 
     try {
-        const newQueue = [];
         const today = new Date();
         const sessionDate = await getActiveSessionDate();
         const dateLabel = sessionDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }).toUpperCase();
         
-        // 1. DEFAULT BADGE: Target Bazar (Always index 0)
-        const isToday = sessionDate.getDate() === today.getDate() && sessionDate.getMonth() === today.getMonth();
-        newQueue.push({
-            text: `TARGET: ${dateLabel} BAZAR`,
-            class: isToday ? 'status-pending' : 'status-done'
-        });
-
-        // 2. FETCH DATA
+        // 1. FETCH DATA
         const [expRes, allMealsRes, myMealsRes, myDepsRes, duesRes] = await Promise.all([
             supabase.from('expenses').select('amount').eq('cycle_id', currentCycleId).eq('status', 'approved'),
             supabase.from('meals').select('day_count, night_count').eq('cycle_id', currentCycleId),
@@ -7926,47 +8115,76 @@ async function updateEntryStatusIndicator() {
             supabase.from('cycle_dues').select('due_amount, settled_amount').eq('member_id', currentUser.member_id).eq('to_cycle_id', currentCycleId).neq('status', 'settled')
         ]);
 
-        // 3. LOGIC: CURRENT BALANCE DEBT
+        // 2. CALCULATE CURRENT BALANCE
         const totalExp = expRes.data?.reduce((s, e) => s + parseFloat(e.amount), 0) || 0;
         const totalGlobalMeals = allMealsRes.data?.reduce((s, m) => s + (parseFloat(m.day_count) + parseFloat(m.night_count)), 0) || 1;
         const mealRate = totalExp / totalGlobalMeals;
-        const myBalance = (myDepsRes.data?.reduce((s, d) => s + parseFloat(d.amount), 0) || 0) - 
-                          ((myMealsRes.data?.reduce((s, m) => s + (parseFloat(m.day_count) + parseFloat(m.night_count)), 0) || 0) * mealRate);
+        
+        const myDeposit = myDepsRes.data?.reduce((s, d) => s + parseFloat(d.amount), 0) || 0;
+        const myMealCost = (myMealsRes.data?.reduce((s, m) => s + (parseFloat(m.day_count) + parseFloat(m.night_count)), 0) || 0) * mealRate;
+        
+        // Use Math.ceil to avoid -0.01 issues
+        const myBalance = Math.ceil(myDeposit - myMealCost);
 
-        if (myBalance < -1) {
-            newQueue.push({
-                text: `DEBT: ৳${Math.abs(myBalance).toFixed(0)}`,
-                class: 'status-debt'
-            });
-        }
-
-        // 4. LOGIC: PREVIOUS CYCLE DEBT (Negative dues only)
+        // 3. CALCULATE PREVIOUS DUE (Only negative amounts = Debt)
         const prevDebt = duesRes.data?.filter(d => d.due_amount < 0)
             .reduce((s, d) => s + (Math.abs(d.due_amount) - Math.abs(d.settled_amount)), 0) || 0;
 
-        if (prevDebt > 1) {
+        // 4. BUILD THE ROTATION QUEUE
+        const newQueue = [];
+
+        // CONDITION 1: Always add Default (Target Bazar)
+        const isToday = sessionDate.getDate() === today.getDate() && sessionDate.getMonth() === today.getMonth();
+        newQueue.push({
+            text: `TARGET: ${dateLabel} BAZAR`,
+            class: isToday ? 'status-pending' : 'status-done'
+        });
+
+        // CONDITION 2 & 4: Add Current Debt Card if negative
+        if (myBalance < -1) { 
             newQueue.push({
-                text: `PAST DUE: ৳${prevDebt.toFixed(0)}`,
-                class: 'status-due'
+                text: `DEBT: ৳${Math.abs(myBalance)}`,
+                class: 'status-debt' // Red Color
             });
         }
 
-        // 5. QUEUE MANAGEMENT
+        // CONDITION 3 & 4: Add Past Due Card if exists
+        if (prevDebt > 1) {
+            newQueue.push({
+                text: `PAST DUE: ৳${Math.round(prevDebt)}`,
+                class: 'status-due' // Orange/Yellow Color
+            });
+        }
+
+        // --- CRITICAL FIX: PREVENT ANIMATION RESET ---
+        // We compare the new queue with the old one. If they are identical, 
+        // we DO NOT reset the interval. This stops the "blink" issue.
+        const currentQueueStr = JSON.stringify(statusQueue);
+        const newQueueStr = JSON.stringify(newQueue);
+
+        if (currentQueueStr === newQueueStr && statusCycleInterval) {
+            return; // Nothing changed, let it keep rotating smoothly
+        }
+
+        // If data changed, update state and restart timer
+        if (statusCycleInterval) clearInterval(statusCycleInterval);
+        
         statusQueue = newQueue;
         currentStatusIndex = 0;
 
-        // Apply first badge immediately
+        // Apply first item immediately
         applyBadgeState(statusQueue[0]);
 
-        // Only start rotation if there is MORE than just the default badge
+        // Start rotation only if we have 2+ items (Condition 2, 3, 4)
         if (statusQueue.length > 1) {
-            statusCycleInterval = setInterval(rotateStatusBadge, 3000); // 3 sec cycle
+            statusCycleInterval = setInterval(rotateStatusBadge, 3000); // 3 Seconds
         }
 
     } catch (err) {
         console.error("Badge Sync Error:", err);
     }
 }
+
 
 function applyBadgeState(state) {
     const badge = document.getElementById('entryStatusBadge');
@@ -8501,15 +8719,32 @@ async function saveDayMenu(dayIndex) {
     }
 }
 
+
+// --- Helper: Convert Date to Bengali Format ---
+// Output: '১২ জানুয়ারি সোমবার'
+function formatBengaliDate(dateObj) {
+    const bnMonths = ["জানুয়ারি", "ফেব্রুয়ারি", "মার্চ", "এপ্রিল", "মে", "জুন", "জুলাই", "আগস্ট", "সেপ্টেম্বর", "অক্টোবর", "নভেম্বর", "ডিসেম্বর"];
+    const bnDays = ["রবিবার", "সোমবার", "মঙ্গলবার", "বুধবার", "বৃহস্পতিবার", "শুক্রবার", "শনিবার"];
+    
+    const dayName = bnDays[dateObj.getDay()];
+    const monthName = bnMonths[dateObj.getMonth()];
+    const dateNum = toBn(dateObj.getDate()); // Uses your existing toBn helper
+
+    return `${dateNum} ${monthName} ${dayName}`;
+}
+
+// --- Updated Function ---
 async function updateDashboardMealPlan() {
+    // 1. Calculate Dates
     const now = new Date();
-    const todayStr = toLocalISO(now);
+    const todayStr = toLocalISO(now); // YYYY-MM-DD
+    
     const tomorrow = new Date(now);
     tomorrow.setDate(now.getDate() + 1);
     const tomorrowStr = toLocalISO(tomorrow);
 
     try {
-        // Fetch fresh members and overrides simultaneously
+        // 2. Fetch Data (Menu, Defaults, Plans)
         const [menuRes, membersRes, plansRes] = await Promise.all([
             supabase.from('weekly_menus').select('*').eq('day_index', now.getDay()).maybeSingle(),
             supabase.from('members').select('id, default_day_on, default_night_on'),
@@ -8520,8 +8755,9 @@ async function updateDashboardMealPlan() {
         const plans = plansRes.data || [];
         const menu = menuRes.data;
 
-        let nightSum = 0;
-        let daySum = 0;
+        // 3. Calculate Totals
+        let nightSum = 0; // Today Night
+        let daySum = 0;   // Tomorrow Day
 
         members.forEach(m => {
             // Check for tonight's override
@@ -8533,22 +8769,28 @@ async function updateDashboardMealPlan() {
             daySum += (dPlan ? Number(dPlan.day_count) : (m.default_day_on ? 1 : 0));
         });
 
-        // UI Updates
+        // 4. Update Visuals
+        
+        // Dates (Using the new Bengali Formatter)
+        document.getElementById('planNightDate').textContent = formatBengaliDate(now);
+        document.getElementById('planDayDate').textContent = formatBengaliDate(tomorrow);
+
+        // Counts (Using toBn for Bengali Digits)
         document.getElementById('planNightTotal').textContent = toBn(nightSum);
         document.getElementById('planDayTotal').textContent = toBn(daySum);
 
-        document.getElementById('planNightDate').textContent = toBn(now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })) + " Night";
-        document.getElementById('planDayDate').textContent = toBn(tomorrow.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })) + " Day";
-
+        // Menus
         if (menu) {
-            document.getElementById('planNightMenu').textContent = menu.night_menu || "Not set";
-            document.getElementById('planDayMenu').textContent = menu.day_menu || "Not set";
-            document.getElementById('planDayTitle').textContent = `${menu.day_name}'s Status`;
+            document.getElementById('planNightMenu').textContent = menu.night_menu || "মেনু নেই";
+            document.getElementById('planDayMenu').textContent = menu.day_menu || "মেনু নেই";
         }
+
     } catch (err) {
         console.error("Dashboard calculation failed:", err);
     }
 }
+
+
 
 // Cleanup intervals when page is hidden to prevent background processing
 document.addEventListener('visibilitychange', () => {
