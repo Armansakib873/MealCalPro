@@ -6,35 +6,46 @@
     <title>MealCal Pro</title>
    <style>
 
-    /* At the top of your <style> tag */
 @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;700&display=swap');
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+Bengali:wght@400;500;600;700;800&family=Poppins:wght@500;600;700;800&display=swap');
 body {
     font-family: 'Hind Siliguri', -apple-system, sans-serif;
 }
 
 /* Ensure numeric values use the font */
-.stat-value, .pulse-val, .log-amount, .balance-tag {
+/* .stat-value, .pulse-val, .log-amount, .balance-tag {
     font-family: 'Hind Siliguri', sans-serif !important;
     font-weight: 700;
-}
+} */
 
 
         /* =========================================
            1. THEME VARIABLES
            ========================================= */
         :root {
-            --primary-color: #237804;
-            --primary-dark: #4338CA;
-            --secondary-color: #10B981;
-            --danger-color: #EF4444;
-            --warning-color: #F59E0B;
-            --bg-color: #F9FAFB;
-            --card-bg: #FFFFFF;
-            --text-primary: #111827;
-            --text-secondary: #6B7280;
-            --border-color: #E5E7EB;
-            --success-color: #10B981;
+
+            
+               /* --- BRAND COLORS --- */
+    --primary-color: #059669;       /* Emerald 600 - The main brand color */
+     --secondary-color: #10B981;
+    --primary-dark: #047857;        /* Emerald 700 - Hover states/Text */
+    --primary-soft: #ecfdf5;        /* Emerald 50 - Background tints */
+
+
+         
+              /* --- NEUTRALS (The Pro Look) --- */
+    --bg-color: #f8fafc;            /* Slate 50 - Very subtle cool grey background */
+    --card-bg: #ffffff;             /* Pure White - Critical for "clean" look */
+    --text-primary: #0f172a;        /* Slate 900 - Almost black, softer than #000 */
+    --text-secondary: #64748b;      /* Slate 500 - Perfect for subtitles */
+    --border-color: #e2e8f0;        /* Slate 200 - Subtle borders */
+
+
+              /* --- SEMANTIC COLORS --- */
+    --success-color: #10b981;       /* Green for positive money */
+    --danger-color: #f43f5e;        /* Rose 500 - Softer, modern red for expense/debt */
+    --warning-color: #f59e0b;       /* Amber - For alerts */
             
             --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
             --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
@@ -47,6 +58,15 @@ body {
     --text-muted: #64748b;
     --glass: rgba(255, 255, 255, 0.8);
 
+     /* --- TYPOGRAPHY VARIABLES --- */
+    --font-primary: 'Inter', 'Noto Sans Bengali', -apple-system, sans-serif;
+    --font-heading: 'Poppins', 'Noto Sans Bengali', sans-serif;
+    --font-mono: 'Inter', monospace; /* Using Inter with tabular-nums feature */
+
+      /* --- SPECIFIC UI ELEMENTS --- */
+    --nav-bg: #ffffff;              /* White bottom nav for clean look */
+    --nav-active-bg: #f0fdf4;       /* Soft green pill for active nav items */
+    --shadow-soft: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 
             
             /* Dimensions */
@@ -65,14 +85,20 @@ body {
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            /* font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; */
             background-color: var(--bg-color);
             color: var(--text-primary);
             line-height: 1.6;
-            -webkit-font-smoothing: antialiased;
             /* Padding top to ensure content isn't hidden behind fixed header */
             padding-top: var(--header-height); 
         }
+
+        body {
+    font-family: var(--font-primary);
+    /* Improves font rendering on modern screens */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
 
 
 
@@ -81,6 +107,37 @@ body {
     display: none !important;
     width: 0 !important;
     height: 0 !important;
+}
+
+
+
+/* 1. Brand and Headings get the premium "Poppins" look */
+.app-logo, .auth-app-name, h1, h2, h3, .card-title, .modal-title {
+    font-family: var(--font-heading);
+    letter-spacing: -0.02em; /* Tighter tracking for modern look */
+}
+
+/* 2. Numeric values need to be clear and distinct */
+/* We force English font for numbers for alignment, but keep Bengali if text is mixed */
+.stat-value, 
+.pulse-val, 
+.log-amount, 
+.balance-tag, 
+.clock-time,
+.amt-whole,
+.amt-decimal {
+    font-family: var(--font-mono) !important;
+    font-feature-settings: "tnum"; /* Tabular numbers (prevents jumping when numbers change) */
+    letter-spacing: -0.03em;
+}
+
+/* 3. Bengali Specific Elements (Menu items, dates) */
+.pulse-header-title,
+.slot-date,
+.slot-label,
+.slot-menu,
+.dash-welcome-row p {
+    font-family: 'Noto Sans Bengali', var(--font-primary);
 }
 
 /* 3. Fix the Login Wrapper to prevent the bottom/side bars */
@@ -2420,7 +2477,7 @@ body {
 }
 
 .pulse-header h3 { font-size: 13px; font-weight: 800; color: #1e293b; margin: 0; }
-.pulse-badge { font-size: 9px; background: var(--soft-emerald); color: #059669; padding: 3px 8px; border-radius: 10px; font-weight: 800; }
+.pulse-badge { font-size: 9px; background: var(--soft-emerald); color: #059669; padding: 3px 8px; border-radius: 10px; font-weight: 800;margin-left: 5px; }
 
 .pulse-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
 
@@ -2445,15 +2502,535 @@ body {
     margin-bottom: 20px;
 }
 
+/* Update this class */
 .stat-pill-card {
-    background: #e3e4933b;
-    padding: 12px;
-    border-radius: 16px;
-    border: 1px solid #8a8a4d32;
+    background: var(--card-bg) !important; /* Force White */
+    border: 1px solid var(--border-color);
+    border-left: 4px solid var(--border-color); /* Default gray stripe */
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: var(--shadow-soft);
     display: flex;
     flex-direction: column;
     justify-content: center;
+    transition: transform 0.2s ease;
 }
+
+
+
+/* =========================================
+   ENHANCED LIQUID BALANCE CARD
+   ========================================= */
+/* =========================================
+   MODERN VERTICAL METER CARD (CSS-FRIENDLY)
+   ========================================= */
+.liquid-card-container {
+    grid-column: span 1;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    border-radius: 20px;
+    padding: 0;
+    position: relative;
+    overflow: hidden;
+    height: 240px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1), 0 3px 10px rgba(0,0,0,0.06);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    display: flex;
+    flex-direction: column;
+}
+
+/* Decorative background circles */
+.liquid-card-bg {
+    position: absolute;
+    top: -30px;
+    right: -30px;
+    width: 150px;
+    height: 150px;
+    background: radial-gradient(circle, rgba(99, 102, 241, 0.05) 0%, transparent 70%);
+    border-radius: 50%;
+    z-index: 0;
+}
+
+.liquid-card-bg::before {
+    content: '';
+    position: absolute;
+    bottom: -80px;
+    left: -80px;
+    width: 120px;
+    height: 120px;
+    background: radial-gradient(circle, rgba(16, 185, 129, 0.05) 0%, transparent 70%);
+    border-radius: 50%;
+}
+
+/* Vertical Meter Container */
+.liquid-box {
+    position: absolute;
+    left: 20px;
+    bottom: 20px;
+    width: 50px;
+    height: calc(100% - 100px);
+    background: linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 100%);
+    border-radius: 25px;
+    overflow: hidden;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.08);
+    z-index: 1;
+}
+
+/* The Fill Bar */
+.liquid-fill-body {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: var(--fill-percent, 50%);
+    background: linear-gradient(180deg, 
+        var(--liquid-color-light, #34d399) 0%, 
+        var(--liquid-color-main, #10b981) 50%,
+        var(--liquid-color-dark, #059669) 100%);
+    border-radius: 10px;
+    transition: height 1.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
+}
+
+/* Animated shine effect on meter */
+.liquid-fill-body::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(180deg, 
+        rgba(255,255,255,0.4) 0%, 
+        transparent 30%,
+        transparent 70%,
+        rgba(0,0,0,0.1) 100%);
+    border-radius: 25px;
+}
+
+/* Pulsing glow effect */
+.liquid-fill-body::after {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80%;
+    height: 20px;
+    background: var(--liquid-color-light, #34d399);
+    border-radius: 50%;
+    filter: blur(8px);
+    opacity: 0.6;
+    animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+    0%, 100% { opacity: 0.6; transform: translateX(-50%) scale(1); }
+    50% { opacity: 0.3; transform: translateX(-50%) scale(1.1); }
+}
+
+/* Meter scale marks */
+.meter-marks {
+    position: absolute;
+    left: 76px;
+    bottom: 20px;
+    height: calc(100% - 100px);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    z-index: 2;
+}
+
+.meter-mark {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.meter-mark-line {
+    width: 8px;
+    height: 1.5px;
+    background: #cbd5e1;
+    border-radius: 2px;
+}
+
+.meter-mark-label {
+    font-size: 9px;
+    font-weight: 600;
+    color: #94a3b8;
+    font-family: 'Courier New', monospace;
+}
+
+/* Floating particles/dots */
+.bubble {
+    position: absolute;
+    left: 25px;
+    width: 4px;
+    height: 4px;
+    background: rgba(255,255,255,0.8);
+    border-radius: 50%;
+    bottom: 0;
+    animation: float-up 3s ease-in infinite;
+    box-shadow: 0 0 6px rgba(255,255,255,0.6);
+    z-index: 3;
+}
+
+.bubble:nth-child(1) { animation-duration: 3.5s; animation-delay: 0s; }
+.bubble:nth-child(2) { animation-duration: 4s; animation-delay: 1s; }
+.bubble:nth-child(3) { animation-duration: 3.2s; animation-delay: 2s; }
+.bubble:nth-child(4) { animation-duration: 3.8s; animation-delay: 0.5s; }
+
+@keyframes float-up {
+    0% { bottom: 0; opacity: 0; }
+    20% { opacity: 1; }
+    80% { opacity: 1; }
+    100% { bottom: 100%; opacity: 0; }
+}
+
+/* Content Area */
+.liquid-content {
+    position: relative;
+    z-index: 10;
+    padding: 20px 20px 20px 90px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    justify-content: space-between;
+    box-shadow: inset 0 0 30px rgb(0 0 0 / 45%);
+}
+
+.liquid-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.liquid-title {
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: #64748b;
+    background: rgba(255,255,255,0.7);
+    padding: 5px 12px;
+    border-radius: 16px;
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.liquid-capacity-pill {
+    font-size: 9px;
+    font-weight: 700;
+    color: #6366f1;
+    background: rgba(238, 242, 255, 0.8);
+    padding: 4px 9px;
+    border-radius: 10px;
+    border: 1px solid rgba(199, 210, 254, 0.5);
+}
+
+.liquid-value-wrapper {
+    margin-top: auto;
+    margin-bottom: 12px;
+    text-align: left;
+}
+
+.liquid-currency {
+    font-size: 20px;
+    font-weight: 700;
+    color: #64748b;
+    vertical-align: top;
+    margin-right: 2px;
+}
+
+.liquid-amount {
+    font-size: 38px;
+    font-weight: 900;
+    letter-spacing: -1.5px;
+    font-family: 'Courier New', monospace;
+    background: linear-gradient(135deg, var(--text-gradient-1, #047857) 0%, var(--text-gradient-2, #059669) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.liquid-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+.liquid-status-badge {
+    font-size: 9px;
+    font-weight: 800;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border-radius: 16px;
+    letter-spacing: 0.5px;
+    transition: all 0.3s;
+}
+
+.liquid-percentage {
+    font-size: 11px;
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+    color: #64748b;
+    background: rgba(241, 245, 249, 0.8);
+    padding: 5px 10px;
+    border-radius: 12px;
+}
+
+/* Color States */
+.state-healthy-liquid {
+    --liquid-color-light: #6ee7b7;
+    --liquid-color-main: #10b981;
+    --liquid-color-dark: #059669;
+    --text-gradient-1: #047857;
+    --text-gradient-2: #059669;
+}
+
+.state-critical-liquid {
+    --liquid-color-light: #fca5a5;
+    --liquid-color-main: #ef4444;
+    --liquid-color-dark: #dc2626;
+    --text-gradient-1: #b91c1c;
+    --text-gradient-2: #dc2626;
+}
+
+.state-empty-liquid {
+    --liquid-color-light: #cbd5e1;
+    --liquid-color-main: #94a3b8;
+    --liquid-color-dark: #64748b;
+    --text-gradient-1: #475569;
+    --text-gradient-2: #64748b;
+}
+
+/* Tablet and Desktop */
+@media (min-width: 640px) {
+    .liquid-card-container {
+        grid-column: span 2;
+        height: 260px;
+    }
+    
+    .liquid-box {
+        width: 60px;
+        left: 24px;
+    }
+    
+    .meter-marks {
+        left: 90px;
+    }
+    
+    .liquid-content {
+        padding: 24px 24px 24px 110px;
+    }
+    
+    .liquid-amount {
+        font-size: 48px;
+    }
+    
+    .liquid-currency {
+        font-size: 24px;
+    }
+}
+
+@media (min-width: 1024px) {
+    .liquid-card-container {
+        height: 280px;
+    }
+    
+    .liquid-amount {
+        font-size: 52px;
+    }
+}
+
+@keyframes foam-move {
+    0%, 100% { transform: translateX(0) scaleX(1); }
+    50% { transform: translateX(2px) scaleX(1.02); }
+}
+
+/* Enhanced bubbles with varying sizes */
+.bubble {
+    position: absolute;
+    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.8), rgba(255,255,255,0.2));
+    border-radius: 50%;
+    bottom: 0;
+    z-index: 4;
+    animation: rise linear infinite;
+    box-shadow: inset 0 0 10px rgba(255,255,255,0.5);
+}
+
+.bubble:nth-child(1) { left: 15%; width: 8px; height: 8px; animation-duration: 4s; animation-delay: 0s; }
+.bubble:nth-child(2) { left: 35%; width: 12px; height: 12px; animation-duration: 5.5s; animation-delay: 1.2s; }
+.bubble:nth-child(3) { left: 55%; width: 6px; height: 6px; animation-duration: 3.8s; animation-delay: 2.1s; }
+.bubble:nth-child(4) { left: 75%; width: 10px; height: 10px; animation-duration: 6s; animation-delay: 0.8s; }
+.bubble:nth-child(5) { left: 25%; width: 7px; height: 7px; animation-duration: 4.5s; animation-delay: 3s; }
+.bubble:nth-child(6) { left: 65%; width: 9px; height: 9px; animation-duration: 5s; animation-delay: 1.8s; }
+.bubble:nth-child(7) { left: 85%; width: 11px; height: 11px; animation-duration: 5.8s; animation-delay: 2.5s; }
+.bubble:nth-child(8) { left: 45%; width: 8px; height: 8px; animation-duration: 4.2s; animation-delay: 0.5s; }
+
+/* Content overlay */
+.liquid-content {
+    position: relative;
+    z-index: 10;
+    text-align: center;
+    width: 100%;
+    padding: 24px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    height: 100%;
+    justify-content: space-between;
+}
+
+.liquid-header {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.liquid-title {
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #475569;
+    background: rgba(255,255,255,0.9);
+    padding: 6px 14px;
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.liquid-capacity-pill {
+    font-size: 10px;
+    font-weight: 700;
+    color: #64748b;
+    background: rgba(255,255,255,0.7);
+    padding: 4px 10px;
+    border-radius: 12px;
+    backdrop-filter: blur(10px);
+}
+
+.liquid-value-wrapper {
+    margin-bottom: 12px;
+    transition: all 0.5s ease;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+}
+
+.liquid-currency {
+    font-size: 28px;
+    font-weight: 700;
+    vertical-align: top;
+    margin-right: 4px;
+}
+
+.liquid-amount {
+    font-size: 56px;
+    font-weight: 900;
+    letter-spacing: -2px;
+    font-family: 'Courier New', monospace;
+}
+
+.liquid-status-badge {
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    padding: 8px 18px;
+    border-radius: 20px;
+    background: white;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    letter-spacing: 0.8px;
+    transition: all 0.3s;
+    backdrop-filter: blur(10px);
+}
+
+/* Color States */
+.state-healthy-liquid {
+    --liquid-color-light: #6ee7b7;
+    --liquid-color-main: #34d399;
+    --liquid-color-dark: #10b981;
+}
+
+.state-critical-liquid {
+    --liquid-color-light: #fca5a5;
+    --liquid-color-main: #f87171;
+    --liquid-color-dark: #ef4444;
+}
+
+.state-empty-liquid {
+    --liquid-color-light: #e2e8f0;
+    --liquid-color-main: #cbd5e1;
+    --liquid-color-dark: #94a3b8;
+}
+
+/* Enhanced Wave Animations */
+@keyframes wave-rotate-1 {
+    0% { transform: translate(-5%, 0) rotate(0deg); }
+    50% { transform: translate(-5%, 3%) rotate(180deg); }
+    100% { transform: translate(-5%, 0) rotate(360deg); }
+}
+
+@keyframes wave-rotate-2 {
+    0% { transform: translate(0, 0) rotate(0deg); }
+    50% { transform: translate(0, -2%) rotate(180deg); }
+    100% { transform: translate(0, 0) rotate(360deg); }
+}
+
+@keyframes wave-rotate-3 {
+    0% { transform: translate(-2%, 0) rotate(0deg); }
+    50% { transform: translate(-2%, 2%) rotate(180deg); }
+    100% { transform: translate(-2%, 0) rotate(360deg); }
+}
+
+@keyframes wave-rotate-4 {
+    0% { transform: translate(3%, 0) rotate(0deg); }
+    50% { transform: translate(3%, -1%) rotate(180deg); }
+    100% { transform: translate(3%, 0) rotate(360deg); }
+}
+
+@keyframes rise {
+    0% {
+        bottom: -20px;
+        transform: translateX(0) scale(0.8);
+        opacity: 0;
+    }
+    10% {
+        opacity: 0.8;
+    }
+    50% {
+        transform: translateX(10px) scale(1);
+        opacity: 0.9;
+    }
+    100% {
+        bottom: 110%;
+        transform: translateX(-15px) scale(0.6);
+        opacity: 0;
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .liquid-card-container {
+        grid-column: span 1;
+        height: 220px;
+    }
+    .liquid-amount {
+        font-size: 42px;
+    }
+    .liquid-currency {
+        font-size: 22px;
+    }
+}
+
+
+
+
+
+
+/* Add specific styling based on content if possible, 
+   or let the IDs handle the colors below */
 
 .stat-pill-card .label { font-size: 9px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px; }
 .stat-pill-card .val { font-size: 16px; font-weight: 800; font-family: 'Courier New', monospace; color: #1e293b; }
@@ -2525,6 +3102,7 @@ body {
     margin-bottom: 20px;
     border: 1px solid var(--border-soft);
     overflow: hidden;
+    box-shadow: inset 0 0 30px rgb(0 0 0 / 45%);
 }
 
 /* Header */
@@ -2567,32 +3145,31 @@ body {
    NIGHT SLOT (Calm Dark)
 ========================= */
 .slot-night {
-     background-image: url(img2.jpg);
+    /*background-image: url(img2.jpg);*/
     background-size: cover;
-    color: #e5e7eb;
     border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .slot-night .slot-label {
-    background: rgba(255, 255, 255, 0.12);
-    color: #e2e8f0;
+    background: rgb(16 16 16 / 79%);
+    color: #e6f1ff;
     border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .slot-night .slot-date {
-    color: #cbd5f5;
+    color: .slot-night .slot-label#3954aaf0;
 }
 
 .slot-night .slot-count {
-    color: #ffffff;
-    text-shadow: 0 4px 18px rgba(129, 140, 248, 0.35);
+    color: #0e608a;
+    text-shadow: 0 4px 18px rgb(0 0 0 / 26%);
 }
 
 /* =========================
    DAY SLOT (Clean Light)
 ========================= */
 .slot-day {
-    background-image: url(img1.jpg);
+    /* background-image: url(img1.jpg); */
     background-size: cover;
     color: #0f172a;
 }
@@ -2609,7 +3186,9 @@ body {
 
 .slot-day .slot-count {
     color: #0284c7;
+    text-shadow: 0 4px 18px rgb(0 0 0 / 26%);
 }
+
 
 /* =========================
    Typography
@@ -2926,6 +3505,63 @@ body {
 }
 .safety-bar-fill { height: 100%; width: 0%; transition: width 1s ease, background 0.5s; }
 .safety-text { font-size: 9px; color: #64748b; font-weight: 700; }
+
+
+
+.balance-glass-card {
+    /* Dark Theme Gradient for Contrast */
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+    color: white !important;
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.glass-label {
+    color: #94a3b8 !important; /* Light Slate text */
+    letter-spacing: 1.5px;
+}
+
+.glass-currency {
+    color: #64748b !important;
+}
+
+.glass-value {
+    color: #ffffff !important; /* Pure white text pops on dark background */
+    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Update the status pill inside this card */
+.status-pill-fintech.pos {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+
+
+.bottom-nav {
+    background-color: #ffffff !important; /* Clean White */
+    border-top: 1px solid #e2e8f0;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.03);
+}
+
+.bottom-nav-link {
+    color: #64748b; /* Inactive Icon Color (Slate 500) */
+}
+
+/* Active State */
+.bottom-nav-link.active {
+    color: var(--primary-color) !important;
+    background-color: transparent; /* Remove the heavy box background */
+}
+
+.bottom-nav-link.active span:first-child {
+    transform: translateY(-5px);
+    color: var(--primary-color);
+    filter: drop-shadow(0 4px 6px rgba(5, 150, 105, 0.2)); /* Green glow on icon */
+}
+
+
 
 @keyframes pulse-red-border {
     0% { border-color: #7f1d1d; }
@@ -3518,25 +4154,65 @@ body {
     <!-- 2. Stats Grid (2x2) -->
     <div class="dash-stats-grid">
 
-        
-<!-- Premium Cash in Hand Card -->
-<div class="balance-glass-card" id="messBalanceContainer">
-    <div class="glass-card-inner">
-        <div class="glass-header">
-            <span class="glass-label">Mess Liquidity</span>
-            <div id="balanceStatusPill" class="status-pill-fintech">Checking...</div>
+
+<!-- Mess Liquidity Liquid Card -->
+<!-- Modern Vertical Meter Card -->
+<div class="liquid-card-container state-healthy-liquid" id="messBalanceContainer">
+    <div class="liquid-card-bg"></div>
+    
+    <!-- Vertical Meter -->
+    <div class="liquid-box">
+        <div class="liquid-fill-body" id="liquidFillBar" style="--fill-percent: 50%;">
+            <div class="bubble"></div>
+            <div class="bubble"></div>
+            <div class="bubble"></div>
+            <div class="bubble"></div>
         </div>
-        
-        <div class="glass-body">
-            <span class="glass-currency">৳</span>
-            <span class="glass-value" id="statMessBalance">0</span>
+    </div>
+    
+    <!-- Scale Marks -->
+    <div class="meter-marks">
+        <div class="meter-mark">
+            <div class="meter-mark-line"></div>
+            <div class="meter-mark-label">10k</div>
         </div>
-        
-        <div class="glass-footer">
-            <div class="safety-bar-container">
-                <div id="safetyProgress" class="safety-bar-fill"></div>
+        <div class="meter-mark">
+            <div class="meter-mark-line"></div>
+            <div class="meter-mark-label">7.5k</div>
+        </div>
+        <div class="meter-mark">
+            <div class="meter-mark-line"></div>
+            <div class="meter-mark-label">5k</div>
+        </div>
+        <div class="meter-mark">
+            <div class="meter-mark-line"></div>
+            <div class="meter-mark-label">2.5k</div>
+        </div>
+        <div class="meter-mark">
+            <div class="meter-mark-line"></div>
+            <div class="meter-mark-label">0</div>
+        </div>
+    </div>
+
+    <!-- Content -->
+    <div class="liquid-content">
+        <div class="liquid-header">
+            <div class="liquid-title">Mess Liquidity</div>
+            <div class="liquid-capacity-pill">CAP: 10k</div>
+        </div>
+
+        <div class="liquid-value-wrapper">
+            <span class="liquid-currency">৳</span>
+            <span class="liquid-amount" id="statMessBalance">0</span>
+        </div>
+
+        <div class="liquid-meta">
+            <div id="balanceStatusPill" class="liquid-status-badge">
+                Calculating...
             </div>
-            <span class="safety-text">Threshold: ৳1,000</span>
+            <div class="liquid-percentage" id="liquidPercent">
+                0%
+            </div>
         </div>
     </div>
 </div>
@@ -6385,82 +7061,86 @@ function refreshCurrentPage() {
     
 // --- Update loadDashboard to set the welcome name ---
 async function loadDashboard() {
-    if (!currentCycleId) return;
-
-    try {
-        const [expRes, mealRes, depRes] = await Promise.all([
+        if (!currentCycleId) return;
+        const [exp, meals, deps] = await Promise.all([
             supabase.from('expenses').select('amount').eq('cycle_id', currentCycleId).eq('status', 'approved'),
             supabase.from('meals').select('day_count, night_count').eq('cycle_id', currentCycleId),
             supabase.from('deposits').select('amount').eq('cycle_id', currentCycleId).neq('status', 'pending')
         ]);
 
-        const totalExpense = expRes.data?.reduce((sum, e) => sum + parseFloat(e.amount), 0) || 0;
-        const totalMeals = mealRes.data?.reduce((sum, m) => sum + (parseFloat(m.day_count) + parseFloat(m.night_count)), 0) || 0;
-        const totalDeposit = depRes.data?.reduce((sum, d) => sum + parseFloat(d.amount), 0) || 0;
+        const totalExp = exp.data?.reduce((s, i) => s + i.amount, 0) || 0;
+        const totalMeals = meals.data?.reduce((s, i) => s + (i.day_count + i.night_count), 0) || 0;
+        const totalDep = deps.data?.reduce((s, i) => s + i.amount, 0) || 0;
+        const rate = totalMeals ? totalExp / totalMeals : 0;
+        const liquidity = totalDep - totalExp;
+
+        // Update Text Stats
+        document.getElementById('statMealRate').innerHTML = formatCurrency(rate);
+        document.getElementById('statTotalExpense').innerHTML = formatCurrency(totalExp);
+        document.getElementById('statTotalDeposit').innerHTML = formatCurrency(totalDep);
         
-        const mealRate = totalMeals > 0 ? totalExpense / totalMeals : 0;
-        const cashInHand = totalDeposit - totalExpense;
+        // ============================================
+        // LIQUID CARD LOGIC (NEW)
+        // ============================================
+      // ============================================
+// ENHANCED LIQUID CARD LOGIC
+// ============================================
+// ============================================
+// VERTICAL METER CARD LOGIC - SIMPLE
+// ============================================
+const balEl = document.getElementById('statMessBalance');
+const container = document.getElementById('messBalanceContainer');
+const fillBar = document.getElementById('liquidFillBar');
+const pill = document.getElementById('balanceStatusPill');
+const percentEl = document.getElementById('liquidPercent');
 
-        // --- UPDATE STATS ---
-        document.getElementById('statMealRate').innerHTML = formatCurrency(mealRate);
-        document.getElementById('statTotalExpense').innerHTML = formatCurrency(totalExpense);
-        document.getElementById('statTotalDeposit').innerHTML = formatCurrency(totalDeposit);
+// 1. Update Number
+balEl.textContent = typeof toBn === 'function' 
+    ? toBn(Math.round(liquidity).toLocaleString()) 
+    : Math.round(liquidity).toLocaleString();
 
-        // --- MESS LIQUIDITY CARD LOGIC ---
-        const THRESHOLD = 1000; // ৳1,000 Safety Limit
-        
-        // Elements
-        const balanceCard = document.getElementById('messBalanceContainer');
-        const balanceValue = document.getElementById('statMessBalance');
-        const statusPill = document.getElementById('balanceStatusPill');
-        const progressBar = document.getElementById('safetyProgress');
+// 2. Calculate Percentage (0-10,000 range)
+let percent = Math.max(0, Math.min(100, (liquidity / 10000) * 100));
 
-        // 1. Set Value
-        balanceValue.textContent = toBn(Math.round(cashInHand).toLocaleString());
+// Minimum visibility for very low amounts
+let visualPercent = liquidity <= 0 ? 3 : (percent < 5 ? 5 : percent);
 
-        // 2. Logic for Visuals
-        if (cashInHand >= THRESHOLD) {
-            // === HEALTHY STATE ===
-            balanceCard.classList.add('state-healthy');
-            balanceCard.classList.remove('state-critical');
+// Update meter fill
+fillBar.style.setProperty('--fill-percent', `${visualPercent}%`);
 
-            statusPill.textContent = "HEALTHY";
-            statusPill.className = "status-pill-fintech pos"; // Green Pill
+// Update percentage display
+percentEl.textContent = `${Math.round(percent)}%`;
 
-            // Full Green Bar
-            progressBar.style.width = "100%";
-            progressBar.style.backgroundColor = "#10b981"; // Emerald
-        } 
-        else {
-            // === CRITICAL / WARNING STATE ===
-            balanceCard.classList.add('state-critical');
-            balanceCard.classList.remove('state-healthy');
+// 3. State styling
+container.classList.remove('state-healthy-liquid', 'state-critical-liquid', 'state-empty-liquid');
 
-            statusPill.className = "status-pill-fintech neg"; // Red Pill
-            progressBar.style.backgroundColor = "#ef4444"; // Red Bar
-
-            if (cashInHand < 0) {
-                // Deficit
-                statusPill.textContent = "DEFICIT";
-                progressBar.style.width = "5%"; // Empty Bar
-            } else {
-                // Low Funds (Between 0 and 1000)
-                statusPill.textContent = "LOW FUNDS";
-                // Calculate percentage (e.g., 500 is 50%)
-                const percent = (cashInHand / THRESHOLD) * 100;
-                progressBar.style.width = `${Math.max(5, percent)}%`;
-            }
-        }
-
-        loadSystemStatus();
-        updateDashboardMealPlan();
-        loadRecentActivity();
-
-    } catch (err) {
-        console.error('Dashboard Load Error:', err);
-    }
+if (liquidity >= 1000) {
+    // Healthy
+    container.classList.add('state-healthy-liquid');
+    pill.textContent = 'HEALTHY';
+    pill.style.color = '#047857';
+    pill.style.background = '#d1fae5';
+    pill.style.border = '1px solid #a7f3d0';
+} else if (liquidity > 0) {
+    // Low Funds
+    container.classList.add('state-critical-liquid');
+    pill.textContent = 'LOW FUNDS';
+    pill.style.color = '#b91c1c';
+    pill.style.background = '#fee2e2';
+    pill.style.border = '1px solid #fecaca';
+} else {
+    // Deficit
+    container.classList.add('state-critical-liquid');
+    pill.textContent = 'DEFICIT';
+    pill.style.color = '#7f1d1d';
+    pill.style.background = '#fef2f2';
+    pill.style.border = '1px solid #fecaca';
 }
 
+        updateDashboardMealPlan();
+        loadSystemStatus();
+        loadRecentActivity(); 
+    }
 
 
 // --- Update loadRecentActivity for the new feed style ---
@@ -6542,41 +7222,47 @@ async function loadProfile() {
             supabase.from('meals').select('day_count, night_count').eq('cycle_id', currentCycleId)
         ]);
 
+        // Calculations
         const totalUserMeals = userMeals.data?.reduce((s, m) => s + (parseFloat(m.day_count) + parseFloat(m.night_count)), 0) || 0;
         const totalUserPaid = userDeps.data?.reduce((s, d) => s + parseFloat(d.amount), 0) || 0;
         const totalGlobalExp = allExp.data?.reduce((s, e) => s + parseFloat(e.amount), 0) || 0;
         const totalGlobalMeals = allMeals.data?.reduce((s, m) => s + (parseFloat(m.day_count) + parseFloat(m.night_count)), 0) || 1;
         
-        const rate = totalGlobalExp / totalGlobalMeals;
+        const rate = totalGlobalMeals > 0 ? totalGlobalExp / totalGlobalMeals : 0;
         const currentBalance = totalUserPaid - (totalUserMeals * rate);
 
-        // Update UI
-        const miniBal = document.getElementById('profileBalanceMini');
-        const miniCard = document.getElementById('miniBalanceCard'); // Top small card
-        const heroBal = document.getElementById('profileBalance');   // Main big card amount
-        const heroCard = document.getElementById('profileBalanceCard'); // Main big card container
+        // --- UI UPDATES (FIXED) ---
 
-        if (miniBal) miniBal.textContent = `৳${Math.round(currentBalance)}`;
-        if (heroBal) heroBal.textContent = `৳${currentBalance.toFixed(2)}`;
-        document.getElementById('profileTotalDeposit').textContent = `৳${toBn(Math.round(totalUserPaid))}`;
+        // 1. Fix Total Meals: Update the text content + Convert to Bengali
+        const mealsEl = document.getElementById('profileTotalMeals');
+        if (mealsEl) {
+            // toBn converts "15" to "১৫"
+            mealsEl.textContent = toBn(totalUserMeals); 
+        }
 
-        // --- APPLY NEGATIVE/POSITIVE CLASSES TO BOTH ---
+        // 2. Fix Total Paid: Convert to Bengali
+        const depositEl = document.getElementById('profileTotalDeposit');
+        if (depositEl) {
+            depositEl.textContent = `৳${toBn(Math.round(totalUserPaid))}`;
+        }
+
+        // 3. Fix Main Wallet Balance: Use formatCurrency() for styling + Bengali
+        const heroBal = document.getElementById('profileBalance');
+        if (heroBal) {
+            // Using innerHTML because formatCurrency returns <span> tags for styling
+            heroBal.innerHTML = formatCurrency(currentBalance); 
+        }
+
+        // 4. Update Color States (Positive/Negative)
+        const heroCard = document.getElementById('profileBalanceCard'); 
+        
         if (currentBalance < 0) {
-            // Mini Card at Top
-            if(miniBal) miniBal.className = "stat-mini-value balance-neg";
-            if(miniCard) { miniCard.classList.add('status-neg'); miniCard.classList.remove('status-pos'); }
-            
-            // Big Fintech Card
             if(heroCard) { heroCard.classList.add('status-neg'); heroCard.classList.remove('status-pos'); }
         } else {
-            // Mini Card at Top
-            if(miniBal) miniBal.className = "stat-mini-value balance-pos";
-            if(miniCard) { miniCard.classList.add('status-pos'); miniCard.classList.remove('status-neg'); }
-            
-            // Big Fintech Card
             if(heroCard) { heroCard.classList.add('status-pos'); heroCard.classList.remove('status-neg'); }
         }
 
+        // Cycle Name
         const cycleObj = allCycles.find(c => c.id == currentCycleId);
         document.getElementById('profileCycleName').textContent = cycleObj ? cycleObj.name : 'Unknown';
 
