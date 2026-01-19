@@ -2146,6 +2146,44 @@ body {
     .btn-wallet-submit { padding: 0 10px; font-size: 10px; }
 }
 
+
+/* Edited Tag Badge */
+.edited-badge {
+    font-size: 8px;
+    background: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #cbd5e1;
+    padding: 1px 4px;
+    border-radius: 4px;
+    margin-left: 6px;
+    text-transform: uppercase;
+    font-weight: 700;
+    vertical-align: middle;
+}
+
+/* Mobile Friendly Edit Button */
+.btn-icon-edit {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 1px solid #e2e8f0;
+    background: white;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    cursor: pointer;
+    margin-left: 10px;
+    transition: all 0.2s;
+}
+.btn-icon-edit:hover {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+
         /* Summary Table Styles */
 .summary-table-wrapper {
     overflow-x: auto;
@@ -4441,53 +4479,52 @@ body {
     </div>
 </div>
 
-            <!-- Expenses Page -->
+<!-- 5. EXPENSES PAGE -->
 <div id="expensesPage" class="page-content hidden">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding: 0 5px;">
-    </div>
-    
-    <!-- Compact Add Expense Form -->
-    <div class="expense-form-container" id="addExpenseCard">
-        <form id="expenseForm" class="exp-grid">
-            <!-- Row 1: Date & Shopper -->
-            <div class="exp-input-group">
-                <label>Bazar Date</label>
-                <input type="date" id="expenseDate" class="exp-field" required>
-            </div>
-            <div class="exp-input-group">
-                <label>Shopper</label>
-                <select id="expenseMember" class="exp-field" required>
-                    <option value="">Select...</option>
-                </select>
-            </div>
+    <div class="card" id="addExpenseCard">
+        <!-- Header changes dynamically via JS -->
+        <h3 class="card-title" id="expenseFormTitle">Add Expense</h3>
+        
+        <form id="expenseForm">
+            <!-- Hidden ID to track editing -->
+            <input type="hidden" id="editExpenseId" value="">
 
-            <!-- Row 2: Description (Narrow Height) -->
-            <div class="exp-input-group exp-full">
-                <label>Description (Items)</label>
-                <input type="text" id="expenseDescription" class="exp-field" placeholder="e.g. Chicken, Veg, Oil" style="height: 38px;">
-            </div>
-
-            <!-- Row 3: Amount & Button -->
-            <div class="exp-input-group exp-full amount-btn-row">
-                <div style="flex: 1;">
-                    <label>Amount (৳)</label>
-                    <input type="number" id="expenseAmount" class="exp-field" placeholder="0" required oninput="this.value = Math.round(this.value)">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                <div>
+                    <label class="form-label">Date</label>
+                    <input type="date" id="expenseDate" class="exp-field" required>
                 </div>
-                <button type="submit" class="btn-add-exp">ADD +</button>
+                <div>
+                    <label class="form-label">Shopper</label>
+                    <select id="expenseMember" class="exp-field" required><option value="">Select...</option></select>
+                </div>
+            </div>
+       <div class="form-group">
+    <label class="form-label">Items</label>
+    <input type="text" id="expenseDescription" class="exp-field" placeholder="e.g. Chicken, Oil (Optional)">
+</div>
+            <div style="display: flex; gap: 10px; align-items: flex-end;">
+                <div style="flex: 1;">
+                    <label class="form-label">Amount (৳)</label>
+                    <input type="number" id="expenseAmount" class="exp-field" required>
+                </div>
+                
+                <!-- Buttons Container -->
+                <div style="display: flex; gap: 8px;">
+                    <button type="button" id="expenseCancelBtn" class="btn btn-secondary hidden" onclick="resetExpenseForm()">Cancel</button>
+                    <button type="submit" id="expenseSubmitBtn" class="btn btn-primary">ADD +</button>
+                </div>
             </div>
         </form>
     </div>
+    
+    <h3 style="font-size: 13px; font-weight: 800; color: var(--text-secondary); margin: 20px 0 10px 0;">HISTORY</h3>
+    <div id="expenseList"><div class="loading">Loading...</div></div>
 
-    <!-- History Header -->
-    <h3 style="font-size: 13px; font-weight: 800; margin: 25px 0 12px 5px; color: #64748b;">EXPENSE HISTORY</h3>
-
-    <div id="expenseList">
-        <div class="loading">Loading ledger...</div>
-    </div>
-</div>
+</div> <!-- <<< THIS CLOSING DIV WAS LIKELY MISSING -->
 
 
-<!-- Deposits Page -->
+<!-- Deposits Page (Should be separate, NOT inside expensesPage) -->
 <div id="depositsPage" class="page-content hidden">
     <div style="display: none; justify-content: space-between; align-items: center; margin-bottom: 15px; padding: 0 5px;">
         <h2 style="font-size: 20px; font-weight: 800;">Wallet</h2>
@@ -7903,53 +7940,114 @@ async function quickToggleSummaryMeal(memberId, dateStr, type, currentVal) {
 
 document.getElementById('expenseForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const btn = e.target.querySelector('button[type="submit"]');
-    const originalText = btn.textContent;
     
+    // Get form values
+    const expenseId = document.getElementById('editExpenseId').value;
     const date = document.getElementById('expenseDate').value;
-    const memberId = parseInt(document.getElementById('expenseMember').value);
-    const description = document.getElementById('expenseDescription').value;
-    const amount = Math.round(parseFloat(document.getElementById('expenseAmount').value));
+    const mid = document.getElementById('expenseMember').value;
+    const desc = document.getElementById('expenseDescription').value;
+    const amt = parseFloat(document.getElementById('expenseAmount').value);
+    
+    if (!currentCycleId) { alert("No active cycle"); return; }
 
-    const isAdmin = (currentUser.role === 'admin' || currentUser.role === 'manager');
-    const initialStatus = isAdmin ? 'approved' : 'pending';
-    const actor = currentUser.members ? currentUser.members.name : "User";
+    const submitBtn = document.getElementById('expenseSubmitBtn');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = "Processing...";
+    submitBtn.disabled = true;
 
-    btn.textContent = "Processing...";
-    btn.disabled = true;
+    // Get the name of the shopper for the log
+    const shopperSelect = document.getElementById('expenseMember');
+    const shopperName = shopperSelect.options[shopperSelect.selectedIndex].text;
+    
+    // Get the name of the person performing the edit (Admin/Manager)
+    const actorName = currentUser.members ? currentUser.members.name : currentUser.name;
 
     try {
-        const { error } = await supabase.from('expenses').insert({
-            cycle_id: currentCycleId,
-            member_id: memberId,
-            expense_date: date,
-            description: description,
-            amount: amount,
-            status: initialStatus
-        });
+        if (expenseId) {
+            // ===========================
+            // 1. EDIT MODE
+            // ===========================
 
-        if (error) throw error;
+            // A. Fetch OLD data first (to compare for notification)
+            const { data: oldData, error: fetchError } = await supabase
+                .from('expenses')
+                .select('amount, description')
+                .eq('id', expenseId)
+                .single();
+            
+            if (fetchError) throw fetchError;
 
-        const targetMember = allMembers.find(m => m.id === memberId);
-        await logActivity(
-            `Expense ${initialStatus.toUpperCase()}: ${formatCurrency(amount)} for "${description}" (Shopper: ${targetMember?.name}) added by ${actor}`, 
-            'expense'
-        );
+            // B. Update the Database
+            const { error: updateError } = await supabase
+                .from('expenses')
+                .update({ 
+                    expense_date: date, 
+                    member_id: mid, 
+                    description: desc, 
+                    amount: amt,
+                    is_edited: true // This will now work with the SQL fix
+                })
+                .eq('id', expenseId);
 
-        document.getElementById('expenseForm').reset();
-        document.getElementById('expenseDate').value = new Date().toISOString().split('T')[0];
-        
-        showNotification(isAdmin ? "Expense added" : "Request sent to admin", 'success');
-        await loadExpenses();
+            if (updateError) throw updateError;
+
+            // C. Log Detailed Notification
+            // Example: "Expense edit request APPROVED: from 800 to 700..."
+            const msg = `Expense Edited: from ৳${oldData.amount} to ৳${amt} for "${desc}" (Shopper: ${shopperName}) - by ${actorName}`;
+            
+            await supabase.from('notifications').insert({
+                cycle_id: currentCycleId,
+                type: 'expense',
+                message: msg
+            });
+
+            showNotification('Expense updated successfully!', 'success');
+
+        } else {
+            // ===========================
+            // 2. INSERT MODE (New Entry)
+            // ===========================
+            
+            const isAdmin = (currentUser.role === 'admin' || currentUser.role === 'manager');
+            const status = isAdmin ? 'approved' : 'pending';
+
+            const { error: insertError } = await supabase
+                .from('expenses')
+                .insert({ 
+                    cycle_id: currentCycleId, 
+                    expense_date: date, 
+                    member_id: mid, 
+                    description: desc, 
+                    amount: amt,
+                    status: status
+                });
+
+            if (insertError) throw insertError;
+
+            // Log New Entry Notification
+            const msg = `New Expense: ৳${amt} for "${desc}" by ${shopperName}`;
+            await supabase.from('notifications').insert({
+                cycle_id: currentCycleId,
+                type: 'expense',
+                message: msg
+            });
+
+            showNotification(isAdmin ? 'Expense added successfully!' : 'Request sent to admin', 'success');
+        }
+
+        // Reset Form and Reload
+        resetExpenseForm();
+        await loadExpenses(); 
+        await loadDashboard(); 
+
     } catch (err) {
         console.error(err);
         showNotification(err.message, 'error');
     } finally {
-        btn.textContent = originalText;
-        btn.disabled = false;
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
     }
 });
-
 
     // ============================================
     // DEPOSITS PAGE
@@ -8077,23 +8175,11 @@ async function loadDeposits() {
 }
 
 async function loadExpenses() {
+    const container = document.getElementById('expenseList');
     if (!currentCycleId) return;
 
-    const expenseListContainer = document.getElementById('expenseList');
-    
-    // 1. CACHE CHECK: If items already exist and the page was marked loaded, stop.
-    if (expenseListContainer.querySelector('.expense-card-modern') && pageLoaded.expenses) {
-        return;
-    }
-
-    // 2. Only show loading spinner if the container is empty (First load).
-    if (!expenseListContainer.innerHTML || expenseListContainer.innerHTML.includes('loading')) {
-        expenseListContainer.innerHTML = '<div class="loading">Syncing ledger...</div>';
-    }
-
     try {
-        // Fetch Data with Shopper Name Join
-        const { data, error } = await supabase
+        const { data: expenses, error } = await supabase
             .from('expenses')
             .select('*, members(name)')
             .eq('cycle_id', currentCycleId)
@@ -8101,67 +8187,234 @@ async function loadExpenses() {
 
         if (error) throw error;
 
-        if (!data || data.length === 0) {
-            expenseListContainer.innerHTML = '<div class="loading">No expenses found for this cycle.</div>';
+        container.innerHTML = '';
+        
+        if (!expenses || expenses.length === 0) {
+            container.innerHTML = '<div style="text-align:center; padding:20px; color:#cbd5e1;">No expenses yet.</div>';
             return;
         }
 
-        const isAuthorized = (currentUser.role === 'admin' || currentUser.role === 'manager');
-        const pendingItems = data.filter(e => e.status === 'pending');
-        const historyItems = data.filter(e => e.status !== 'pending'); 
+        const isAdmin = (currentUser.role === 'admin' || currentUser.role === 'manager');
 
-        // 3. BUILD HTML STRING IN MEMORY
-        let finalHTML = '';
+        expenses.forEach(exp => {
+            const dateObj = new Date(exp.expense_date);
+            const dateStr = dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+            
+            // Handle optional description
+            const itemsText = exp.description ? exp.description : 'General Expense';
+            const shopperName = exp.members?.name || 'Unknown';
 
-        const renderRow = (expense, showButtons) => {
-            let statusPill = '';
-            if (expense.status === 'pending') statusPill = '<span class="status-pill pending">Pending</span>';
-            else if (expense.status === 'approved') statusPill = '<span class="status-pill approved">Approved</span>';
+            // Check for edited flag
+            const editedTag = exp.is_edited ? `<span class="edited-badge">EDITED</span>` : '';
 
-            const shopperName = expense.members?.name?.split(' ')[0] || 'User';
-            const dateStr = new Date(expense.expense_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+            let actionBtn = '';
+            if (isAdmin) {
+                // Pass data attributes safely
+                actionBtn = `
+                <button class="btn-icon-edit" 
+                    onclick="populateExpenseForm('${exp.id}', '${exp.expense_date}', '${exp.member_id}', '${exp.amount}', this.dataset.desc)"
+                    data-desc="${(exp.description || '').replace(/"/g, '&quot;')}"
+                >
+                    ✎
+                </button>`;
+            }
 
-            return `
+            // --- VISUAL SWAP HERE ---
+            const html = `
             <div class="expense-card-modern">
                 <div class="exp-info-left">
                     <div class="exp-icon-box">🛒</div>
                     <div class="exp-details">
-                        <div class="title">${expense.description || 'Bazar'}</div>
-                        <div class="meta">${dateStr} • By ${shopperName}</div>
+                        <!-- MAIN TITLE: Shopper • Date -->
+                        <div class="title">
+                            ${shopperName} • ${dateStr} 
+                            ${editedTag}
+                        </div>
+                        <!-- SUBTITLE: Items (Muted) -->
+                        <div class="meta">${itemsText}</div>
                     </div>
                 </div>
-                <div class="exp-amount-right">
-                    <div class="val">৳${Math.round(expense.amount)}</div>
-                    ${statusPill}
-                    ${(showButtons && isAuthorized) ? `
-                        <div style="margin-top: 5px; display:flex; gap:5px; justify-content: flex-end;">
-                            <button class="btn btn-sm btn-success" onclick="handleExpenseApproval('${expense.id}', 'approved')">✓</button>
-                            <button class="btn btn-sm btn-danger" onclick="handleExpenseApproval('${expense.id}', 'rejected')">✕</button>
-                        </div>` : ''}
+                <div class="exp-info-left" style="gap:0;">
+                    <div class="exp-amount-right">
+                        <!-- Amount in Bengali -->
+                        <div class="val">৳${toBn(exp.amount)}</div> 
+                    </div>
+                    ${actionBtn}
                 </div>
             </div>`;
-        };
-
-        if (pendingItems.length > 0) {
-            finalHTML += `<h3 style="font-size: 11px; font-weight: 800; color: #b91c1c; margin-bottom: 10px; text-transform: uppercase;">⏳ Needs Approval</h3>`;
-            pendingItems.forEach(item => finalHTML += renderRow(item, true));
-            finalHTML += `<div style="border-bottom: 2px dashed #f1f5f9; margin: 20px 0;"></div>`;
-        }
-
-        if (historyItems.length > 0) {
-            finalHTML += `<h3 style="font-size: 11px; font-weight: 800; color: #64748b; margin-bottom: 10px; text-transform: uppercase;">History</h3>`;
-            historyItems.forEach(item => finalHTML += renderRow(item, false));
-        }
-
-        // 4. UPDATE DOM ONLY ONCE
-        expenseListContainer.innerHTML = finalHTML;
+            
+            container.insertAdjacentHTML('beforeend', html);
+        });
 
     } catch (err) {
-        console.error('Error loading expenses:', err);
-        expenseListContainer.innerHTML = '<div class="loading" style="color:red">Error loading list.</div>';
+        console.error("Load Exp Error:", err);
+        container.innerHTML = '<div style="color:red; text-align:center;">Failed to load.</div>';
     }
 }
 
+// Function to fill the form with existing data
+function populateExpenseForm(id, date, memberId, amount, desc) {
+    // 1. Fill Fields
+    document.getElementById('editExpenseId').value = id;
+    document.getElementById('expenseDate').value = date;
+    document.getElementById('expenseMember').value = memberId;
+    document.getElementById('expenseAmount').value = amount;
+    document.getElementById('expenseDescription').value = desc;
+
+    // 2. Change UI to "Edit Mode"
+    document.getElementById('expenseFormTitle').textContent = "Edit Expense Log";
+    document.getElementById('expenseFormTitle').style.color = "var(--primary-color)";
+    
+    const submitBtn = document.getElementById('expenseSubmitBtn');
+    submitBtn.textContent = "Update ✓";
+    submitBtn.classList.remove('btn-primary');
+    submitBtn.classList.add('btn-success'); // You might need to define .btn-success or just leave styled via CSS
+    submitBtn.style.backgroundColor = "#059669"; // Force green
+
+    document.getElementById('expenseCancelBtn').classList.remove('hidden');
+
+    // 3. Scroll to top so user sees the form
+    document.getElementById('expensesPage').scrollIntoView({ behavior: 'smooth' });
+}
+
+// Function to cancel edit and reset form
+function resetExpenseForm() {
+    document.getElementById('expenseForm').reset();
+    document.getElementById('editExpenseId').value = '';
+    
+    // Reset UI
+    document.getElementById('expenseFormTitle').textContent = "Add Expense";
+    document.getElementById('expenseFormTitle').style.color = "var(--text-primary)";
+    
+    const submitBtn = document.getElementById('expenseSubmitBtn');
+    submitBtn.textContent = "ADD +";
+    submitBtn.classList.add('btn-primary');
+    submitBtn.style.backgroundColor = ""; // Reset inline style
+
+    document.getElementById('expenseCancelBtn').classList.add('hidden');
+    
+    // Set default shopper to current user if not admin
+    if (currentUser.role !== 'admin' && currentUser.role !== 'manager') {
+        document.getElementById('expenseMember').value = currentUser.member_id;
+    }
+}
+
+document.getElementById('expenseForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    // Get form values
+    const expenseId = document.getElementById('editExpenseId').value;
+    const date = document.getElementById('expenseDate').value;
+    const mid = document.getElementById('expenseMember').value;
+    const desc = document.getElementById('expenseDescription').value;
+    const amt = parseFloat(document.getElementById('expenseAmount').value);
+    
+    if (!currentCycleId) { alert("No active cycle"); return; }
+
+    const submitBtn = document.getElementById('expenseSubmitBtn');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = "Processing...";
+    submitBtn.disabled = true;
+
+    // Get Shopper Name (The person who bought it)
+    const shopperSelect = document.getElementById('expenseMember');
+    const shopperName = shopperSelect.options[shopperSelect.selectedIndex].text;
+    
+    // Get Actor Name (The person currently logged in editing)
+    const actorName = currentUser.members ? currentUser.members.name : currentUser.name;
+
+    try {
+        if (expenseId) {
+            // ===========================
+            // 1. EDIT MODE
+            // ===========================
+
+            // A. Fetch OLD data first
+            const { data: oldData, error: fetchError } = await supabase
+                .from('expenses')
+                .select('amount, description')
+                .eq('id', expenseId)
+                .single();
+            
+            if (fetchError) throw fetchError;
+
+            // B. Update Database
+            const { error: updateError } = await supabase
+                .from('expenses')
+                .update({ 
+                    expense_date: date, 
+                    member_id: mid, 
+                    description: desc, 
+                    amount: amt,
+                    is_edited: true 
+                })
+                .eq('id', expenseId);
+
+            if (updateError) throw updateError;
+
+            // C. Log Notification (Fixed Bengali Numbers & Linked Actor)
+            // Use toBn() for converting numbers to Bengali
+            const oldAmtBn = toBn(oldData.amount);
+            const newAmtBn = toBn(amt);
+
+            const msg = `Expense Edited: from ৳${oldAmtBn} to ৳${newAmtBn} for "${desc}" (Shopper: ${shopperName}) - by ${actorName}`;
+            
+            await supabase.from('notifications').insert({
+                cycle_id: currentCycleId,
+                type: 'expense',
+                message: msg,
+                member_id: currentUser.member_id // <--- THIS FIXES "By: System" to "By: Admin"
+            });
+
+            showNotification('Expense updated successfully!', 'success');
+
+        } else {
+            // ===========================
+            // 2. INSERT MODE
+            // ===========================
+            
+            const isAdmin = (currentUser.role === 'admin' || currentUser.role === 'manager');
+            const status = isAdmin ? 'approved' : 'pending';
+
+            const { error: insertError } = await supabase
+                .from('expenses')
+                .insert({ 
+                    cycle_id: currentCycleId, 
+                    expense_date: date, 
+                    member_id: mid, 
+                    description: desc, 
+                    amount: amt,
+                    status: status
+                });
+
+            if (insertError) throw insertError;
+
+            // Log New Entry
+            const amtBn = toBn(amt);
+            const msg = `New Expense: ৳${amtBn} for "${desc}" by ${shopperName}`;
+            
+            await supabase.from('notifications').insert({
+                cycle_id: currentCycleId,
+                type: 'expense',
+                message: msg,
+                member_id: currentUser.member_id // Link actor here too
+            });
+
+            showNotification(isAdmin ? 'Expense added successfully!' : 'Request sent to admin', 'success');
+        }
+
+        resetExpenseForm();
+        await loadExpenses(); 
+        await loadDashboard(); 
+
+    } catch (err) {
+        console.error(err);
+        showNotification(err.message, 'error');
+    } finally {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+    }
+});
 
 function autoUpdateDepositLabel() {
     const type = document.getElementById('depositType').value;
@@ -8229,6 +8482,7 @@ function renderHistoryItem(t) {
 
     const dateStr = new Date(t.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 
+    // --- CHANGED LINE BELOW: toBn(Math.round(t.amount)) ---
     return `
     <div class="history-item-premium">
         <div class="hist-left">
@@ -8240,7 +8494,7 @@ function renderHistoryItem(t) {
         </div>
         <div class="hist-amount">
             <div class="val" style="color: ${isNegative ? '#e11d48' : '#059669'}">
-                ${isNegative ? '' : '+'}${Math.round(t.amount)}
+                ${isNegative ? '' : '+'}${toBn(Math.round(t.amount))}
             </div>
             <div class="label" style="color: var(--text-muted)">${t.label || 'Entry'}</div>
         </div>
@@ -9501,6 +9755,7 @@ window.addEventListener('beforeunload', () => {
 });
 
 
-</script>
+
+</script> 
 </body>
 </html>
