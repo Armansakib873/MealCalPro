@@ -4565,7 +4565,16 @@ body {
 <div id="summaryPage" class="page-content hidden">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding: 0 5px;">
         <h2 style="font-size: 20px; font-weight: 800;">Summary</h2>
-        <button class="btn btn-sm btn-secondary" id="exportSummaryBtn" style="font-size: 10px; border-radius: 20px;">Export CSV</button>
+        <div style="display: flex; gap: 10px;">
+        <!-- New Full Export Button -->
+        <button class="btn btn-sm" id="exportFullCycleBtn" style="background-color: #4f46e5; color: white; border-radius: 20px; font-size: 10px;">
+            📥 Full Data Export
+        </button>
+        <!-- Existing Simple Export Button -->
+        <button class="btn btn-sm btn-secondary" id="exportSummaryBtn" style="font-size: 10px; border-radius: 20px;">
+            Table Only
+        </button>
+        </div>
     </div>
 
     <!-- Cycle Stats Overview -->
@@ -8032,6 +8041,150 @@ async function quickToggleSummaryMeal(memberId, dateStr, type, currentVal) {
         const wb = XLSX.utils.table_to_book(table);
         XLSX.writeFile(wb, `MealCal_Summary_${new Date().toISOString().split('T')[0]}.xlsx`);
     });
+
+
+
+
+
+    // ============================================
+// FULL CYCLE EXPORT SYSTEM
+// ============================================
+
+document.getElementById('exportFullCycleBtn').addEventListener('click', async () => {
+    if (!currentCycleId) return;
+    
+    const btn = document.getElementById('exportFullCycleBtn');
+    const originalText = btn.textContent;
+    btn.textContent = "Generating...";
+    btn.disabled = true;
+
+    try {
+        // 1. Fetch ALL Data for the Cycle in Parallel
+        const [cycleRes, membersRes, mealsRes, depositsRes, expensesRes] = await Promise.all([
+            supabase.from('cycles').select('name, start_date, end_date').eq('id', currentCycleId).single(),
+            supabase.from('members').select('id, name').order('name'),
+            supabase.from('meals').select('*').eq('cycle_id', currentCycleId),
+            supabase.from('deposits').select('*, members(name)').eq('cycle_id', currentCycleId).neq('status', 'pending').order('created_at'),
+            supabase.from('expenses').select('*, members(name)').eq('cycle_id', currentCycleId).eq('status', 'approved').order('expense_date')
+        ]);
+
+        const cycle = cycleRes.data;
+        const members = membersRes.data;
+        const meals = mealsRes.data;
+        const deposits = depositsRes.data;
+        const expenses = expensesRes.data;
+
+        // 2. Perform Calculations
+        const totalExpense = expenses.reduce((sum, e) => sum + parseFloat(e.amount), 0);
+        const totalMeals = meals.reduce((sum, m) => sum + (parseFloat(m.day_count) + parseFloat(m.night_count)), 0);
+        const totalDeposits = deposits.reduce((sum, d) => sum + parseFloat(d.amount), 0);
+        
+        // Avoid division by zero
+        const mealRate = totalMeals > 0 ? (totalExpense / totalMeals) : 0;
+        const currentBalance = totalDeposits - totalExpense; // Cash in Hand
+
+        // 3. Construct Data Arrays (Rows for the Excel file)
+        let dataRows = [];
+
+        // --- SECTION A: METADATA ---
+        dataRows.push(["MEALCAL PRO - FULL CYCLE REPORT"]);
+        dataRows.push(["Export Date", new Date().toLocaleString()]);
+        dataRows.push(["Cycle Name", cycle.name]);
+        dataRows.push(["Duration", `${cycle.start_date} to ${cycle.end_date}`]);
+        dataRows.push([]); // Spacer
+
+        // --- SECTION B: OVERALL STATISTICS ---
+        dataRows.push(["--- OVERALL STATISTICS ---"]);
+        dataRows.push(["Total Meals", "Total Expenses", "Total Deposits", "Meal Rate", "Cash Balance"]);
+        dataRows.push([
+            totalMeals.toFixed(2), 
+            totalExpense.toFixed(2), 
+            totalDeposits.toFixed(2), 
+            mealRate.toFixed(4), 
+            currentBalance.toFixed(2)
+        ]);
+        dataRows.push([]); // Spacer
+
+        // --- SECTION C: MEMBER SUMMARY TABLE ---
+        dataRows.push(["--- MEMBER SUMMARY ---"]);
+        dataRows.push(["Member Name", "Total Meals", "Total Deposit", "Actual Cost", "Balance (+Refund/-Due)"]);
+
+        members.forEach(m => {
+            const mMeals = meals.filter(x => x.member_id === m.id)
+                .reduce((s, x) => s + (parseFloat(x.day_count) + parseFloat(x.night_count)), 0);
+            
+            const mDep = deposits.filter(x => x.member_id === m.id)
+                .reduce((s, x) => s + parseFloat(x.amount), 0);
+            
+            const mCost = mMeals * mealRate;
+            const mBal = mDep - mCost;
+
+            dataRows.push([
+                m.name,
+                mMeals.toFixed(1),
+                mDep.toFixed(2),
+                mCost.toFixed(2),
+                mBal.toFixed(2)
+            ]);
+        });
+        dataRows.push([]); // Spacer
+
+        // --- SECTION D: EXPENSE LOG (BAZAR LIST) ---
+        dataRows.push(["--- EXPENSE / BAZAR LOG ---"]);
+        dataRows.push(["Date", "Shopper", "Description", "Amount"]);
+        
+        expenses.forEach(e => {
+            dataRows.push([
+                e.expense_date,
+                e.members?.name || 'Unknown',
+                e.description,
+                parseFloat(e.amount).toFixed(2)
+            ]);
+        });
+        dataRows.push([]); // Spacer
+
+        // --- SECTION E: DEPOSIT LOG (WALLET HISTORY) ---
+        dataRows.push(["--- DEPOSIT & TRANSACTION LOG ---"]);
+        dataRows.push(["Date", "Member", "Label/Type", "Notes", "Amount"]);
+
+        deposits.forEach(d => {
+            const dateStr = new Date(d.created_at).toLocaleDateString('en-GB');
+            dataRows.push([
+                dateStr,
+                d.members?.name || 'Unknown',
+                d.label,
+                d.notes || '-',
+                parseFloat(d.amount).toFixed(2)
+            ]);
+        });
+
+        // 4. Generate File
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet(dataRows);
+
+        // Optional: Auto-width columns (Cosmetic)
+        ws['!cols'] = [
+            { wch: 20 }, { wch: 20 }, { wch: 25 }, { wch: 15 }, { wch: 15 }
+        ];
+
+        XLSX.utils.book_append_sheet(wb, ws, "Full Report");
+        
+        // Filename: MealCal_Report_CycleName_Date.csv
+        const safeName = cycle.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        const fileName = `MealCal_FullReport_${safeName}.csv`;
+
+        XLSX.writeFile(wb, fileName);
+
+        showNotification("Full Cycle Data Exported!", "success");
+
+    } catch (err) {
+        console.error("Export Error:", err);
+        showNotification("Failed to export data", "error");
+    } finally {
+        btn.textContent = originalText;
+        btn.disabled = false;
+    }
+});
 
     // ============================================
     // EXPENSES PAGE
