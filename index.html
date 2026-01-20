@@ -597,7 +597,14 @@ body {
             box-shadow: var(--shadow-lg);
             display: flex; flex-direction: column; justify-content: space-between;
         }
-        .stat-label { font-size: 13px; opacity: 0.9; margin-bottom: 5px; }
+        
+        
+        .stat-label {     font-size: 18px;
+    opacity: 0.9;
+    margin-bottom: 5px;
+    color: #fff;
+    font-weight: 700;
+}
         .stat-value { font-size: 24px; font-weight: 700; }
 
         /* =========================================
@@ -720,21 +727,45 @@ body {
             -webkit-overflow-scrolling: touch; /* Smooth iOS scroll */
             scrollbar-width: none;
         }
-        /* .scheduler-card {
-            min-width: 120px;
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
-            padding: 10px;
-            display: flex; flex-direction: column; align-items: center; gap: 8px;
-        }
-        .scheduler-card.is-today { border: 2px solid var(--primary-color); background-color: rgba(79, 70, 229, 0.05); }
-        .sched-btn {
-            width: 100%; padding: 6px; border-radius: 6px; border: 1px solid var(--border-color);
-            background: var(--bg-color); font-size: 11px; cursor: pointer;
-        }
-        .sched-btn.active { background-color: var(--success-color); color: white; border-color: var(--success-color); } */
 
+#profilePage .scheduler-scroll {
+    display: flex !important;           /* Force cards into a row */
+    flex-direction: row !important;     /* Ensure horizontal direction */
+    overflow-x: auto !important;        /* Enable side scrolling */
+    flex-wrap: nowrap !important;       /* Prevent stacking onto new lines */
+    gap: 12px;                          /* Space between cards */
+    padding: 5px 2px 15px 2px;          /* Padding (extra bottom for scrollbar) */
+    width: 100%;                        /* Full width of container */
+    -webkit-overflow-scrolling: touch;  /* Smooth scroll on iPhone */
+    scrollbar-width: none;              /* Hide scrollbar on Firefox */
+}
+
+/* Hide scrollbar on Chrome/Safari/Edge */
+#profilePage .scheduler-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+/* Ensure the cards have a fixed width so they don't squash */
+#profilePage .scheduler-card {
+    flex: 0 0 auto;        /* Don't grow, don't shrink, stay fixed */
+    width: 150px;          /* Fixed card width */
+    min-width: 150px;      /* Force minimum width */
+    margin-right: 0;       /* Gap handles spacing */
+}
+
+/* Optional: Keep Desktop as Grid (If you want PC to be a grid, keep this) */
+@media (min-width: 769px) {
+    #profilePage .scheduler-scroll {
+        display: grid !important;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important;
+        overflow-x: visible !important;
+        flex-wrap: wrap !important;
+    }
+    
+    #profilePage .scheduler-card {
+        width: auto; /* Let grid control width on PC */
+    }
+}
         /* Matrix Table */
         .matrix-wrapper {
             overflow: auto; max-height: 70vh;
@@ -857,7 +888,6 @@ body {
         /* Styling for the main amount */
 .amt-whole {
     font-weight: 800;
-    color: #10b981; /* Current Green */
     font-size: 1.1em;
 }
 
@@ -1159,6 +1189,35 @@ body {
 
 .balance-card-modern.warning { border-left-color: var(--danger-color); }
 
+/* 1. Positive State (Green) */
+/* #profileBalanceCard.status-pos {
+    background: linear-gradient(135deg, #064e3b 0%, #022c22 100%) !important;
+    border: 1px solid #059669 !important;
+}
+#profileBalanceCard.status-pos .stat-value {
+    color: #34d399 !important;
+}
+
+/* 2. Negative State (Reddish) */
+#profileBalanceCard.status-neg {
+    background: linear-gradient(135deg, #7f1d1d 0%, #450a0a 100%) !important;
+    border: 1px solid #ef4444 !important;
+    box-shadow: 0 10px 25px rgba(239, 68, 68, 0.2);
+}
+
+/* Make the text inside the red card readable (Light Red/White) */
+#profileBalanceCard.status-neg .stat-value {
+    color: #fca5a5 !important; /* Light Red Text */
+}
+#profileBalanceCard.status-neg .stat-label, 
+#profileBalanceCard.status-neg .cycle-info-text {
+    color: #fecaca !important; /* Very Light Red */
+}
+#profileBalanceCard.status-neg .btn-primary {
+    background: #fca5a5 !important;
+    color: #7f1d1d !important;
+} */
+
 /* Timeline Scheduler */
 .scheduler-scroll {
     padding: 5px 5px;
@@ -1390,6 +1449,22 @@ body {
         font-size: 48px !important;
         box-shadow: var(--shadow-lg) !important;
     }
+
+            .stat-label {     font-size: 18px;
+    opacity: 0.9;
+    margin-bottom: 5px;
+    color: #fff;
+    font-weight: 700;
+}
+
+        #profileCycleName{
+            color: #bdbdbd;
+        }
+
+        .cycle-info-text{
+            color: #d4d4d4;
+            font-size: 14px;
+        }
 
 
     }
@@ -2389,12 +2464,13 @@ body {
 .matrix-table-premium thead th {
     position: sticky;
     top: 0;
-    z-index: 100; /* Stays above body cells */
-    background: #f8fafc;
+    z-index: 100;
+    background: #f7fffbb5;
     border-bottom: 2px solid #cbd5e1;
     padding: 12px 8px;
     font-size: 0.7rem;
     font-weight: 500;
+    border: 1px solid #53535333;
 }
 
 /* 3. Sticky Column (First Column - Dates) */
@@ -2407,6 +2483,7 @@ body {
     font-size: 0.7rem;
     font-weight: 500;
     text-align: center;
+    border: 1px solid #53535333;
 }
 
 /* 4. The Intersection (Top-Left BAZAR cell) */
@@ -2455,10 +2532,15 @@ body {
     background: #c0c0c02b;
 }
 
+.cell-split-premium{
+    border: 1px solid #dfcece;
+}
+
 
 .cell-val-half.active {
-    background: rgba(99, 102, 241, 0.1);
+        background: rgb(99 227 241 / 10%);
     color: #4f46e5;
+    border: 1px dashed #d7d7d7;
 }
 .cell-val-half.zero { color: #cbd5e1; font-weight: 400; }
 
@@ -5294,14 +5376,18 @@ async function loadPageData(pageName, forceRefresh = false) {
         const hashArray = Array.from(new Uint8Array(hashBuffer));
         return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
     }
+
+
 function formatCurrency(amount) {
     const isNegative = amount < 0;
+    // We get absolute value for the numbers, but keep track of sign
     const val = Math.abs(parseFloat(amount || 0)).toFixed(2);
     const [integerPart, decimalPart] = val.split('.');
-    const sign = isNegative ? '-' : '+';
     
-    // sign is hidden but available if needed. Here we style the currency symbol and amounts
-    return `৳ <span class="amt-whole">${toBn(integerPart)}</span><span class="amt-decimal">.${toBn(decimalPart)}</span>`;
+    // Add the negative sign if needed
+    const signPrefix = isNegative ? '-' : '';
+    
+    return `${signPrefix}৳ <span class="amt-whole">${toBn(integerPart)}</span><span class="amt-decimal">.${toBn(decimalPart)}</span>`;
 }
 
 // This function handles both the name 'formatDate' and adds the Time
@@ -7329,7 +7415,6 @@ async function loadProfile() {
     }
 }
 
-
 // Function to update the Avatar Link
 async function changeProfilePicture() {
     // 1. Ask the user for the URL
@@ -9092,7 +9177,7 @@ async function updateEntryStatusIndicator() {
         // 4. BUILD THE ROTATION QUEUE
         const newQueue = [];
 
-        // CONDITION 1: Always add Default (Target Bazar)
+      // CONDITION 1: Target
         const isToday = sessionDate.getDate() === today.getDate() && sessionDate.getMonth() === today.getMonth();
         newQueue.push({
             text: `TARGET: ${dateLabel} BAZAR`,
@@ -9101,17 +9186,19 @@ async function updateEntryStatusIndicator() {
 
         // CONDITION 2 & 4: Add Current Debt Card if negative
         if (myBalance < -1) { 
-            newQueue.push({
-                text: `DEBT: ৳${Math.abs(myBalance)}`,
-                class: 'status-debt' // Red Color
+             const debtAmount = toBn(Math.round(Math.abs(myBalance)));
+              newQueue.push({
+                text: `DEBT: -৳${debtAmount}`, // Added negative sign here
+                class: 'status-debt'
             });
         }
 
         // CONDITION 3 & 4: Add Past Due Card if exists
-        if (prevDebt > 1) {
+         if (prevDebt > 1) {
+            const pastDueAmount = toBn(Math.round(prevDebt));
             newQueue.push({
-                text: `PAST DUE: ৳${Math.round(prevDebt)}`,
-                class: 'status-due' // Orange/Yellow Color
+                text: `PAST DUE: -৳${pastDueAmount}`, // Added negative sign here
+                class: 'status-due'
             });
         }
 
