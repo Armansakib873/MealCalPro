@@ -7485,22 +7485,17 @@ document.getElementById('cycleSelect').addEventListener('change', (e) => {
         const select = document.getElementById(selectId);
         if (!select) return;
 
-        // Inside populateMemberSelects() or loadDeposits()
-if (currentUser && currentUser.member_id) {
-    const memberSelect = document.getElementById('depositMember');
-    if (memberSelect) {
-        memberSelect.value = currentUser.member_id;
-        // Trigger the history load for current user immediately
-        loadSelectedMemberHistory(currentUser.member_id);
-    }
-}
+        // Save current selection if refreshing
+        const currentValue = select.value; 
         
-        const firstOption = select.options[0];
-        const currentValue = select.value; // Preserve value if reloading
-        
+        // Clear and add placeholder
         select.innerHTML = '';
-        select.appendChild(firstOption);
+        const defaultOption = document.createElement('option');
+        defaultOption.value = "";
+        defaultOption.textContent = "Select...";
+        select.appendChild(defaultOption);
         
+        // Populate Members
         allMembers.forEach(member => {
             const option = document.createElement('option');
             option.value = member.id;
@@ -7508,16 +7503,24 @@ if (currentUser && currentUser.member_id) {
             select.appendChild(option);
         });
 
-        // --- NEW LOGIC FOR USER CONVENIENCE ---
-        // If this is the Expense form and I am a regular user, auto-select ME
-        if (selectId === 'expenseMember' && currentUser.role === 'user' && currentUser.member_id) {
+        // --- SPECIFIC DEFAULTS LOGIC ---
+
+        // 1. Expenses: Always default to Current User initially
+        if (selectId === 'expenseMember' && currentUser.member_id) {
              select.value = currentUser.member_id;
-             // Optional: Disable it so they can't change it
-             // select.disabled = true; 
-        } else if (currentValue) {
+        } 
+        // 2. Deposits: Always default to Current User
+        else if (selectId === 'depositMember' && currentUser.member_id) {
+             select.value = currentUser.member_id;
+        }
+        // 3. Others: Restore previous value if exists
+        else if (currentValue) {
             select.value = currentValue;
         }
     });
+
+    // Force date default on load as well
+    resetExpenseForm(); 
 }
     // ============================================
     // NAVIGATION
@@ -9171,23 +9174,43 @@ function populateExpenseForm(id, date, memberId, amount, desc) {
 
 // Function to cancel edit and reset form
 function resetExpenseForm() {
-    document.getElementById('expenseForm').reset();
+    const form = document.getElementById('expenseForm');
+    if (!form) return;
+
+    // 1. Clear standard inputs
+    form.reset();
     document.getElementById('editExpenseId').value = '';
     
-    // Reset UI
-    document.getElementById('expenseFormTitle').textContent = "Add Expense";
-    document.getElementById('expenseFormTitle').style.color = "var(--text-primary)";
-    
+    // 2. Reset UI Styling (Title & Buttons)
+    const title = document.getElementById('expenseFormTitle');
     const submitBtn = document.getElementById('expenseSubmitBtn');
-    submitBtn.textContent = "ADD +";
-    submitBtn.classList.add('btn-primary');
-    submitBtn.style.backgroundColor = ""; // Reset inline style
+    const cancelBtn = document.getElementById('expenseCancelBtn');
 
-    document.getElementById('expenseCancelBtn').classList.add('hidden');
+    title.textContent = "Add Expense";
+    title.style.color = "var(--text-primary)";
     
-    // Set default shopper to current user if not admin
-    if (currentUser.role !== 'admin' && currentUser.role !== 'manager') {
-        document.getElementById('expenseMember').value = currentUser.member_id;
+    submitBtn.textContent = "ADD +";
+    submitBtn.className = "btn btn-primary"; // Reset classes
+    submitBtn.style.backgroundColor = ""; // Reset inline styles
+
+    if (cancelBtn) cancelBtn.classList.add('hidden');
+
+    // 3. SET DEFAULT DATE: TODAY (Local Time)
+    // We adjust for timezone offset to get the correct local "YYYY-MM-DD"
+    const now = new Date();
+    const localDate = new Date(now.getTime() - (now.getTimezoneOffset() * 60000))
+                        .toISOString()
+                        .split('T')[0];
+    
+    document.getElementById('expenseDate').value = localDate;
+    
+    // 4. SET DEFAULT SHOPPER: CURRENT USER
+    // This applies to everyone (Admins included) for convenience
+    if (currentUser && currentUser.member_id) {
+        const memberSelect = document.getElementById('expenseMember');
+        if (memberSelect) {
+            memberSelect.value = currentUser.member_id;
+        }
     }
 }
 
