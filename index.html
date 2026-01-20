@@ -6255,15 +6255,17 @@ function removeToast(toastElement) {
     document.getElementById('authPage').classList.add('hidden');
     document.getElementById('mainApp').classList.remove('hidden');
     
-    // RE-ENABLE SCROLLING
     document.body.style.overflow = "auto";
     document.documentElement.style.overflow = "auto";
     
-    // Show admin menu if applicable
-    if (currentUser.role === 'admin' || currentUser.role === 'manager') {
-        document.getElementById('adminMenuItem').style.display = 'block';
-    } else {
-        document.getElementById('adminMenuItem').style.display = 'none';
+    // --- UI SECURITY: HIDE/SHOW MENU ITEM ---
+    const adminBtn = document.getElementById('adminMenuItem');
+    if (adminBtn) {
+        if (currentUser.role === 'admin' || currentUser.role === 'manager') {
+            adminBtn.style.display = 'block'; // Show for Admin/Manager
+        } else {
+            adminBtn.style.display = 'none';  // Hide for everyone else
+        }
     }
     
     initializeApp();
@@ -6582,15 +6584,18 @@ setInterval(updateRestrictedUI, 30000); // Check every 30 seconds
 }
 
 async function preLoadAllPages() {
-    // List all pages except dashboard
+    // Standard pages for everyone
     const pages = ['profile', 'tracker', 'summary', 'expenses', 'deposits'];
-    if (currentUser.role === 'admin' || currentUser.role === 'manager') pages.push('admin');
+
+    // Only preload Admin for Admins/Managers
+    if (currentUser.role === 'admin' || currentUser.role === 'manager') {
+        pages.push('admin');
+    }
 
     for (const page of pages) {
-        // We await each one to keep the network requests orderly
         await loadPageData(page);
     }
-    console.log("✅ All pages pre-rendered successfully.");
+    console.log("✅ Pages pre-loaded.");
 }
 
 function loadPageData(pageName) {
@@ -7521,23 +7526,42 @@ if (currentUser && currentUser.member_id) {
 async function navigateToPage(pageName) {
     if (!pageName) return;
 
-    // Show the page container immediately (it will show old data or loading state)
+    // --- SECURITY CHECK ---
+    // If trying to access Admin, check role immediately
+    if (pageName === 'admin') {
+        if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'manager')) {
+            showNotification("⛔ Access Denied: Admin privileges required.", "error");
+            // If they are currently on a different page, stay there. 
+            // If they are nowhere (fresh load), send to dashboard.
+            if (document.querySelector('.page-content:not(.hidden)') === null) {
+                navigateToPage('dashboard');
+            }
+            return;
+        }
+    }
+
+    // --- STANDARD NAVIGATION ---
+    // Hide all pages
     document.querySelectorAll('.page-content').forEach(p => p.classList.add('hidden'));
+    
+    // Show target page
     const target = document.getElementById(pageName + 'Page');
     if (target) target.classList.remove('hidden');
 
-    // Update Nav UI
+    // Update Nav UI (Active State)
     document.querySelectorAll('.bottom-nav-link, .nav-link').forEach(link => {
         link.classList.toggle('active', link.getAttribute('data-page') === pageName);
     });
 
-    // Check cache/load data (This will return instantly if pre-loaded)
+    // Load Data
     await loadPageData(pageName);
 
-    // Sidebar Close
+    // Auto-close sidebar on mobile
     if (window.innerWidth <= 768) {
-        document.getElementById('sidebar').classList.remove('mobile-active');
-        document.getElementById('sidebarOverlay').classList.remove('active');
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        if(sidebar) sidebar.classList.remove('mobile-active');
+        if(overlay) overlay.classList.remove('active');
     }
 }
 
