@@ -3513,7 +3513,7 @@ body {
 }
 
 .summary-table-premium td {
-    padding: 10px 15px;
+    padding: 10px 10px;
     border-bottom: 1px solid #f1f5f9;
     text-align: center;
     vertical-align: middle;
@@ -3528,7 +3528,7 @@ body {
     z-index: 10;
     text-align: left;
     border-right: 2px solid #f1f5f9;
-    min-width: 100px;
+    min-width: 50px;
 }
 
 .summary-table-premium th:first-child { background: #f8fafc; }
@@ -3715,6 +3715,13 @@ body {
     }
     .balance-glass-card { grid-column: span 1; }
 }
+/* Total Meals Card Styling (Blue) */
+#statTotalMealsDisplay {
+    color: #2563eb !important; /* Royal Blue */
+}
+
+
+
 
 /* Dashboard Balance Indicator Colors */
 #statMessBalance.pos {
@@ -3723,6 +3730,37 @@ body {
 
 #statMessBalance.neg {
     color: #ef4444 !important; /* Rose Red */
+}
+
+/* --- Mobile View Adjustments (Dashboard) --- */
+@media (max-width: 768px) {
+
+    /* 1. Force the grid to have 2 columns on mobile */
+    .dash-stats-grid {
+        grid-template-columns: 1fr 1fr !important; 
+        gap: 10px;
+    }
+
+    /* 2. Make the Big Balance Card span across both columns (Full Width) */
+    .balance-glass-card, 
+    #messBalanceContainer {
+        grid-column: span 2 !important;
+    }
+
+    /* 3. Optional: Compact styling for the small cards so they fit nicely */
+    .stat-pill-card {
+        padding: 10px !important;
+        min-height: 80px; /* Ensure consistent height */
+    }
+    
+    .stat-pill-card .label {
+        font-size: 8px !important;
+        white-space: nowrap; /* Prevent text wrapping */
+    }
+    
+    .stat-pill-card .val {
+        font-size: 15px !important; /* Adjust number size */
+    }
 }
 
 /* Subtle background tints for the balance card */
@@ -4294,7 +4332,6 @@ body {
     <div class="dash-stats-grid">
 
 
-<!-- Mess Liquidity Liquid Card -->
 <!-- Modern Vertical Meter Card -->
 <div class="liquid-card-container state-healthy-liquid" id="messBalanceContainer">
     <div class="liquid-card-bg"></div>
@@ -4360,6 +4397,12 @@ body {
             <div class="label">Meal Rate</div>
             <div class="val" id="statMealRate">৳0.00</div>
         </div>
+
+        <!-- 2. NEW CARD: Total Meals -->
+<div class="stat-pill-card">
+    <div class="label">Total Meals</div>
+    <div class="val" id="statTotalMealsDisplay">0</div>
+</div>
 
 
         <div class="stat-pill-card">
@@ -4550,7 +4593,7 @@ body {
                     <th>🌙 Night</th>
                     <th>🌞 Day</th>
                     <th>Bazar</th>
-                    <th>Total</th>
+                    <th>Meals</th>
                     <th>Balance</th>
                 </tr>
             </thead>
@@ -7220,6 +7263,13 @@ async function loadDashboard() {
         document.getElementById('statMealRate').innerHTML = formatCurrency(rate);
         document.getElementById('statTotalExpense').innerHTML = formatCurrency(totalExp);
         document.getElementById('statTotalDeposit').innerHTML = formatCurrency(totalDep);
+
+          // --- NEW: UPDATE TOTAL MEALS CARD ---
+        // toBn() converts to Bengali digits. toFixed(1) keeps one decimal place (e.g., 50.5)
+        const mealsEl = document.getElementById('statTotalMealsDisplay');
+        if (mealsEl) {
+            mealsEl.textContent = toBn(totalMeals.toFixed(1).replace(/\.0$/, '')); // Removes .0 if whole number
+        }
         
         // ============================================
         // LIQUID CARD LOGIC (NEW)
