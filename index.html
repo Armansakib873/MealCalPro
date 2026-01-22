@@ -3998,7 +3998,52 @@ body {
     filter: drop-shadow(0 4px 6px rgba(5, 150, 105, 0.2)); /* Green glow on icon */
 }
 
+/* CYCLE CLOSING CHECKLIST STYLES */
+.checklist-container {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
 
+.checklist-header {
+    font-size: 12px;
+    font-weight: 800;
+    color: #64748b;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 5px;
+}
+
+.check-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px dashed #e2e8f0;
+    font-size: 13px;
+}
+
+.check-item:last-child { border-bottom: none; }
+
+.check-label { font-weight: 600; color: #334155; }
+.check-status { font-weight: 800; font-size: 11px; padding: 2px 8px; border-radius: 12px; }
+
+.status-pass { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+.status-fail { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+
+.balance-fix-hint {
+    font-size: 11px;
+    background: #eff6ff;
+    color: #1e40af;
+    padding: 10px;
+    border-radius: 8px;
+    margin-top: 10px;
+    border: 1px solid #dbeafe;
+    display: none; /* Hidden by default */
+}
 
 @keyframes pulse-red-border {
     0% { border-color: #7f1d1d; }
@@ -5279,13 +5324,34 @@ body {
 </div>
 
 <!-- Cycle Close/Creation Modal -->
+<!-- Cycle Close/Creation Modal (Strict Validation) -->
 <div id="cycleCloseModal" class="modal">
-    <div class="modal-content" style="max-width: 400px;">
+    <div class="modal-content" style="max-width: 450px;">
         <div class="modal-header">
-            <h3 class="modal-title">Close & Create Cycle</h3>
+            <h3 class="modal-title">Finalize Cycle</h3>
             <span class="close-modal" onclick="document.getElementById('cycleCloseModal').classList.remove('active')">×</span>
         </div>
-        <form id="cycleCloseForm">
+
+        <!-- 1. VALIDATION CHECKLIST AREA -->
+        <div id="cycleValidationArea">
+            <div class="checklist-container">
+                <div class="checklist-header">System Health Check</div>
+                <div id="checklistItems">
+                    <div class="loading">Running diagnostics...</div>
+                </div>
+            </div>
+            
+            <!-- Hint box for fixing balance -->
+            <div id="balanceFixHint" class="balance-fix-hint"></div>
+        </div>
+
+        <!-- 2. NEXT CYCLE FORM (Hidden until validation passes) -->
+        <form id="cycleCloseForm" style="display: none; opacity: 0; transition: opacity 0.5s;">
+            
+            <div style="margin: 15px 0; padding-top: 15px; border-top: 2px solid #e2e8f0;">
+                <h4 style="font-size: 13px; font-weight: 800; margin-bottom: 10px; color: var(--primary-color);">✅ Ready to Create Next Cycle</h4>
+            </div>
+
             <div class="form-group">
                 <label class="form-label">Select Target Month</label>
                 <div style="display: flex; gap: 10px;">
@@ -5295,8 +5361,8 @@ body {
             </div>
 
             <div class="form-group">
-                <label class="form-label">Cycle Name</label>
-                <input type="text" id="newCycleName" class="form-input" placeholder="e.g. January 2026">
+                <label class="form-label">New Cycle Name</label>
+                <input type="text" id="newCycleName" class="form-input" placeholder="e.g. February 2026">
             </div>
 
             <div class="form-group">
@@ -5309,12 +5375,13 @@ body {
                 <input type="date" id="newCycleEnd" class="form-input" required>
             </div>
 
-            <div style="background: #fff1f2; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 11px; color: #991b1b;">
-                ⚠️ This will deactivate the current cycle and forward all member balances to the new one.
-            </div>
-
-            <button type="submit" class="btn btn-danger" style="width: 100%;">Confirm & Finalize</button>
+            <button type="submit" class="btn btn-danger" style="width: 100%;">🔒 Close & Start New</button>
         </form>
+
+        <!-- Blocked Message -->
+        <div id="cycleBlockedMsg" style="display:none; text-align:center; color:#ef4444; font-size:12px; font-weight:700; margin-top:10px;">
+            ⛔ Cannot close cycle until all checks pass.
+        </div>
     </div>
 </div>
 
@@ -8788,43 +8855,60 @@ document.getElementById('exportFullCycleBtn').addEventListener('click', async ()
 document.getElementById('expenseForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     
-    // Get form values
+    // 1. Grab UI Elements
+    const submitBtn = document.getElementById('expenseSubmitBtn');
     const expenseId = document.getElementById('editExpenseId').value;
+    
+    // 2. Safe Value Extraction
     const date = document.getElementById('expenseDate').value;
     const mid = document.getElementById('expenseMember').value;
     const desc = document.getElementById('expenseDescription').value;
-    const amt = parseFloat(document.getElementById('expenseAmount').value);
-    
-    if (!currentCycleId) { alert("No active cycle"); return; }
+    const amtVal = document.getElementById('expenseAmount').value;
+    const amt = parseFloat(amtVal); // Don't round yet if you want decimals, or use Math.round(amtVal)
 
-    const submitBtn = document.getElementById('expenseSubmitBtn');
-    const originalText = submitBtn.textContent;
+    // 3. Validations
+    if (!currentCycleId) { 
+        showNotification("System Error: No active cycle found.", "error"); 
+        return; 
+    }
+    if (!mid) { 
+        showNotification("Please select a shopper.", "error"); 
+        return; 
+    }
+    if (isNaN(amt) || amt <= 0) { 
+        showNotification("Please enter a valid amount.", "error"); 
+        return; 
+    }
+
+    // 4. Lock UI
+    const isEditMode = !!expenseId;
+    const originalText = isEditMode ? "Update ✓" : "ADD +";
     submitBtn.textContent = "Processing...";
     submitBtn.disabled = true;
 
-    // Get the name of the shopper for the log
-    const shopperSelect = document.getElementById('expenseMember');
-    const shopperName = shopperSelect.options[shopperSelect.selectedIndex].text;
-    
-    // Get the name of the person performing the edit (Admin/Manager)
-    const actorName = currentUser.members ? currentUser.members.name : currentUser.name;
-
     try {
-        if (expenseId) {
-            // ===========================
-            // 1. EDIT MODE
-            // ===========================
+        // --- SAFE DATA GATHERING ---
+        // Get Shopper Name safely
+        const shopperSelect = document.getElementById('expenseMember');
+        let shopperName = "Unknown";
+        if (shopperSelect.selectedIndex >= 0) {
+            shopperName = shopperSelect.options[shopperSelect.selectedIndex].text;
+        }
 
-            // A. Fetch OLD data first (to compare for notification)
-            const { data: oldData, error: fetchError } = await supabase
-                .from('expenses')
-                .select('amount, description')
-                .eq('id', expenseId)
-                .single();
-            
-            if (fetchError) throw fetchError;
+        // Get Actor Name safely
+        const actorName = currentUser?.name || "User";
 
-            // B. Update the Database
+        // ===========================
+        // DATABASE OPERATION
+        // ===========================
+        if (isEditMode) {
+            // --- EDIT MODE ---
+            // 1. Fetch old data for diff logging (Optional - wrapped to not break flow)
+            let oldAmt = 0;
+            const { data: oldData } = await supabase.from('expenses').select('amount').eq('id', expenseId).maybeSingle();
+            if(oldData) oldAmt = oldData.amount;
+
+            // 2. Update
             const { error: updateError } = await supabase
                 .from('expenses')
                 .update({ 
@@ -8832,38 +8916,27 @@ document.getElementById('expenseForm').addEventListener('submit', async (e) => {
                     member_id: mid, 
                     description: desc, 
                     amount: amt,
-                    is_edited: true // This will now work with the SQL fix
+                    is_edited: true 
                 })
                 .eq('id', expenseId);
 
             if (updateError) throw updateError;
 
-            // C. Log Detailed Notification
-            // Example: "Expense edit request APPROVED: from 800 to 700..."
-            const msg = `Expense Edited: from ৳${oldData.amount} to ৳${amt} for "${desc}" (Shopper: ${shopperName}) - by ${actorName}`;
-            
-            await supabase.from('notifications').insert({
-                cycle_id: currentCycleId,
-                type: 'expense',
-                message: msg
-            });
-
-            showNotification('Expense updated successfully!', 'success');
+            // 3. Log (Non-blocking)
+            logExpenseActivity(`Expense Edited: ৳${oldAmt} ➔ ৳${amt} (${desc}) by ${actorName}`);
+            showNotification('Expense updated!', 'success');
 
         } else {
-            // ===========================
-            // 2. INSERT MODE (New Entry)
-            // ===========================
-            
+            // --- ADD MODE ---
             const isAdmin = (currentUser.role === 'admin' || currentUser.role === 'manager');
             const status = isAdmin ? 'approved' : 'pending';
 
             const { error: insertError } = await supabase
                 .from('expenses')
                 .insert({ 
-                    cycle_id: currentCycleId, 
+                    cycle_id: parseInt(currentCycleId), 
                     expense_date: date, 
-                    member_id: mid, 
+                    member_id: parseInt(mid), 
                     description: desc, 
                     amount: amt,
                     status: status
@@ -8871,30 +8944,58 @@ document.getElementById('expenseForm').addEventListener('submit', async (e) => {
 
             if (insertError) throw insertError;
 
-            // Log New Entry Notification
+            // 3. Log (Non-blocking)
             const msg = `New Expense: ৳${amt} for "${desc}" by ${shopperName}`;
-            await supabase.from('notifications').insert({
-                cycle_id: currentCycleId,
-                type: 'expense',
-                message: msg
-            });
+            logExpenseActivity(msg);
 
-            showNotification(isAdmin ? 'Expense added successfully!' : 'Request sent to admin', 'success');
+            showNotification(isAdmin ? 'Expense added!' : 'Request sent for approval', 'success');
         }
 
-        // Reset Form and Reload
-        resetExpenseForm();
-        await loadExpenses(); 
-        await loadDashboard(); 
+        // ===========================
+        // SUCCESS CLEANUP
+        // ===========================
+        resetExpenseForm(); // This resets the button text inside it too
+        
+        // Refresh data in background
+        loadExpenses(); 
+        loadDashboard(); 
 
     } catch (err) {
-        console.error(err);
-        showNotification(err.message, 'error');
-    } finally {
+        console.error("Expense Submit Error:", err);
+        showNotification(err.message || "Failed to save expense", 'error');
+        
+        // Manual Reset of button on error because resetExpenseForm() wasn't called
         submitBtn.textContent = originalText;
         submitBtn.disabled = false;
+        
+    } finally {
+        // Double Ensure Button is unlocked in case resetExpenseForm failed
+        if(submitBtn.disabled) {
+           submitBtn.disabled = false;
+           // If resetExpenseForm ran, text is "ADD +", if not, we revert to original
+           if(document.getElementById('expenseAmount').value !== "") {
+               submitBtn.textContent = originalText; 
+           }
+        }
     }
 });
+
+// Helper to log without breaking the main flow
+async function logExpenseActivity(message) {
+    try {
+        // Ensure member_id is valid, or pass null
+        const loggerId = currentUser?.member_id ? parseInt(currentUser.member_id) : null;
+        
+        await supabase.from('notifications').insert({
+            cycle_id: parseInt(currentCycleId),
+            type: 'expense',
+            message: message,
+            member_id: loggerId
+        });
+    } catch (e) {
+        console.warn("Logging failed silently:", e);
+    }
+}
 
     // ============================================
     // DEPOSITS PAGE
@@ -9214,122 +9315,122 @@ function resetExpenseForm() {
     }
 }
 
-document.getElementById('expenseForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
+// document.getElementById('expenseForm').addEventListener('submit', async (e) => {
+//     e.preventDefault();
     
-    // Get form values
-    const expenseId = document.getElementById('editExpenseId').value;
-    const date = document.getElementById('expenseDate').value;
-    const mid = document.getElementById('expenseMember').value;
-    const desc = document.getElementById('expenseDescription').value;
-    const amt = parseFloat(document.getElementById('expenseAmount').value);
+//     // Get form values
+//     const expenseId = document.getElementById('editExpenseId').value;
+//     const date = document.getElementById('expenseDate').value;
+//     const mid = document.getElementById('expenseMember').value;
+//     const desc = document.getElementById('expenseDescription').value;
+//     const amt = parseFloat(document.getElementById('expenseAmount').value);
     
-    if (!currentCycleId) { alert("No active cycle"); return; }
+//     if (!currentCycleId) { alert("No active cycle"); return; }
 
-    const submitBtn = document.getElementById('expenseSubmitBtn');
-    const originalText = submitBtn.textContent;
-    submitBtn.textContent = "Processing...";
-    submitBtn.disabled = true;
+//     const submitBtn = document.getElementById('expenseSubmitBtn');
+//     const originalText = submitBtn.textContent;
+//     submitBtn.textContent = "Processing...";
+//     submitBtn.disabled = true;
 
-    // Get Shopper Name (The person who bought it)
-    const shopperSelect = document.getElementById('expenseMember');
-    const shopperName = shopperSelect.options[shopperSelect.selectedIndex].text;
+//     // Get Shopper Name (The person who bought it)
+//     const shopperSelect = document.getElementById('expenseMember');
+//     const shopperName = shopperSelect.options[shopperSelect.selectedIndex].text;
     
-    // Get Actor Name (The person currently logged in editing)
-    const actorName = currentUser.members ? currentUser.members.name : currentUser.name;
+//     // Get Actor Name (The person currently logged in editing)
+//     const actorName = currentUser.members ? currentUser.members.name : currentUser.name;
 
-    try {
-        if (expenseId) {
-            // ===========================
-            // 1. EDIT MODE
-            // ===========================
+//     try {
+//         if (expenseId) {
+//             // ===========================
+//             // 1. EDIT MODE
+//             // ===========================
 
-            // A. Fetch OLD data first
-            const { data: oldData, error: fetchError } = await supabase
-                .from('expenses')
-                .select('amount, description')
-                .eq('id', expenseId)
-                .single();
+//             // A. Fetch OLD data first
+//             const { data: oldData, error: fetchError } = await supabase
+//                 .from('expenses')
+//                 .select('amount, description')
+//                 .eq('id', expenseId)
+//                 .single();
             
-            if (fetchError) throw fetchError;
+//             if (fetchError) throw fetchError;
 
-            // B. Update Database
-            const { error: updateError } = await supabase
-                .from('expenses')
-                .update({ 
-                    expense_date: date, 
-                    member_id: mid, 
-                    description: desc, 
-                    amount: amt,
-                    is_edited: true 
-                })
-                .eq('id', expenseId);
+//             // B. Update Database
+//             const { error: updateError } = await supabase
+//                 .from('expenses')
+//                 .update({ 
+//                     expense_date: date, 
+//                     member_id: mid, 
+//                     description: desc, 
+//                     amount: amt,
+//                     is_edited: true 
+//                 })
+//                 .eq('id', expenseId);
 
-            if (updateError) throw updateError;
+//             if (updateError) throw updateError;
 
-            // C. Log Notification (Fixed Bengali Numbers & Linked Actor)
-            // Use toBn() for converting numbers to Bengali
-            const oldAmtBn = toBn(oldData.amount);
-            const newAmtBn = toBn(amt);
+//             // C. Log Notification (Fixed Bengali Numbers & Linked Actor)
+//             // Use toBn() for converting numbers to Bengali
+//             const oldAmtBn = toBn(oldData.amount);
+//             const newAmtBn = toBn(amt);
 
-            const msg = `Expense Edited: from ৳${oldAmtBn} to ৳${newAmtBn} for "${desc}" (Shopper: ${shopperName}) - by ${actorName}`;
+//             const msg = `Expense Edited: from ৳${oldAmtBn} to ৳${newAmtBn} for "${desc}" (Shopper: ${shopperName}) - by ${actorName}`;
             
-            await supabase.from('notifications').insert({
-                cycle_id: currentCycleId,
-                type: 'expense',
-                message: msg,
-                member_id: currentUser.member_id // <--- THIS FIXES "By: System" to "By: Admin"
-            });
+//             await supabase.from('notifications').insert({
+//                 cycle_id: currentCycleId,
+//                 type: 'expense',
+//                 message: msg,
+//                 member_id: currentUser.member_id // <--- THIS FIXES "By: System" to "By: Admin"
+//             });
 
-            showNotification('Expense updated successfully!', 'success');
+//             showNotification('Expense updated successfully!', 'success');
 
-        } else {
-            // ===========================
-            // 2. INSERT MODE
-            // ===========================
+//         } else {
+//             // ===========================
+//             // 2. INSERT MODE
+//             // ===========================
             
-            const isAdmin = (currentUser.role === 'admin' || currentUser.role === 'manager');
-            const status = isAdmin ? 'approved' : 'pending';
+//             const isAdmin = (currentUser.role === 'admin' || currentUser.role === 'manager');
+//             const status = isAdmin ? 'approved' : 'pending';
 
-            const { error: insertError } = await supabase
-                .from('expenses')
-                .insert({ 
-                    cycle_id: currentCycleId, 
-                    expense_date: date, 
-                    member_id: mid, 
-                    description: desc, 
-                    amount: amt,
-                    status: status
-                });
+//             const { error: insertError } = await supabase
+//                 .from('expenses')
+//                 .insert({ 
+//                     cycle_id: currentCycleId, 
+//                     expense_date: date, 
+//                     member_id: mid, 
+//                     description: desc, 
+//                     amount: amt,
+//                     status: status
+//                 });
 
-            if (insertError) throw insertError;
+//             if (insertError) throw insertError;
 
-            // Log New Entry
-            const amtBn = toBn(amt);
-            const msg = `New Expense: ৳${amtBn} for "${desc}" by ${shopperName}`;
+//             // Log New Entry
+//             const amtBn = toBn(amt);
+//             const msg = `New Expense: ৳${amtBn} for "${desc}" by ${shopperName}`;
             
-            await supabase.from('notifications').insert({
-                cycle_id: currentCycleId,
-                type: 'expense',
-                message: msg,
-                member_id: currentUser.member_id // Link actor here too
-            });
+//             await supabase.from('notifications').insert({
+//                 cycle_id: currentCycleId,
+//                 type: 'expense',
+//                 message: msg,
+//                 member_id: currentUser.member_id // Link actor here too
+//             });
 
-            showNotification(isAdmin ? 'Expense added successfully!' : 'Request sent to admin', 'success');
-        }
+//             showNotification(isAdmin ? 'Expense added successfully!' : 'Request sent to admin', 'success');
+//         }
 
-        resetExpenseForm();
-        await loadExpenses(); 
-        await loadDashboard(); 
+//         resetExpenseForm();
+//         await loadExpenses(); 
+//         await loadDashboard(); 
 
-    } catch (err) {
-        console.error(err);
-        showNotification(err.message, 'error');
-    } finally {
-        submitBtn.textContent = originalText;
-        submitBtn.disabled = false;
-    }
-});
+//     } catch (err) {
+//         console.error(err);
+//         showNotification(err.message, 'error');
+//     } finally {
+//         submitBtn.textContent = originalText;
+//         submitBtn.disabled = false;
+//     }
+// });
 
 function autoUpdateDepositLabel() {
     const type = document.getElementById('depositType').value;
@@ -10222,14 +10323,153 @@ const monthNames = ["January", "February", "March", "April", "May", "June",
                     "July", "August", "September", "October", "November", "December"];
 
 // 1. Open the Modal and Pre-fill
+// document.getElementById('closeMonthBtn').addEventListener('click', () => {
+//     const modal = document.getElementById('cycleCloseModal');
+//     const monthSelect = document.getElementById('newCycleMonth');
+//     const yearInput = document.getElementById('newCycleYear');
+    
+//     // Populate Month Dropdown
+//     monthSelect.innerHTML = monthNames.map((m, i) => `<option value="${i}">${m}</option>`).join('');
+    
+//     // Auto-select based on Old Cycle end date + 1 day
+//     const currentCycle = allCycles.find(c => c.id == currentCycleId);
+//     let targetDate = new Date();
+//     if (currentCycle) {
+//         targetDate = parseLocalDate(currentCycle.end_date);
+//         targetDate.setDate(targetDate.getDate() + 1);
+//     }
+    
+//     monthSelect.value = targetDate.getMonth();
+//     yearInput.value = targetDate.getFullYear();
+    
+//     updateCycleFields(); // Trigger first calculation
+//     modal.classList.add('active');
+// });
+
+// ==========================================
+// STRICT CYCLE CLOSING LOGIC
+// ==========================================
+
+// 1. Trigger the Check when button clicked
 document.getElementById('closeMonthBtn').addEventListener('click', () => {
     const modal = document.getElementById('cycleCloseModal');
+    modal.classList.add('active');
+    
+    // Reset UI
+    document.getElementById('cycleValidationArea').style.display = 'block';
+    document.getElementById('cycleCloseForm').style.display = 'none';
+    document.getElementById('cycleCloseForm').style.opacity = '0';
+    document.getElementById('cycleBlockedMsg').style.display = 'none';
+    
+    runCycleDiagnostics();
+});
+
+// 2. Main Diagnostic Function
+async function runCycleDiagnostics() {
+    const listEl = document.getElementById('checklistItems');
+    const hintEl = document.getElementById('balanceFixHint');
+    listEl.innerHTML = '<div class="loading">Calculating financials...</div>';
+    hintEl.style.display = 'none';
+
+    try {
+        // --- STEP A: FETCH DATA ---
+        const [pendDep, pendExp, allExp, allDep, activeDues] = await Promise.all([
+            // 1. Pending Deposits Count
+            supabase.from('deposits').select('*', { count: 'exact', head: true }).eq('cycle_id', currentCycleId).eq('status', 'pending'),
+            // 2. Pending Expenses Count
+            supabase.from('expenses').select('*', { count: 'exact', head: true }).eq('cycle_id', currentCycleId).eq('status', 'pending'),
+            // 3. Approved Expenses Sum
+            supabase.from('expenses').select('amount').eq('cycle_id', currentCycleId).eq('status', 'approved'),
+            // 4. Approved Deposits Sum
+            supabase.from('deposits').select('amount').eq('cycle_id', currentCycleId).neq('status', 'pending'),
+            // 5. Outstanding Dues (From previous cycle into current)
+            supabase.from('cycle_dues').select('*', { count: 'exact', head: true }).eq('to_cycle_id', currentCycleId).neq('status', 'settled')
+        ]);
+
+        // --- STEP B: CALCULATE ---
+        const pendingDepositsCount = pendDep.count || 0;
+        const pendingExpensesCount = pendExp.count || 0;
+        const outstandingDuesCount = activeDues.count || 0;
+
+        const totalExpenses = allExp.data?.reduce((sum, item) => sum + parseFloat(item.amount), 0) || 0;
+        const totalDeposits = allDep.data?.reduce((sum, item) => sum + parseFloat(item.amount), 0) || 0;
+        
+        // Net Cash in Hand (Must be 0)
+        const netBalance = totalDeposits - totalExpenses;
+        // Allow a tiny margin for float rounding error (0.1)
+        const isBalanceZero = Math.abs(netBalance) < 0.1; 
+
+        // --- STEP C: RENDER CHECKLIST ---
+        const checks = [
+            { label: "Pending Deposits", val: pendingDepositsCount, pass: pendingDepositsCount === 0, text: pendingDepositsCount === 0 ? "0 (Clean)" : `${pendingDepositsCount} Pending` },
+            { label: "Pending Expenses", val: pendingExpensesCount, pass: pendingExpensesCount === 0, text: pendingExpensesCount === 0 ? "0 (Clean)" : `${pendingExpensesCount} Pending` },
+            { label: "Unsettled Past Dues", val: outstandingDuesCount, pass: outstandingDuesCount === 0, text: outstandingDuesCount === 0 ? "All Settled" : `${outstandingDuesCount} Unpaid` },
+            { label: "Net Cash Balance", val: netBalance, pass: isBalanceZero, text: `৳${parseFloat(netBalance.toFixed(2))}` }
+        ];
+
+        let allPassed = true;
+        let html = '';
+
+        checks.forEach(c => {
+            if (!c.pass) allPassed = false;
+            html += `
+                <div class="check-item">
+                    <span class="check-label">${c.label}</span>
+                    <span class="check-status ${c.pass ? 'status-pass' : 'status-fail'}">
+                        ${c.pass ? '✔' : '✖'} ${c.text}
+                    </span>
+                </div>
+            `;
+        });
+
+        listEl.innerHTML = html;
+
+        // --- STEP D: HANDLE BALANCE FIX HINT ---
+        if (!isBalanceZero) {
+            hintEl.style.display = 'block';
+            if (netBalance > 0) {
+                // Surplus: Need to carry forward or refund
+                hintEl.innerHTML = `💡 <strong>Surplus Funds: ৳${netBalance.toFixed(2)}</strong><br>You have extra cash. Please add an Expense entry labeled "Carry Forward to Next Month" for exactly ৳${netBalance.toFixed(2)} to zero this out.`;
+            } else {
+                // Deficit: Manager spent from pocket
+                hintEl.innerHTML = `💡 <strong>Deficit: ৳${Math.abs(netBalance).toFixed(2)}</strong><br>The mess owes money (Negative Balance). Please add a Deposit entry labeled "Manager Input" for ৳${Math.abs(netBalance).toFixed(2)} to balance the books.`;
+            }
+        }
+
+        // --- STEP E: UNLOCK FORM OR BLOCK ---
+        if (allPassed) {
+            document.getElementById('cycleBlockedMsg').style.display = 'none';
+            initNextCycleForm(); // Pre-fill dates
+        } else {
+            document.getElementById('cycleBlockedMsg').style.display = 'block';
+        }
+
+    } catch (err) {
+        console.error("Diagnostic Error:", err);
+        listEl.innerHTML = '<div style="color:red">Diagnostics failed. Check console.</div>';
+    }
+}
+
+// 3. Helper to Show/Init the Form
+function initNextCycleForm() {
+    const form = document.getElementById('cycleCloseForm');
+    form.style.display = 'block';
+    
+    // Small delay for animation
+    setTimeout(() => form.style.opacity = '1', 50);
+
+    // Populate Date Pickers (Same as before)
+    const monthNames = ["January", "February", "March", "April", "May", "June", 
+                    "July", "August", "September", "October", "November", "December"];
+    
     const monthSelect = document.getElementById('newCycleMonth');
     const yearInput = document.getElementById('newCycleYear');
     
-    // Populate Month Dropdown
-    monthSelect.innerHTML = monthNames.map((m, i) => `<option value="${i}">${m}</option>`).join('');
-    
+    // Fill Month Dropdown if empty
+    if(monthSelect.options.length === 0) {
+        monthSelect.innerHTML = monthNames.map((m, i) => `<option value="${i}">${m}</option>`).join('');
+    }
+
     // Auto-select based on Old Cycle end date + 1 day
     const currentCycle = allCycles.find(c => c.id == currentCycleId);
     let targetDate = new Date();
@@ -10241,9 +10481,8 @@ document.getElementById('closeMonthBtn').addEventListener('click', () => {
     monthSelect.value = targetDate.getMonth();
     yearInput.value = targetDate.getFullYear();
     
-    updateCycleFields(); // Trigger first calculation
-    modal.classList.add('active');
-});
+    updateCycleFields(); // Trigger date calculation
+}
 
 // 2. Helper to calculate dates when Month/Year changes
 function updateCycleFields() {
@@ -10380,11 +10619,17 @@ const { data: deposits } = await supabase
 // DUE SETTLEMENT UI
 // ============================================
 
+// ==========================================
+// LOAD DUE SETTLEMENT (WITH THRESHOLD)
+// ==========================================
+
 async function loadDueSettlement() {
     console.log("🔍 Loading due settlement for cycle:", currentCycleId);
     
     if (!currentCycleId) {
-        console.warn("No cycle ID, skipping due settlement");
+        // Hide card if no cycle
+        const card = document.getElementById('dueSettlementCard');
+        if (card) card.style.display = 'none';
         return;
     }
 
@@ -10396,58 +10641,57 @@ async function loadDueSettlement() {
             .eq('to_cycle_id', currentCycleId)
             .order('due_amount', { ascending: true });
 
-        console.log("📊 Dues data received:", dues);
-
-        if (error) {
-            console.error("❌ Error fetching dues:", error);
-            throw error;
-        }
+        if (error) throw error;
 
         const card = document.getElementById('dueSettlementCard');
-        
-        if (!card) {
-            console.error("❌ dueSettlementCard element not found in DOM!");
-            return;
-        }
+        if (!card) return;
 
-        // Filter out fully settled
-        const activeDues = dues?.filter(d => d.status !== 'settled') || [];
+        // --- FILTER LOGIC (THE FIX) ---
+        const activeDues = dues?.filter(d => {
+            // 1. Ignore if explicitly marked 'settled'
+            if (d.status === 'settled') return false;
 
-        // Show/hide card
+            // 2. Calculate Real Remaining Amount
+            // (Using absolute values handles both Debtors[-] and Creditors[+])
+            const remaining = Math.abs(d.due_amount) - Math.abs(d.settled_amount);
+
+            // 3. THRESHOLD CHECK: 
+            // If remaining amount is less than 1 Taka, hide it (treat as settled)
+            if (remaining < 1) return false;
+
+            return true;
+        }) || [];
+
+        // --- SHOW/HIDE CARD ---
         if (activeDues.length === 0) {
-            console.log("✅ No active dues found, hiding card");
             card.style.display = 'none';
             return;
         }
 
-        console.log(`✅ Found ${activeDues.length} active dues, showing card`);
         card.style.display = 'block';
 
-        // Separate debtors and creditors
+        // Split Data
         const debtors = activeDues.filter(d => d.due_amount < 0);
         const creditors = activeDues.filter(d => d.due_amount > 0);
 
-        console.log(`📉 Debtors: ${debtors.length}, 📈 Creditors: ${creditors.length}`);
-
-        // Render Debtors
+        // Render Debtors (People who owe money)
         const debtorsList = document.getElementById('debtorsList');
         if (debtors.length === 0) {
-            debtorsList.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-secondary);">No outstanding debts 🎉</div>';
+            debtorsList.innerHTML = '<div style="text-align:center; padding:15px; font-size:11px; color:var(--text-secondary);">No significant debts</div>';
         } else {
             debtorsList.innerHTML = debtors.map(d => renderDueItem(d, 'debtor')).join('');
         }
 
-        // Render Creditors
+        // Render Creditors (People owed money)
         const creditorsList = document.getElementById('creditorsList');
         if (creditors.length === 0) {
-            creditorsList.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-secondary);">No pending credits</div>';
+            creditorsList.innerHTML = '<div style="text-align:center; padding:15px; font-size:11px; color:var(--text-secondary);">No pending credits</div>';
         } else {
             creditorsList.innerHTML = creditors.map(d => renderDueItem(d, 'creditor')).join('');
         }
 
     } catch (err) {
-        console.error("❌ Due settlement load error:", err);
-        showNotification("Failed to load due settlement: " + err.message, "error");
+        console.error("Due settlement error:", err);
     }
 }
 
