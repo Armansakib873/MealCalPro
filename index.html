@@ -369,6 +369,11 @@ body {
     }
 
 
+    .Individual{
+        display: none !important;
+    }
+
+
     /* REMOVE the display:none and manage it instead */
     .user-info { 
         display: flex !important; /* Force display */
@@ -565,6 +570,220 @@ body {
     display: flex; gap: 10px;
     border-radius: 15px;;
 }
+
+
+/* =========================================
+   MOBILE FAB & BOTTOM SHEET STYLES
+   ========================================= */
+
+/* 1. Floating Action Button (FAB) */
+.mobile-fab {
+  display: none;
+    position: fixed;
+    bottom: 120px;
+    right: 20px;
+    width: 56px;
+    height: 56px;
+    background: linear-gradient(135deg, #85eaff, #317779);
+    border-radius: 50%;
+    box-shadow: 0 10px 25px rgb(11 11 20 / 40%);
+    color: white;
+    font-size: 28px;
+    border: none;
+    z-index: 2100;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.mobile-fab:active { transform: scale(0.9); }
+
+/* 2. Bottom Sheet Overlay */
+.sheet-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.5); /* Dimmed background */
+    backdrop-filter: blur(3px);
+    z-index: 3000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s;
+}
+.sheet-overlay.active { opacity: 1; visibility: visible; }
+
+/* 3. The Bottom Sheet Container */
+.bottom-sheet {
+    position: fixed;
+    left: 0; right: 0; bottom: -100%;
+    background: #ffffff;
+    border-radius: 24px 24px 0 0;
+    padding: 24px 20px;
+    z-index: 3100;
+    transition: bottom 0.35s cubic-bezier(0.19, 1, 0.22, 1); /* Smooth spring */
+    box-shadow: 0 -10px 40px rgba(0,0,0,0.15);
+    
+    /* KEYBOARD FIX: Allow scrolling internally */
+    max-height: 85vh; 
+    display: flex;
+    flex-direction: column;
+}
+
+.bottom-sheet.active { bottom: 0; }
+
+/* Wrapper for scrollable content inside sheet */
+.sheet-scroll-content {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 20px; /* Space for keyboard push */
+}
+
+/* 4. Header & Tabs */
+.sheet-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 20px;
+    flex-shrink: 0; /* Prevent header shrinking */
+}
+.sheet-title { font-size: 20px; font-weight: 800; color: #1e293b; letter-spacing: -0.5px; }
+.sheet-close { 
+    width: 30px; height: 30px; 
+    background: #f1f5f9; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; color: #64748b; font-weight: bold;
+    cursor: pointer;
+}
+
+/* Segmented Control */
+.sheet-tabs {
+    background: #f1f5f9;
+    padding: 5px;
+    border-radius: 16px;
+    display: flex;
+    margin-bottom: 25px;
+    flex-shrink: 0;
+}
+
+.sheet-tab {
+    flex: 1;
+    text-align: center;
+    padding: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    border-radius: 12px;
+    color: #94a3b8;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+/* --- THEME: EXPENSE (RED) --- */
+.sheet-theme-expense .sheet-tab.active {
+    background: #fff1f2; /* Pale Red */
+    color: #e11d48;      /* Rose 600 */
+    box-shadow: 0 2px 8px rgba(225, 29, 72, 0.1);
+}
+.sheet-theme-expense .big-amount-input { color: #e11d48; } /* Red Text */
+.sheet-theme-expense .sheet-save-btn {
+    background: linear-gradient(135deg, #e11d48, #be123c); /* Red Gradient */
+    box-shadow: 0 8px 20px rgba(225, 29, 72, 0.25);
+}
+
+/* --- THEME: DEPOSIT (GREEN) --- */
+.sheet-theme-deposit .sheet-tab.active {
+    background: #ecfdf5; /* Pale Green */
+    color: #059669;      /* Emerald 600 */
+    box-shadow: 0 2px 8px rgba(5, 150, 105, 0.1);
+}
+.sheet-theme-deposit .big-amount-input { color: #059669; } /* Green Text */
+.sheet-theme-deposit .sheet-save-btn {
+    background: linear-gradient(135deg, #10b981, #059669); /* Green Gradient */
+    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.25);
+}
+
+/* 5. Big Input */
+.big-input-wrapper {
+    display: flex; justify-content: center; align-items: center; gap: 4px;
+    margin-bottom: 20px;
+}
+.currency-symbol { font-size: 28px; color: #cbd5e1; font-weight: 400; }
+.big-amount-input {
+    border: none; background: transparent;
+    font-size: 48px; font-weight: 800;
+    width: 220px; text-align: center;
+    font-family: 'Inter', sans-serif;
+    outline: none; padding: 0;
+}
+.big-amount-input::placeholder { color: #e2e8f0; }
+
+/* 6. Form Grid & Fields */
+.sheet-grid {
+    display: grid; grid-template-columns: 1fr 1.5fr; gap: 12px;
+    margin-bottom: 12px;
+}
+.sheet-field {
+    background: #f8fafc;
+    border: 1px solid transparent;
+    padding: 14px;
+    border-radius: 14px;
+    font-size: 14px;
+    width: 100%;
+    color: #1e293b;
+    outline: none;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+.sheet-field:focus {
+    background: #ffffff;
+    border-color: #e2e8f0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+}
+
+/* 7. Chips & Categories */
+.sheet-section-label {
+    font-size: 10px; font-weight: 800; color: #94a3b8; 
+    margin: 8px 0 6px 4px; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.sheet-chips {
+    display: flex; gap: 8px; overflow-x: auto; 
+    padding: 2px 2px 10px 2px;
+    scrollbar-width: none;
+}
+.sheet-chip {
+    padding: 8px 14px;
+    border-radius: 20px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    font-size: 11px; font-weight: 700; color: #64748b;
+    white-space: nowrap; cursor: pointer;
+    transition: all 0.2s;
+}
+/* Active Chip Colors */
+.sheet-theme-expense .sheet-chip.selected {
+    background: #fff1f2; color: #e11d48; border-color: #fecaca;
+}
+.sheet-theme-deposit .sheet-chip.selected {
+    background: #ecfdf5; color: #059669; border-color: #a7f3d0;
+}
+
+/* 8. Save Button */
+.sheet-save-btn {
+    width: 100%; padding: 18px;
+    color: white; border: none; border-radius: 18px;
+    font-size: 16px; font-weight: 700;
+    margin-top: 15px; cursor: pointer;
+    position: relative; overflow: hidden;
+}
+.sheet-save-btn:active { transform: scale(0.98); }
+
+/* --- MOBILE SPECIFIC VISIBILITY --- */
+@media (max-width: 768px) {
+    .mobile-fab { display: flex; }
+    /* Hide old desktop forms */
+    #addExpenseCard, .wallet-form-container { display: none !important; }
+    .page-content { padding-bottom: 120px; }
+}
+
+
+
         /* =========================================
            4. CARDS & GRID
            ========================================= */
@@ -1118,7 +1337,7 @@ body {
 /* --- Professional Profile Enhancements --- */
 .profile-header-banner {
     height: 100px;
-    background: radial-gradient(circle at top right, #069095, #021f2e);
+  background: radial-gradient(circle at top right, #e0ffa05c, #9fd0cf);
     border-radius: 12px 12px 0 0;
     margin-bottom: -50px;
     padding: 15px;
@@ -1669,7 +1888,7 @@ body {
     /* 1. Sophisticated Background & Banner */
     .profile-header-banner {
         height: 130px;
-        background: radial-gradient(circle at top right, #237804, #0b2e02);
+        background: radial-gradient(circle at top right, #c2faf6, #a2a2a2);
         border-radius: 0 0 40px 40px;
         margin-bottom: -60px;
         position: relative;
@@ -1718,7 +1937,7 @@ body {
 
     .profile-main-meta {
         backdrop-filter: blur(5px);
-        color: white;
+        color: #4b4b4b;
         padding: 3px 12px;
         border-radius: 20px;
         font-size: 10px;
@@ -1769,18 +1988,18 @@ body {
     .profile-stats-mini {
    display: flex;
         justify-content: space-evenly;
-        background: #1d1c1af2;
+        background: #fdfdfdf2;
         margin: 0 20px 20px 20px;
         padding: 15px;
         border-radius: 24px;
-        box-shadow: 0 4px 15px rgb(51 47 47 / 5%);
+        box-shadow: inset 0 4px 15px rgb(28 19 19 / 25%);
         border: 1px solid var(--border-color);
     }
 
     .stat-mini-value{
         font-size: 16px !important;
         font-weight: 800 !important;
-        color: #ced090 !important;
+        color: #151e01 !important;
     }
 
     .profile-stat-item {
@@ -1802,7 +2021,7 @@ body {
    /* background: #725b00 !important;  */
     /* 4. The "Neo-Wallet" Hero Card */
    #profileBalanceCard {
-        background: linear-gradient(135deg, #a3a041 0%, #020617 100%) !important;
+       background: linear-gradient(135deg, #ffffff 0%, #e0e6ff 100%) !important;
         border-radius: 28px !important;
         padding: 25px !important;
         display: flex !important; /* Switch to side-by-side */
@@ -1836,7 +2055,7 @@ body {
     }
 
     #profileBalanceCard .stat-label {
-        color: #ffffff !important;
+        color: #000000 !important;
         font-size: 10px !important;
         text-transform: uppercase;
         letter-spacing: 1px;
@@ -1963,10 +2182,10 @@ body {
     }
 
     .def-btn.active {
-        background: #006620;
-        color: white;
+       background: #e5e5e5;
+        color: #3e3e3e;
         border-color: #3b3b3bd1;
-        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
+        box-shadow: 0 4px 12px rgb(0 0 0 / 41%);
     }
 
     /* --- 3. Smart Scheduler Cards --- */
@@ -2278,15 +2497,15 @@ body {
 }
 
 .btn-approve {
-    background: #22c55e;
-    color: white;
-    box-shadow: 0 2px 5px rgba(34, 197, 94, 0.2);
+    background: #1a6034;
+    color: #ffffff;
+    box-shadow: inset 0 2px 5px rgb(0 0 0 / 50%);
 }
 
 .btn-reject {
-    background: #ef4444;
+    background: #730909;
     color: white;
-    box-shadow: 0 2px 5px rgba(239, 68, 68, 0.2);
+    box-shadow: inset 0 2px 5px rgb(40 34 34 / 74%);
 }
 
 /* Non-Admin Status Label */
@@ -4394,7 +4613,7 @@ body {
 .tag-deposit { background: #DBEAFE; color: #1E40AF; }
 .tag-settle { background: #F3F4F6; color: #374151; }
 
-.log-meta { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+.log-meta { font-size: 10px; color: var(--text-secondary); margin-top: 2px; }
 
 .log-amount-area { text-align: right; }
 
@@ -4921,7 +5140,7 @@ body {
         <h2 style="font-size: 20px; font-weight: 800;">Summary</h2>
         <div style="display: flex; gap: 10px;">
         <!-- New Full Export Button -->
-        <button class="btn btn-sm" id="exportFullCycleBtn" style="background-color: #4f46e5; color: white; border-radius: 20px; font-size: 10px;">
+        <button class="btn btn-sm" id="exportFullCycleBtn" style="background-color: #e9e9e9; color: #000000; border-radius: 20px; font-size: 10px;">
             📥 Full Data Export
         </button>
         <!-- Existing Simple Export Button -->
@@ -5089,7 +5308,7 @@ body {
     </div>
 
     <!-- 3. SELECTED MEMBER HISTORY (The Part I skipped) -->
-    <div class="card" style="margin-top: 20px; padding: 15px; border: 1px solid var(--premium-indigo); background: #e2b7b7b5;">
+    <div class="card Individual" style="margin-top: 20px; padding: 15px; border: 1px solid var(--premium-indigo); background: #e2b7b7b5;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
             <h3 style="font-size: 13px; font-weight: 800; color: rgb(33, 33, 33);">Individual Ledger</h3>
             <span id="historyMemberName" style="font-size: 11px; font-weight: 700; color: var(--premium-indigo); background: #000000b5; padding: 2px 8px; border-radius: 10px;">No member selected</span>
@@ -5394,6 +5613,95 @@ body {
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
   <div id="realtimeStatus" class="realtime-status">⚫ Connecting...</div>
+
+
+  <!-- MOBILE FAB -->
+<button class="mobile-fab" id="globalAddBtn" onclick="openBottomSheet()">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+</button>
+
+<!-- BOTTOM SHEET MODAL -->
+<div class="sheet-overlay" id="sheetOverlay" onclick="closeBottomSheet()"></div>
+
+<!-- The container has the theme class (default: expense) -->
+<div class="bottom-sheet sheet-theme-expense" id="sheetModal">
+    
+    <!-- Fixed Header -->
+    <div class="sheet-header">
+        <div class="sheet-title" id="sheetMainTitle">New Expense</div>
+        <div class="sheet-close" onclick="closeBottomSheet()">✕</div>
+    </div>
+
+    <!-- Fixed Tabs -->
+    <div class="sheet-tabs">
+        <div class="sheet-tab active" id="tabExpense" onclick="switchSheetTab('expense')">Expense</div>
+        <div class="sheet-tab" id="tabDeposit" onclick="switchSheetTab('deposit')">Deposit</div>
+    </div>
+
+    <!-- Scrollable Form Area -->
+    <div class="sheet-scroll-content">
+        
+        <!-- Big Input -->
+        <div class="big-input-wrapper">
+            <span class="currency-symbol">৳</span>
+            <input type="number" id="sheetAmount" class="big-amount-input" placeholder="0" inputmode="decimal">
+        </div>
+
+        <!-- Date & Member -->
+        <div class="sheet-grid">
+            <div>
+                <div class="sheet-section-label">DATE</div>
+                <input type="date" id="sheetDate" class="sheet-field">
+            </div>
+            <div>
+                <div class="sheet-section-label">MEMBER</div>
+                <select id="sheetMember" class="sheet-field">
+                    <option value="">Select...</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Expense Specific: Category Chips -->
+        <div id="expenseExtras">
+            <div class="sheet-section-label">CATEGORY / ITEM</div>
+            <div class="sheet-chips">
+                <div class="sheet-chip" onclick="selectChip('Bazar')">Bazar</div>
+                <div class="sheet-chip" onclick="selectChip('Transport')">Transport</div>
+                <div class="sheet-chip" onclick="selectChip('Snacks')">Snacks</div>
+                <div class="sheet-chip" onclick="selectChip('Utilities')">Utilities</div>
+                <div class="sheet-chip" onclick="selectChip('Meal Rate')">Meal Rate</div>
+            </div>
+            <input type="text" id="sheetDesc" class="sheet-field" placeholder="Item details (e.g. Chicken, Oil)" onfocus="ensureVisible(this)">
+        </div>
+
+        <!-- Deposit Specific: Type Chips -->
+        <div id="depositExtras" style="display: none;">
+            <div class="sheet-section-label">TRANSACTION TYPE</div>
+            <div class="sheet-chips">
+                <div class="sheet-chip selected" onclick="selectDepositType('deposit')">Add Cash (+৳)</div>
+                <div class="sheet-chip" onclick="selectDepositType('charge')">Deduction (-৳)</div>
+            </div>
+            <input type="hidden" id="sheetDepType" value="deposit">
+            
+            <div class="sheet-section-label" style="margin-top:10px;">LABEL</div>
+            <input type="text" id="sheetLabel" class="sheet-field" placeholder="e.g. Monthly Fee" value="Deposit" onfocus="ensureVisible(this)">
+        </div>
+
+        <!-- Common Note -->
+        <div class="sheet-section-label" style="margin-top:10px;">NOTE (OPTIONAL)</div>
+        <input type="text" id="sheetNotes" class="sheet-field" placeholder="Add a note..." onfocus="ensureVisible(this)">
+
+        <!-- Spacer for keyboard -->
+        <div style="height: 20px;"></div>
+
+        <!-- Save Button -->
+        <button class="sheet-save-btn" id="sheetSubmitBtn" onclick="submitMobileEntry()">Save Expense</button>
+        
+        <!-- Extra Spacer for safe area scrolling -->
+        <div style="height: 50px;"></div>
+    </div>
+</div>
+
 
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -10891,6 +11199,201 @@ async function updateDashboardMealPlan() {
     }
 }
 
+
+/* =========================================
+   MOBILE BOTTOM SHEET LOGIC (UPDATED)
+   ========================================= */
+
+let activeSheetTab = 'expense';
+
+function openBottomSheet() {
+    const overlay = document.getElementById('sheetOverlay');
+    const sheet = document.getElementById('sheetModal');
+    
+    // 1. Populate Members (Keep defaults)
+    const select = document.getElementById('sheetMember');
+    const existingVal = select.value;
+    select.innerHTML = '';
+    
+    allMembers.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.id;
+        opt.text = m.name;
+        select.appendChild(opt);
+    });
+
+    if (currentUser && currentUser.member_id) {
+        select.value = currentUser.member_id;
+    }
+
+    // 2. Set Date
+    const now = new Date();
+    const localDate = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+    document.getElementById('sheetDate').value = localDate;
+
+    // 3. Open
+    overlay.classList.add('active');
+    sheet.classList.add('active');
+    
+    // Default to Expense
+    switchSheetTab('expense');
+    
+    // Auto-focus amount (delayed for animation)
+    setTimeout(() => {
+        document.getElementById('sheetAmount').focus();
+    }, 400);
+}
+
+function closeBottomSheet() {
+    document.getElementById('sheetOverlay').classList.remove('active');
+    document.getElementById('sheetModal').classList.remove('active');
+    document.activeElement.blur(); // Close keyboard
+    
+    setTimeout(() => {
+        document.getElementById('sheetAmount').value = '';
+        document.getElementById('sheetDesc').value = '';
+        document.getElementById('sheetNotes').value = '';
+        document.querySelectorAll('.sheet-chip').forEach(c => c.classList.remove('selected'));
+    }, 300);
+}
+
+// --- NEW: THEME SWITCHER & VISUAL UPDATES ---
+function switchSheetTab(tab) {
+    activeSheetTab = tab;
+    const sheet = document.getElementById('sheetModal');
+    const title = document.getElementById('sheetMainTitle');
+    const btn = document.getElementById('sheetSubmitBtn');
+    
+    // Toggle Tab Active Classes
+    document.getElementById('tabExpense').className = `sheet-tab ${tab === 'expense' ? 'active' : ''}`;
+    document.getElementById('tabDeposit').className = `sheet-tab ${tab === 'deposit' ? 'active' : ''}`;
+    
+    // Toggle Sheet Theme Class (Handles Colors)
+    if (tab === 'expense') {
+        sheet.classList.remove('sheet-theme-deposit');
+        sheet.classList.add('sheet-theme-expense');
+        
+        title.textContent = "New Expense";
+        btn.textContent = "Save Expense";
+        
+        document.getElementById('expenseExtras').style.display = 'block';
+        document.getElementById('depositExtras').style.display = 'none';
+        
+    } else {
+        sheet.classList.remove('sheet-theme-expense');
+        sheet.classList.add('sheet-theme-deposit');
+        
+        title.textContent = "New Deposit";
+        btn.textContent = "Save Deposit";
+        
+        document.getElementById('expenseExtras').style.display = 'none';
+        document.getElementById('depositExtras').style.display = 'block';
+    }
+}
+
+// --- KEYBOARD FIX: Ensure input is visible when focused ---
+function ensureVisible(element) {
+    setTimeout(() => {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 300);
+}
+
+// Chip Helpers
+function selectChip(text) {
+    document.getElementById('sheetDesc').value = text;
+    document.querySelectorAll('#expenseExtras .sheet-chip').forEach(c => c.classList.remove('selected'));
+    event.target.classList.add('selected');
+}
+
+function selectDepositType(type) {
+    document.getElementById('sheetDepType').value = type;
+    document.getElementById('sheetLabel').value = type === 'charge' ? 'Reduction' : 'Deposit';
+    
+    document.querySelectorAll('#depositExtras .sheet-chip').forEach(c => c.classList.remove('selected'));
+    event.target.classList.add('selected');
+}
+
+// Submit Logic
+async function submitMobileEntry() {
+    const btn = document.getElementById('sheetSubmitBtn');
+    const originalText = btn.textContent;
+    btn.textContent = "Saving...";
+    btn.disabled = true;
+
+    try {
+        const amountVal = parseFloat(document.getElementById('sheetAmount').value);
+        const date = document.getElementById('sheetDate').value;
+        const memberId = document.getElementById('sheetMember').value;
+        const notes = document.getElementById('sheetNotes').value;
+
+        if (!amountVal || amountVal <= 0) throw new Error("Please enter a valid amount");
+        if (!memberId) throw new Error("Please select a member");
+
+        if (activeSheetTab === 'expense') {
+            // EXPENSE LOGIC
+            const desc = document.getElementById('sheetDesc').value || "General Expense";
+            const isAdmin = (currentUser.role === 'admin' || currentUser.role === 'manager');
+            const status = isAdmin ? 'approved' : 'pending';
+
+            const { error } = await supabase.from('expenses').insert({
+                cycle_id: currentCycleId,
+                expense_date: date,
+                member_id: memberId,
+                description: desc,
+                amount: amountVal,
+                status: status
+            });
+            if (error) throw error;
+            
+            // Log & Refresh
+            const actorName = currentUser.members?.name || currentUser.name;
+            await logActivity(`New Expense: ৳${amountVal} (${desc}) by ${actorName}`, 'expense');
+            showNotification(isAdmin ? "Expense Added" : "Request Sent", "success");
+            
+            if (typeof loadExpenses === 'function') loadExpenses();
+
+        } else {
+            // DEPOSIT LOGIC
+            const type = document.getElementById('sheetDepType').value;
+            const label = document.getElementById('sheetLabel').value;
+            const finalAmount = type === 'charge' ? -Math.abs(amountVal) : Math.abs(amountVal);
+            const isAdmin = (currentUser.role === 'admin' || currentUser.role === 'manager');
+
+            if (isAdmin) {
+                // Admin Settlement Logic
+                try {
+                     const { error } = await supabase.rpc('process_deposit_with_settlement', {
+                        p_member_id: memberId, p_cycle_id: parseInt(currentCycleId),
+                        p_amount: finalAmount, p_label: label, p_notes: notes
+                    });
+                     if (error) throw error;
+                } catch (e) {
+                     await processDepositWithClientSideSettlement(memberId, currentCycleId, finalAmount, label, notes);
+                }
+                showNotification("Transaction Saved", "success");
+            } else {
+                // User Request
+                const { error } = await supabase.from('deposits').insert({
+                    cycle_id: parseInt(currentCycleId), member_id: memberId,
+                    amount: finalAmount, label: label, notes: notes, status: 'pending'
+                });
+                if (error) throw error;
+                showNotification("Deposit Requested", "info");
+            }
+            if (typeof loadDeposits === 'function') loadDeposits();
+        }
+
+        // Global Refresh & Close
+        if (typeof loadDashboard === 'function') loadDashboard();
+        closeBottomSheet();
+
+    } catch (err) {
+        showNotification(err.message, "error");
+    } finally {
+        btn.textContent = originalText;
+        btn.disabled = false;
+    }
+}
 
 
 // Cleanup intervals when page is hidden to prevent background processing
