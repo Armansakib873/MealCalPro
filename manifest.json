@@ -1,6 +1,6 @@
 {
   "name": "MealCal Pro",
-  "short_name": "MealCal",
+  "short_name": "MealCal Pro",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#21122e",
@@ -36,4 +36,5 @@
         "label": "MealCal Dashboard on Mobile"
       }
     ]
+
   }
