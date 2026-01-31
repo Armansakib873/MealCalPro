@@ -1,4 +1,3 @@
-<script>
 
 
     const SUPABASE_URL = 'https://bcardtccxcnktkkeszpp.supabase.co';
@@ -4552,53 +4551,86 @@ function openEditMemberModal(memberId, currentName, userId) {
 document.getElementById('editMemberForm').addEventListener('submit', async (e) => {
     e.preventDefault();
 
+    // 1. Get Elements
     const memberId = document.getElementById('editMemberId').value;
-    const userId = document.getElementById('editUserId').value;
+    const userId = document.getElementById('editUserId').value; // The Auth User ID
     const newName = document.getElementById('editMemberName').value;
     const newPassword = document.getElementById('editMemberPassword').value;
+    
+    // Select the button specifically inside this form
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const originalText = "Save Changes";
+
+    // 2. Lock UI
+    submitBtn.textContent = "Saving...";
+    submitBtn.disabled = true;
 
     try {
-        // 1. Update Member Name
+        // --- A. Update Display Name ---
         const { error: mError } = await supabase
             .from('members')
             .update({ name: newName })
             .eq('id', memberId);
 
-
-               const actor = currentUser.members ? currentUser.members.name : "Admin";
-        // LOG MEMBER EDIT
-        await logActivity(`Member Profile: Account for "${newName}" was modified by ${actor}`, 'other');
-
-        document.getElementById('editMemberModal').classList.remove('active');
-        showNotification('Member updated successfully', 'success');
-        
         if (mError) throw mError;
 
-        // 2. Update User (Username and optionally Password)
-        if (userId) {
-            const userUpdates = { username: newName }; // Sync username with member name
+        // --- B. Handle Password Change ---
+        if (newPassword && newPassword.trim() !== "") {
             
-            if (newPassword && newPassword.trim() !== "") {
-                userUpdates.password = await hashPassword(newPassword);
+            // Check if the user ID exists (some old members might not have logins)
+            if (!userId || userId === "null" || userId === "undefined") {
+                throw new Error("This member does not have a linked User Account, so password cannot be changed.");
             }
 
-            const { error: uError } = await supabase
-                .from('users')
-                .update(userUpdates)
-                .eq('id', userId);
+            // SCENARIO 1: Changing MY OWN password
+            if (currentUser && currentUser.id === userId) {
+                const { error: authError } = await supabase.auth.updateUser({ 
+                    password: newPassword 
+                });
+                if (authError) throw authError;
+                console.log("Updated own password via Auth API");
+            } 
+            
+            // SCENARIO 2: Admin changing SOMEONE ELSE'S password
+            else {
+                // Call the SQL function we created in Step 1
+                const { error: rpcError } = await supabase.rpc('admin_reset_password', {
+                    target_user_id: userId,
+                    new_password: newPassword
+                });
 
-            if (uError) throw uError;
+                if (rpcError) throw rpcError;
+                console.log("Updated user password via Admin RPC");
+            }
         }
 
-        await loadMembersList();
-        await loadMembers(); // Refresh global list
+        // --- C. Log & Notify ---
+        const actor = currentUser.members ? currentUser.members.name : "Admin";
+        await logActivity(`Profile Update: ${newName}'s details updated by ${actor}`, 'other');
+
+        // Close Modal
+        document.getElementById('editMemberModal').classList.remove('active');
+        showNotification('Member updated successfully', 'success');
+
+        // Refresh Lists
+        await loadMembersList(); // Admin list
+        await loadMembers();     // Global dropdowns
+        
+        // If updating self, update header name immediately
+        if (currentUser.member_id == memberId) {
+            document.getElementById('profileName').textContent = newName;
+            document.getElementById('headerUserName').textContent = `${newName} (${currentUser.role.toUpperCase()})`;
+        }
 
     } catch (err) {
         console.error('Edit error:', err);
-        showNotification('Failed to update member: ' + err.message, 'error');
+        showNotification('Update failed: ' + err.message, 'error');
+    } finally {
+        // --- 3. FIX: Reset Button State Always ---
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
     }
 });
-
 
     // ============================================
     // UTILITY: LOG ACTIVITY
@@ -5735,6 +5767,18 @@ window.addEventListener('beforeunload', () => {
     }
 });
 
+// Open the existing Edit Member modal, but configured for the current user
+function openChangePasswordModal() {
+    if (!currentUser || !currentUser.member_id) return;
 
-
-</script> 
+    // Reuse your existing Edit Member Modal logic
+    document.getElementById('editMemberId').value = currentUser.member_id;
+    document.getElementById('editUserId').value = currentUser.id; // Supabase Auth ID
+    document.getElementById('editMemberName').value = currentUser.name;
+    document.getElementById('editMemberPassword').value = ''; // Clean field
+    
+    // Change Title to look like a User Action
+    document.querySelector('#editMemberModal .modal-title').textContent = "Change My Password";
+    
+    document.getElementById('editMemberModal').classList.add('active');
+}
