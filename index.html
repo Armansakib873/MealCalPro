@@ -8831,13 +8831,13 @@ async function loadSummary() {
     if (!tbody) return;
 
     try {
-const sessionDate = await getActiveSessionDate(); // This helper uses local time
-const nightDateStr = toLocalISO(sessionDate);
+        const sessionDate = await getActiveSessionDate();
+        const nightDateStr = toLocalISO(sessionDate);
 
-// Calculate next day properly
-const nextDay = new Date(sessionDate);
-nextDay.setDate(sessionDate.getDate() + 1);
-const dayDateStr = toLocalISO(nextDay);
+        // Calculate next day properly
+        const nextDay = new Date(sessionDate);
+        nextDay.setDate(sessionDate.getDate() + 1);
+        const dayDateStr = toLocalISO(nextDay);
 
         const [mealsRes, plansRes, depositsRes, expensesRes] = await Promise.all([
             supabase.from('meals').select('*').eq('cycle_id', currentCycleId),
@@ -8863,38 +8863,63 @@ const dayDateStr = toLocalISO(nextDay);
         // Build Table Rows
         const isAdmin = (currentUser.role === 'admin' || currentUser.role === 'manager');
         const bazarCountMap = {};
-        expenses.forEach(exp => { bazarCountMap[exp.member_id] = (bazarCountMap[exp.member_id] || 0) + 1; });
+        expenses.forEach(exp => {
+            bazarCountMap[exp.member_id] = (bazarCountMap[exp.member_id] || 0) + 1;
+        });
+
+        // --- UPDATE 1: ADD HEADER FOR DEPOSIT ---
+        const tableHead = document.querySelector('#summaryTable thead tr');
+        if(tableHead) {
+            tableHead.innerHTML = `
+                <th>Member</th>
+                <th>🌙 Night</th>
+                <th>🌞 Day</th>
+                <th>Bazar</th>
+                <th>Meals</th>
+                <th>Deposit</th> <!-- NEW COLUMN -->
+                <th>Balance</th>
+            `;
+        }
 
         tbody.innerHTML = allMembers.map(member => {
             const memMeals = meals.filter(m => m.member_id === member.id).reduce((sum, m) => sum + (parseFloat(m.day_count || 0) + parseFloat(m.night_count || 0)), 0);
-            const memPaid = deposits.filter(d => d.member_id === member.id).reduce((sum, d) => sum + parseFloat(d.amount || 0), 0);
-            const memBal = memPaid - (memMeals * mealRate);
             
+            // This variable already existed in your code
+            const memPaid = deposits.filter(d => d.member_id === member.id).reduce((sum, d) => sum + parseFloat(d.amount || 0), 0);
+            
+            const memBal = memPaid - (memMeals * mealRate);
+
             const nPlan = plans.find(p => p.member_id === member.id && p.plan_date === nightDateStr);
             const dPlan = plans.find(p => p.member_id === member.id && p.plan_date === dayDateStr);
-            
+
             const nVal = nPlan ? nPlan.night_count : (member.default_night_on ? 1 : 0);
             const dVal = dPlan ? dPlan.day_count : (member.default_day_on ? 1 : 0);
 
-           return `
+            // --- UPDATE 2: ADD DATA CELL FOR DEPOSIT ---
+            return `
             <tr>
                 <td><strong>${member.name.split(' ')[0]}</strong></td>
                 <td><button class="summary-status-btn ${nVal > 0 ? 'on' : 'off'}" ${isAdmin ? `onclick="quickToggleSummaryMeal(${member.id}, '${nightDateStr}', 'night', ${nVal})"` : 'disabled'}>${nVal > 0 ? 'ON' : 'OFF'}</button></td>
                 <td><button class="summary-status-btn ${dVal > 0 ? 'on' : 'off'}" ${isAdmin ? `onclick="quickToggleSummaryMeal(${member.id}, '${dayDateStr}', 'day', ${dVal})"` : 'disabled'}>${dVal > 0 ? 'ON' : 'OFF'}</button></td>
-               <td style="font-weight:700; color:var(--premium-indigo);">${toBn(bazarCountMap[member.id] || 0)}</td>
-    <td>${toBn(memMeals.toFixed(1))}</td>
-    <td><span class="balance-tag ${memBal >= 0 ? 'pos' : 'neg'}">${toBn(Math.round(memBal))}</span></td>
-</tr>`;
+                <td style="font-weight:700; color:var(--premium-indigo);">${toBn(bazarCountMap[member.id] || 0)}</td>
+                <td>${toBn(memMeals.toFixed(1))}</td>
+                
+                <!-- NEW DEPOSIT CELL -->
+                <td style="font-weight:700; color: #059669;">৳${toBn(Math.round(memPaid))}</td>
+                
+                <td><span class="balance-tag ${memBal >= 0 ? 'pos' : 'neg'}">${toBn(Math.round(memBal))}</span></td>
+            </tr>`;
         }).join('');
 
         await loadDueSettlement();
 
     } catch (err) {
         console.error('Summary Error:', err);
-        tbody.innerHTML = '<tr><td colspan="6" style="color:red">Error loading summary</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="color:red">Error loading summary</td></tr>';
     }
 }
-// Function to instantly toggle meal from Summary Page
+
+
 // Function to instantly toggle meal from Summary Page
 async function quickToggleSummaryMeal(memberId, dateStr, type, currentVal) {
     const btn = event.target; // Optimistic UI
