@@ -11,6 +11,7 @@
     let currentCycleId = null;
     let allMembers = [];
     let allCycles = [];
+    let navigationHistory = []; // Tracks page history
 
 
     // Master Local Mirror of the Database
@@ -2274,34 +2275,44 @@ document.getElementById('cycleSelect').addEventListener('change', (e) => {
     // NAVIGATION
     // ============================================
     
-async function navigateToPage(pageName) {
+async function navigateToPage(pageName, addToHistory = true) {
     if (!pageName) return;
 
     // --- SECURITY CHECK ---
-    // If trying to access Admin, check role immediately
     if (pageName === 'admin') {
         if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'manager')) {
             showNotification("⛔ Access Denied: Admin privileges required.", "error");
-            // If they are currently on a different page, stay there. 
-            // If they are nowhere (fresh load), send to dashboard.
             if (document.querySelector('.page-content:not(.hidden)') === null) {
-                navigateToPage('dashboard');
+                navigateToPage('dashboard', false); // Don't save history if redirecting
             }
             return;
         }
     }
 
+    // --- HISTORY TRACKING (New Logic) ---
+    const currentPage = getActivePage();
+    
+    // Only add to history if:
+    // 1. We are told to (addToHistory is true)
+    // 2. We are actually changing pages (currentPage != pageName)
+    // 3. There is a current page to remember
+    if (addToHistory && currentPage && currentPage !== pageName) {
+        navigationHistory.push(currentPage);
+    }
+
     // --- STANDARD NAVIGATION ---
-    // Hide all pages
     document.querySelectorAll('.page-content').forEach(p => p.classList.add('hidden'));
     
-    // Show target page
     const target = document.getElementById(pageName + 'Page');
     if (target) target.classList.remove('hidden');
 
-    // Update Nav UI (Active State)
+    // Update Nav UI
     document.querySelectorAll('.bottom-nav-link, .nav-link').forEach(link => {
-        link.classList.toggle('active', link.getAttribute('data-page') === pageName);
+        if (link.getAttribute('data-page') === pageName) {
+            link.classList.add('active');
+        } else {
+            link.classList.remove('active');
+        }
     });
 
     // Load Data
@@ -5961,19 +5972,22 @@ function openChangePasswordModal() {
 // SMART BACK BUTTON LOGIC (Android/PWA)
 // ============================================
 
+// ============================================
+// SMART BACK BUTTON LOGIC (History + Modals)
+// ============================================
+
 function initAndroidBackHandler() {
-    // 1. Push a "Guard" state into history on load
-    // This ensures there is a history item to "pop" when the user presses back
+    // 1. Push a "Guard" state immediately
     window.history.pushState({ app: 'active' }, document.title, window.location.href);
 
-    // 2. Listen for the Back Button
+    // 2. Listen for Back Button
     window.addEventListener('popstate', (event) => {
         
         let handled = false;
 
-        // --- CHECK 1: HIGH PRIORITY OVERLAYS ---
+        // --- PRIORITY 1: CLOSE OVERLAYS & MODALS ---
         
-        // A. Sidebar (Mobile Drawer)
+        // A. Sidebar
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('sidebarOverlay');
         if (sidebar && sidebar.classList.contains('mobile-active')) {
@@ -5982,11 +5996,10 @@ function initAndroidBackHandler() {
             handled = true;
         }
 
-        // B. Bottom Sheet (Expense Form)
+        // B. Bottom Sheet
         const sheet = document.getElementById('sheetModal');
-        const sheetOverlay = document.getElementById('sheetOverlay');
         if (!handled && sheet && sheet.classList.contains('active')) {
-            closeBottomSheet(); // Uses your existing function
+            closeBottomSheet(); 
             handled = true;
         }
 
@@ -5997,35 +6010,40 @@ function initAndroidBackHandler() {
             handled = true;
         }
 
-        // D. Any Standard Modal (Meal Edit, Admin Cycle, Member Edit)
+        // D. Any Standard Modal
         const activeModal = document.querySelector('.modal.active');
         if (!handled && activeModal) {
             activeModal.classList.remove('active');
             handled = true;
         }
 
-        // --- CHECK 2: NAVIGATION ---
+        // --- PRIORITY 2: GO BACK IN APP HISTORY ---
+        
+        if (!handled && navigationHistory.length > 0) {
+            const prevPage = navigationHistory.pop(); // Get last page
+            // Navigate there, but FALSE means don't add "Current" to stack (prevent loops)
+            navigateToPage(prevPage, false); 
+            handled = true;
+        }
+
+        // --- PRIORITY 3: FALLBACK TO DASHBOARD ---
         
         if (!handled) {
-            const activePage = getActivePage(); // Uses your existing helper
-            
-            // If on any page EXCEPT Dashboard, go back to Dashboard
+            const activePage = getActivePage();
+            // If we are NOT on dashboard, and have NO history, go to dashboard
             if (activePage && activePage !== 'dashboard') {
-                navigateToPage('dashboard');
+                navigateToPage('dashboard', false); 
                 handled = true;
             }
         }
 
         // --- CONCLUSION ---
         if (handled) {
-            // If we handled a UI action (closed something or navigated), 
-            // we must PUSH THE STATE AGAIN. 
-            // This re-arms the back button so it catches the next press too.
+            // We handled it internally, so we Push State again to "re-arm" the trap
             window.history.pushState({ app: 'active' }, document.title, window.location.href);
         } else {
-            // If we didn't handle anything (User is on Dashboard, no modals open),
-            // we DO NOT push state. We let the browser history recede.
-            // This closes the app / minimizes it.
+            // We did NOT handle it (User is on Dashboard, No Modals, No History).
+            // We let the browser's "Back" action complete, which closes/minimizes the app.
             console.log("Exiting App...");
         }
     });
