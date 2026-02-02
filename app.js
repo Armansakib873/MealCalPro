@@ -1,5 +1,4 @@
 
-
     const SUPABASE_URL = 'https://bcardtccxcnktkkeszpp.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjYXJkdGNjeGNua3Rra2VzenBwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ1NzU1NDIsImV4cCI6MjA4MDE1MTU0Mn0.xGxk81ThPGtyQgRCNoOxpvxsnXBUAzgmclrS0ru7g2Q';
     
@@ -1205,6 +1204,22 @@ setInterval(updateRestrictedUI, 30000); // Check every 30 seconds
         await loadAppConfig();
         await loadMembers();
 
+        // --- NEW: FORCE DB SYNC ---
+try {
+    const sessionDate = getStrictSessionDate();
+    console.log("⚡ Enforcing Schedule for Session:", sessionDate);
+    
+    // Call the SQL function we created
+    const { error } = await supabase.rpc('manage_meal_plans', { 
+        target_date: sessionDate 
+    });
+    
+    if (error) throw error;
+    console.log("✅ Database rows synced & cleaned.");
+} catch (err) {
+    console.error("Sync Error:", err);
+}
+
         initHeader();
         initNotifications();
 
@@ -1531,13 +1546,12 @@ async function loadScheduler() {
     
     const container = document.getElementById('schedulerList');
     
-    // 1. CACHE CHECK: If cards exist and we aren't forcing a reload, skip.
-    // This prevents the scheduler from re-rendering when you switch tabs.
+    // 1. Check if we need to reload (Prevent flicker on tab switch)
     if (container.querySelector('.scheduler-card') && pageLoaded.profile) {
         return; 
     }
 
-    // 2. Only show loading text if the container is empty.
+    // 2. Loading State
     if (!container.innerHTML || container.innerHTML.includes('loading')) {
         container.innerHTML = '<div class="loading">Syncing your schedule...</div>';
     }
@@ -1556,7 +1570,10 @@ async function loadScheduler() {
         const defNight = memberData?.default_night_on || false;
 
         // Calculate 8-day date range (Today + next 7 days)
-        const startDate = await getActiveSessionDate();
+        // We use getStrictSessionDate() to ensure it matches Dashboard logic exactly
+        const sessionDateStr = getStrictSessionDate(); // String YYYY-MM-DD
+        const startDate = parseLocalDate(sessionDateStr); // Date Object
+
         const dates = [];
         for(let i=0; i<=8; i++) { 
             const d = new Date(startDate);
@@ -1564,7 +1581,7 @@ async function loadScheduler() {
             dates.push(toLocalISO(d));
         }
 
-        // Fetch user's specific meal plans
+        // Fetch plans
         const { data: plans } = await supabase
             .from('meal_plans')
             .select('*')
@@ -1574,7 +1591,7 @@ async function loadScheduler() {
         const planMap = {};
         plans?.forEach(p => planMap[p.plan_date] = p);
 
-        // 3. BUILD HTML STRING (Avoids multiple DOM reflows/flickers)
+        // 3. BUILD HTML
         let newHTML = '';
         const fmt = (dStr) => {
             const d = parseLocalDate(dStr);
@@ -1582,38 +1599,50 @@ async function loadScheduler() {
         };
 
         for (let i = 0; i < 7; i++) {
-            const dateSession = dates[i];
-            const dateNextDay = dates[i+1];
+            const dateSession = dates[i];      // e.g., 2 Feb
+            const dateNextDay = dates[i+1];    // e.g., 3 Feb
             
             const sessionLabel = fmt(dateSession);
             const nextDayLabel = fmt(dateNextDay);
             const isFirstCard = (i === 0);
             
-            const nightActive = planMap[dateSession] ? planMap[dateSession].night_count > 0 : defNight;
-            const dayActive = planMap[dateNextDay] ? planMap[dateNextDay].day_count > 0 : defDay;
+            // Check DB row. If missing, assume OFF (0) because backend script handles creation now.
+            const nPlan = planMap[dateSession];
+            const dPlan = planMap[dateNextDay];
 
-          newHTML += `
-    <div class="scheduler-card ${isFirstCard ? 'is-today' : ''}">
-        <div class="sched-date-main">${sessionLabel}</div>
-        <div class="sched-sub-label">${isFirstCard ? 'ACTIVE SESSION' : 'UPCOMING'}</div>
-        
-        <div class="sched-actions">
-            <button class="sched-btn night-btn ${nightActive ? 'active' : ''}" 
-                onclick="toggleSchedulerPlan('${dateSession}', 'night', this)">
-                <span class="status-text">${nightActive ? 'ON' : 'OFF'}</span>
-                <span class="btn-label">🌙 Night</span>
-            </button>
-            
-            <button class="sched-btn day-btn ${dayActive ? 'active' : ''}" 
-                onclick="toggleSchedulerPlan('${dateNextDay}', 'day', this)">
-                <span class="status-text">${dayActive ? 'ON' : 'OFF'}</span>
-                <span class="btn-label">🌞 Day</span>
-            </button>
-        </div>
-    </div>`;
+            const nightActive = nPlan ? nPlan.night_count > 0 : false; 
+            const dayActive = dPlan ? dPlan.day_count > 0 : false;
+
+            newHTML += `
+            <div class="scheduler-card ${isFirstCard ? 'is-today' : ''}">
+                <!-- UPDATED: Added 'Bazar' to title -->
+                <div class="sched-date-main">${sessionLabel} Bazar</div>
+                <div class="sched-sub-label">${isFirstCard ? 'ACTIVE SESSION' : 'UPCOMING'}</div>
+                
+                <div class="sched-actions">
+                    <!-- Night Button: Shows Current Date -->
+                    <button class="sched-btn night-btn ${nightActive ? 'active' : ''}" 
+                        onclick="toggleSchedulerPlan('${dateSession}', 'night', this)">
+                        <span class="status-text">${nightActive ? 'ON' : 'OFF'}</span>
+                        <span class="btn-label">
+                             Night 
+                            <span class="btn-date-micro">${sessionLabel}</span>
+                        </span>
+                    </button>
+                    
+                    <!-- Day Button: Shows Next Day Date -->
+                    <button class="sched-btn day-btn ${dayActive ? 'active' : ''}" 
+                        onclick="toggleSchedulerPlan('${dateNextDay}', 'day', this)">
+                        <span class="status-text">${dayActive ? 'ON' : 'OFF'}</span>
+                        <span class="btn-label">
+                             Day 
+                            <span class="btn-date-micro">${nextDayLabel}</span>
+                        </span>
+                    </button>
+                </div>
+            </div>`;
         }
         
-        // 4. Update the DOM only once
         container.innerHTML = newHTML;
 
     } catch (err) {
@@ -2276,96 +2305,146 @@ function refreshCurrentPage() {
     // ============================================
     
 // --- Update loadDashboard to set the welcome name ---
-async function loadDashboard() {
-        if (!currentCycleId) return;
-        const [exp, meals, deps] = await Promise.all([
+  async function loadDashboard() {
+    if (!currentCycleId) return;
+
+    try {
+        // 1. DETERMINE STRICT SESSION DATES
+        // This ensures Dashboard looks at exactly the same dates as the Scheduler/Summary
+        const sessionDateObj = await getActiveSessionDate(); // The active "Bazar Date"
+        const sessionDateStr = toLocalISO(sessionDateObj);   // YYYY-MM-DD (For Night Meal)
+
+        const nextDateObj = new Date(sessionDateObj);
+        nextDateObj.setDate(sessionDateObj.getDate() + 1);
+        const nextDateStr = toLocalISO(nextDateObj);         // YYYY-MM-DD (For Day Meal)
+
+        // 2. FETCH ALL REQUIRED DATA IN PARALLEL
+        const [
+            expRes,         // Approved Expenses (For Rate/Liquidity)
+            mealsRes,       // Historical Meals (For Rate Calculation)
+            depsRes,        // Deposits (For Liquidity)
+            plansNightRes,  // PLAN: Tonight's Night Counts (The "First Card" Truth)
+            plansDayRes,    // PLAN: Tomorrow's Day Counts (The "First Card" Truth)
+            menuRes         // Menu for the session day
+        ] = await Promise.all([
             supabase.from('expenses').select('amount').eq('cycle_id', currentCycleId).eq('status', 'approved'),
             supabase.from('meals').select('day_count, night_count').eq('cycle_id', currentCycleId),
-            supabase.from('deposits').select('amount').eq('cycle_id', currentCycleId).neq('status', 'pending')
+            supabase.from('deposits').select('amount').eq('cycle_id', currentCycleId).neq('status', 'pending'),
+            
+            // Critical Fix: Summing actual DB rows for the Pulse Card
+            supabase.from('meal_plans').select('night_count').eq('plan_date', sessionDateStr),
+            supabase.from('meal_plans').select('day_count').eq('plan_date', nextDateStr),
+            
+            supabase.from('weekly_menus').select('*').eq('day_index', sessionDateObj.getDay()).maybeSingle()
         ]);
 
-        const totalExp = exp.data?.reduce((s, i) => s + i.amount, 0) || 0;
-        const totalMeals = meals.data?.reduce((s, i) => s + (i.day_count + i.night_count), 0) || 0;
-        const totalDep = deps.data?.reduce((s, i) => s + i.amount, 0) || 0;
-        const rate = totalMeals ? totalExp / totalMeals : 0;
+        // 3. CALCULATE FINANCIAL STATS (Accounting)
+        const totalExp = expRes.data?.reduce((s, i) => s + parseFloat(i.amount), 0) || 0;
+        const totalDep = depsRes.data?.reduce((s, i) => s + parseFloat(i.amount), 0) || 0;
+        
+        // Total Historical Meals (Used for Meal Rate)
+        const totalMealsHistory = mealsRes.data?.reduce((s, i) => s + (parseFloat(i.day_count) + parseFloat(i.night_count)), 0) || 0;
+        
+        const rate = totalMealsHistory > 0 ? totalExp / totalMealsHistory : 0;
         const liquidity = totalDep - totalExp;
 
-        // Update Text Stats
+        // 4. CALCULATE PULSE CARD COUNTS (Live Schedule)
+        // This is the fix: We sum the rows directly. No guessing.
+        const liveNightCount = plansNightRes.data?.reduce((sum, row) => sum + row.night_count, 0) || 0;
+        const liveDayCount = plansDayRes.data?.reduce((sum, row) => sum + row.day_count, 0) || 0;
+
+        // ===================================
+        // UI UPDATES
+        // ===================================
+
+        // A. Update Text Stats (Pills)
         document.getElementById('statMealRate').innerHTML = formatCurrency(rate);
         document.getElementById('statTotalExpense').innerHTML = formatCurrency(totalExp);
         document.getElementById('statTotalDeposit').innerHTML = formatCurrency(totalDep);
 
-          // --- NEW: UPDATE TOTAL MEALS CARD ---
-        // toBn() converts to Bengali digits. toFixed(1) keeps one decimal place (e.g., 50.5)
+        // Total Meals Card (Bengali)
         const mealsEl = document.getElementById('statTotalMealsDisplay');
         if (mealsEl) {
-            mealsEl.textContent = toBn(totalMeals.toFixed(1).replace(/\.0$/, '')); // Removes .0 if whole number
+            mealsEl.textContent = toBn(totalMealsHistory.toFixed(1).replace(/\.0$/, '')); 
         }
-        
-        // ============================================
-        // LIQUID CARD LOGIC (NEW)
-        // ============================================
-      // ============================================
-// ENHANCED LIQUID CARD LOGIC
-// ============================================
-// ============================================
-// VERTICAL METER CARD LOGIC - SIMPLE
-// ============================================
-const balEl = document.getElementById('statMessBalance');
-const container = document.getElementById('messBalanceContainer');
-const fillBar = document.getElementById('liquidFillBar');
-const pill = document.getElementById('balanceStatusPill');
-const percentEl = document.getElementById('liquidPercent');
 
-// 1. Update Number
-balEl.textContent = typeof toBn === 'function' 
-    ? toBn(Math.round(liquidity).toLocaleString()) 
-    : Math.round(liquidity).toLocaleString();
+        // B. Update Meal Pulse Card (The First Card)
+        // Dates
+        document.getElementById('planNightDate').textContent = formatBengaliDate(sessionDateObj);
+        document.getElementById('planDayDate').textContent = formatBengaliDate(nextDateObj);
 
-// 2. Calculate Percentage (0-10,000 range)
-let percent = Math.max(0, Math.min(100, (liquidity / 10000) * 100));
+        // Counts (Synced with Summary)
+        document.getElementById('planNightTotal').textContent = toBn(liveNightCount);
+        document.getElementById('planDayTotal').textContent = toBn(liveDayCount);
 
-// Minimum visibility for very low amounts
-let visualPercent = liquidity <= 0 ? 3 : (percent < 5 ? 5 : percent);
+        // Menus
+        const menu = menuRes.data;
+        if (menu) {
+            document.getElementById('planNightMenu').textContent = menu.night_menu || "মেনু নেই";
+            document.getElementById('planDayMenu').textContent = menu.day_menu || "মেনু নেই";
+        }
 
-// Update meter fill
-fillBar.style.setProperty('--fill-percent', `${visualPercent}%`);
+        // C. Update Liquidity Meter (Vertical Bar)
+        updateLiquidityMeter(liquidity);
 
-// Update percentage display
-percentEl.textContent = `${Math.round(percent)}%`;
-
-// 3. State styling
-container.classList.remove('state-healthy-liquid', 'state-critical-liquid', 'state-empty-liquid');
-
-if (liquidity >= 1000) {
-    // Healthy
-    container.classList.add('state-healthy-liquid');
-    pill.textContent = 'HEALTHY';
-    pill.style.color = '#047857';
-    pill.style.background = '#d1fae5';
-    pill.style.border = '1px solid #a7f3d0';
-} else if (liquidity > 0) {
-    // Low Funds
-    container.classList.add('state-critical-liquid');
-    pill.textContent = 'LOW FUNDS';
-    pill.style.color = '#b91c1c';
-    pill.style.background = '#fee2e2';
-    pill.style.border = '1px solid #fecaca';
-} else {
-    // Deficit
-    container.classList.add('state-critical-liquid');
-    pill.textContent = 'DEFICIT';
-    pill.style.color = '#7f1d1d';
-    pill.style.background = '#fef2f2';
-    pill.style.border = '1px solid #fecaca';
-}
-
-        updateDashboardMealPlan();
+        // D. Trigger Background Updates
         loadSystemStatus();
         loadRecentActivity(); 
-          updateDashboardBadges(); 
-           updatePendingCounts();
+        updateDashboardBadges(); 
+        updatePendingCounts();
+
+    } catch (err) {
+        console.error("Dashboard Load Error:", err);
     }
+}
+
+function updateLiquidityMeter(liquidity) {
+    const balEl = document.getElementById('statMessBalance');
+    const container = document.getElementById('messBalanceContainer');
+    const fillBar = document.getElementById('liquidFillBar');
+    const pill = document.getElementById('balanceStatusPill');
+    const percentEl = document.getElementById('liquidPercent');
+
+    if (!balEl || !container) return;
+
+    // Update Number
+    balEl.textContent = typeof toBn === 'function' 
+        ? toBn(Math.round(liquidity).toLocaleString()) 
+        : Math.round(liquidity).toLocaleString();
+
+    // Calculate Percentage (0-10,000 range cap)
+    let percent = Math.max(0, Math.min(100, (liquidity / 10000) * 100));
+    let visualPercent = liquidity <= 0 ? 3 : (percent < 5 ? 5 : percent);
+
+    // Update Visuals
+    fillBar.style.setProperty('--fill-percent', `${visualPercent}%`);
+    percentEl.textContent = `${Math.round(percent)}%`;
+
+    // Reset Classes
+    container.classList.remove('state-healthy-liquid', 'state-critical-liquid', 'state-empty-liquid');
+
+    // Apply State
+    if (liquidity >= 1000) {
+        container.classList.add('state-healthy-liquid');
+        pill.textContent = 'HEALTHY';
+        pill.style.color = '#047857';
+        pill.style.background = '#d1fae5';
+        pill.style.border = '1px solid #a7f3d0';
+    } else if (liquidity > 0) {
+        container.classList.add('state-critical-liquid');
+        pill.textContent = 'LOW FUNDS';
+        pill.style.color = '#b91c1c';
+        pill.style.background = '#fee2e2';
+        pill.style.border = '1px solid #fecaca';
+    } else {
+        container.classList.add('state-critical-liquid');
+        pill.textContent = 'DEFICIT';
+        pill.style.color = '#7f1d1d';
+        pill.style.background = '#fef2f2';
+        pill.style.border = '1px solid #fecaca';
+    }
+}
+
 
 
     // ==========================================
@@ -3097,6 +3176,29 @@ document.getElementById('mealForm').addEventListener('submit', async (e) => {
     }
 });
 
+
+// Add this helper function
+function getStrictSessionDate() {
+    const now = new Date();
+    
+    // Parse the Bazar End Time from config (e.g., "19:00")
+    const endTimeStr = appConfig.lock_time_end || "19:00";
+    const [endH, endM] = endTimeStr.split(':').map(Number);
+    
+    const bazarDeadline = new Date();
+    bazarDeadline.setHours(endH, endM, 0, 0);
+
+    // If we are PAST the deadline (e.g., it's 8 PM), the "Session" is Tomorrow.
+    if (now > bazarDeadline) {
+        const tomorrow = new Date();
+        tomorrow.setDate(now.getDate() + 1);
+        return tomorrow.toISOString().split('T')[0];
+    } else {
+        // Otherwise, the Session is Today.
+        return now.toISOString().split('T')[0];
+    }
+}
+
     // ============================================
     // SUMMARY PAGE
     // ============================================
@@ -3169,8 +3271,8 @@ async function loadSummary() {
             const nPlan = plans.find(p => p.member_id === member.id && p.plan_date === nightDateStr);
             const dPlan = plans.find(p => p.member_id === member.id && p.plan_date === dayDateStr);
 
-            const nVal = nPlan ? nPlan.night_count : (member.default_night_on ? 1 : 0);
-            const dVal = dPlan ? dPlan.day_count : (member.default_day_on ? 1 : 0);
+           const nVal = nPlan ? nPlan.night_count : 0; 
+           const dVal = dPlan ? dPlan.day_count : 0;
 
             // --- UPDATE 2: ADD DATA CELL FOR DEPOSIT ---
             return `
