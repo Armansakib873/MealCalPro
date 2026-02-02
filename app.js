@@ -11,7 +11,8 @@
     let currentCycleId = null;
     let allMembers = [];
     let allCycles = [];
-    let navigationHistory = []; // Tracks page history
+    let navigationHistory = [];
+    let lastRenderedSessionDate = null;
 
 
     // Master Local Mirror of the Database
@@ -1190,6 +1191,46 @@ window.handleDepositAction = async function(depositId, action) {
     }
 };
 
+async function checkSessionAutoSwitch() {
+    // 1. Get what the date SHOULD be right now
+    const currentCalculatedSession = getStrictSessionDate();
+
+    // 2. Initialize if first run
+    if (!lastRenderedSessionDate) {
+        lastRenderedSessionDate = currentCalculatedSession;
+        return;
+    }
+
+    // 3. Compare with what we last rendered
+    if (currentCalculatedSession !== lastRenderedSessionDate) {
+        console.log("⚡ Session Shift Detected: Switching from " + lastRenderedSessionDate + " to " + currentCalculatedSession);
+        
+        // A. Update the Global Tracker
+        lastRenderedSessionDate = currentCalculatedSession;
+
+        // B. Force DB Sync (Ensures the new 7th card exists)
+        try {
+            await supabase.rpc('manage_meal_plans', { target_date: currentCalculatedSession });
+            console.log("✅ New session cards generated.");
+        } catch (e) {
+            console.error("Auto-gen failed:", e);
+        }
+
+        // C. Clear Page Caches (Forces re-render)
+        pageLoaded.profile = false;
+        pageLoaded.dashboard = false;
+        pageLoaded.summary = false;
+        pageLoaded.tracker = false;
+
+        // D. Refresh Current View Immediately
+        // If user is staring at Profile, this makes the cards slide/update instantly
+        refreshCurrentPage();
+        
+        // E. Notify User
+        showNotification("Session changed to " + formatDate(currentCalculatedSession), "success");
+    }
+}
+
 async function initializeApp() {
     const progress = document.getElementById('load-progress');
     const setProgress = (p) => { if(progress) progress.style.width = p + '%'; };
@@ -1232,6 +1273,17 @@ setInterval(updateRestrictedUI, 30000); // Check every 30 seconds
         await loadAppConfig();
         await loadMembers();
 
+
+               // --- NEW INITIALIZATION LOGIC ---
+        // 1. Ask DB: "Is Today's Bazar Closed?"
+        const sessionDateObj = await getActiveSessionDate();
+        const sessionDateStr = toLocalISO(sessionDateObj);
+        
+        console.log("📅 Active Session determined by DB Log:", sessionDateStr);
+        lastRenderedSessionDate = sessionDateStr;
+
+    
+
         // --- NEW: FORCE DB SYNC ---
 try {
     const sessionDate = getStrictSessionDate();
@@ -1246,7 +1298,12 @@ try {
     console.log("✅ Database rows synced & cleaned.");
 } catch (err) {
     console.error("Sync Error:", err);
+
 }
+
+    lastRenderedSessionDate = getStrictSessionDate(); 
+        setInterval(checkSessionAutoSwitch, 30000); 
+
 
         initHeader();
         initNotifications();
@@ -1399,32 +1456,33 @@ document.getElementById('adminSettingsForm').addEventListener('submit', async (e
     }
 });
 
-
-
-// Centralized Logic for "Active Session Date"
-// Ensures consistency across Profile, Summary, and Dashboard
-// Centralized Logic for "Active Session Date" (Timezone Safe)
 async function getActiveSessionDate() {
-    const today = new Date();
-    // Force local date string
-    const todayStr = toLocalISO(today);
+    const now = new Date();
+    const todayStr = toLocalISO(now); // e.g., "2026-02-02"
 
     try {
-        // Check if bazar for today is already done
-        const { data: log } = await supabase
+        // Check if the System has already run "Auto-Entry" for today
+        const { data: log, error } = await supabase
             .from('system_logs')
             .select('id')
             .eq('log_date', todayStr)
             .maybeSingle();
 
-        let sessionDate = new Date(today);
+        if (error && error.code !== 'PGRST116') console.error("Session Check Error:", error);
+
+        let sessionDate = new Date(now);
+        
         if (log) {
-            // If today's automation ran, the "Active" bazar is now tomorrow's
-            sessionDate.setDate(today.getDate() + 1);
-        }
+            // Log EXISTS: Bazar closed. Session moves to Tomorrow.
+            sessionDate.setDate(now.getDate() + 1);
+        } 
+        // Log MISSING: Bazar open. Session is Today.
+
         return sessionDate;
+
     } catch (err) {
-        return new Date(); 
+        console.error("Critical Session Error", err);
+        return new Date(); // Fallback to Today
     }
 }
 
@@ -1571,19 +1629,37 @@ async function loadScheduler() {
     if (!currentUser.member_id || !currentCycleId) return;
     
     const container = document.getElementById('schedulerList');
-    
-    // 1. Check if we need to reload (Prevent flicker on tab switch)
-    if (container.querySelector('.scheduler-card') && pageLoaded.profile) {
-        return; 
-    }
-
-    // 2. Loading State
-    if (!container.innerHTML || container.innerHTML.includes('loading')) {
-        container.innerHTML = '<div class="loading">Syncing your schedule...</div>';
-    }
 
     try {
-        // Fetch Member Defaults
+        // 1. ASYNC CHECK: Ask DB "What is the active session?"
+        const sessionDateObj = await getActiveSessionDate();
+        const currentSessionStr = toLocalISO(sessionDateObj); // YYYY-MM-DD
+
+        // 2. STALENESS CHECK: Did the session change since we last drew the cards?
+        if (lastRenderedSessionDate && lastRenderedSessionDate !== currentSessionStr) {
+            console.log(`🔄 Session Shift Detected (Log Found). Rolling cards to ${currentSessionStr}...`);
+            
+            // A. Update Tracker
+            lastRenderedSessionDate = currentSessionStr;
+            
+            // B. Force DB to generate the new 7th card immediately
+            await supabase.rpc('manage_meal_plans', { target_date: currentSessionStr });
+            
+            // C. Invalidate Cache to force redraw
+            pageLoaded.profile = false; 
+            if (container) container.innerHTML = '<div class="loading">Refreshing session...</div>';
+        }
+
+        // 3. CACHE CHECK (Standard)
+        if (container.querySelector('.scheduler-card') && pageLoaded.profile) {
+            return; 
+        }
+
+        if (!container.innerHTML.includes('scheduler-card')) {
+            container.innerHTML = '<div class="loading">Syncing your schedule...</div>';
+        }
+
+        // 4. FETCH DATA & RENDER (Standard Logic)
         const { data: memberData } = await supabase
             .from('members')
             .select('default_day_on, default_night_on')
@@ -1591,23 +1667,15 @@ async function loadScheduler() {
             .maybeSingle();
 
         if (memberData) updateDefaultButtons(memberData);
-        
-        const defDay = memberData?.default_day_on || false;
-        const defNight = memberData?.default_night_on || false;
 
-        // Calculate 8-day date range (Today + next 7 days)
-        // We use getStrictSessionDate() to ensure it matches Dashboard logic exactly
-        const sessionDateStr = getStrictSessionDate(); // String YYYY-MM-DD
-        const startDate = parseLocalDate(sessionDateStr); // Date Object
-
+        // Generate 7 Days based on the DB-confirmed Session Date
         const dates = [];
         for(let i=0; i<=8; i++) { 
-            const d = new Date(startDate);
-            d.setDate(startDate.getDate() + i); 
+            const d = new Date(sessionDateObj);
+            d.setDate(sessionDateObj.getDate() + i); 
             dates.push(toLocalISO(d));
         }
 
-        // Fetch plans
         const { data: plans } = await supabase
             .from('meal_plans')
             .select('*')
@@ -1617,7 +1685,6 @@ async function loadScheduler() {
         const planMap = {};
         plans?.forEach(p => planMap[p.plan_date] = p);
 
-        // 3. BUILD HTML
         let newHTML = '';
         const fmt = (dStr) => {
             const d = parseLocalDate(dStr);
@@ -1625,55 +1692,57 @@ async function loadScheduler() {
         };
 
         for (let i = 0; i < 7; i++) {
-            const dateSession = dates[i];      // e.g., 2 Feb
-            const dateNextDay = dates[i+1];    // e.g., 3 Feb
+            const dateSession = dates[i];
+            const dateNextDay = dates[i+1];
             
             const sessionLabel = fmt(dateSession);
             const nextDayLabel = fmt(dateNextDay);
             const isFirstCard = (i === 0);
             
-            // Check DB row. If missing, assume OFF (0) because backend script handles creation now.
             const nPlan = planMap[dateSession];
             const dPlan = planMap[dateNextDay];
 
-            const nightActive = nPlan ? nPlan.night_count > 0 : false; 
+            const nightActive = nPlan ? nPlan.night_count > 0 : false;
             const dayActive = dPlan ? dPlan.day_count > 0 : false;
+
+            // Lock Logic (Visual Only - Security is in toggle function)
+            const userRole = currentUser?.role;
+            const isAdmin = (userRole === 'admin' || userRole === 'manager');
+            const isNightLocked = !isAdmin && isMealLocked(dateSession, 'night');
+            const isDayLocked = !isAdmin && isMealLocked(dateNextDay, 'day');
+            const lockIcon = `<span style="font-size:10px; margin-left:4px;">🔒</span>`;
 
             newHTML += `
             <div class="scheduler-card ${isFirstCard ? 'is-today' : ''}">
-                <!-- UPDATED: Added 'Bazar' to title -->
                 <div class="sched-date-main">${sessionLabel} Bazar</div>
                 <div class="sched-sub-label">${isFirstCard ? 'ACTIVE SESSION' : 'UPCOMING'}</div>
                 
                 <div class="sched-actions">
-                    <!-- Night Button: Shows Current Date -->
                     <button class="sched-btn night-btn ${nightActive ? 'active' : ''}" 
-                        onclick="toggleSchedulerPlan('${dateSession}', 'night', this)">
+                        onclick="toggleSchedulerPlan('${dateSession}', 'night', this)"
+                        style="${isNightLocked ? 'opacity: 0.6;' : ''}">
                         <span class="status-text">${nightActive ? 'ON' : 'OFF'}</span>
-                        <span class="btn-label">
-                             Night 
-                            <span class="btn-date-micro">${sessionLabel}</span>
-                        </span>
+                        <span class="btn-label">🌙 Night <span class="btn-date-micro">${sessionLabel}</span> ${isNightLocked ? lockIcon : ''}</span>
                     </button>
                     
-                    <!-- Day Button: Shows Next Day Date -->
                     <button class="sched-btn day-btn ${dayActive ? 'active' : ''}" 
-                        onclick="toggleSchedulerPlan('${dateNextDay}', 'day', this)">
+                        onclick="toggleSchedulerPlan('${dateNextDay}', 'day', this)"
+                        style="${isDayLocked ? 'opacity: 0.6;' : ''}">
                         <span class="status-text">${dayActive ? 'ON' : 'OFF'}</span>
-                        <span class="btn-label">
-                             Day 
-                            <span class="btn-date-micro">${nextDayLabel}</span>
-                        </span>
+                        <span class="btn-label">🌞 Day <span class="btn-date-micro">${nextDayLabel}</span> ${isDayLocked ? lockIcon : ''}</span>
                     </button>
                 </div>
             </div>`;
         }
         
         container.innerHTML = newHTML;
+        
+        // Save state
+        lastRenderedSessionDate = currentSessionStr;
+        pageLoaded.profile = true;
 
     } catch (err) {
         console.error("Scheduler Error:", err);
-        container.innerHTML = '<div class="loading" style="color:red">Error loading schedule</div>';
     }
 }
 
