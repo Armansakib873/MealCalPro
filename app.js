@@ -314,13 +314,27 @@ const { data: authData, error: signupError } = await supabase.auth.signUp({
 
 
 
-// 5. Update Logout
+// --- UPDATED LOGOUT LOGIC ---
 document.getElementById('logoutBtn').addEventListener('click', async () => {
-    await supabase.auth.signOut();
-    // onAuthStateChange will handle the UI update
+    // 1. Show feedback
+    const btn = document.getElementById('logoutBtn');
+    btn.innerHTML = '<span class="nav-icon">⏳</span> Logging out...';
+    
+    try {
+        // 2. Sign out from Supabase server
+        await supabase.auth.signOut();
+    } catch (err) {
+        console.warn("SignOut Error (ignoring):", err);
+    }
+    
+    // 3. Clear Local Storage (clears cached session tokens/preferences)
+    localStorage.clear();
+    sessionStorage.clear();
+
+    // 4. FORCE RELOAD (The Fix)
+    // This clears the JS Heap/Memory so the next login starts fresh
+    window.location.reload(); 
 });
-
-
 
 // Function to populate the login dropdown
 async function loadLoginUserDropdown() {
@@ -965,48 +979,73 @@ window.handleExpenseApproval = async function(expenseId, newStatus) {
         return; 
     }
 
-    // Change button text to indicate processing
     const btn = event.target;
     const originalText = btn.textContent;
     btn.textContent = "...";
     btn.disabled = true;
 
     try {
-        // 1. Update Database
+        // 1. FETCH DETAILS FIRST (Before deleting/updating)
+        const { data: exp, error: fetchError } = await supabase
+            .from('expenses')
+            .select('*, members(name)')
+            .eq('id', expenseId)
+            .single();
+
+        if (fetchError || !exp) throw new Error("Expense not found");
+
+        // Prepare details for the log
+        const shopperName = exp.members?.name || "Unknown";
+        const amountBn = toBn(exp.amount);
+        const dateObj = new Date(exp.expense_date);
+        const dateStr = dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); // e.g., 2 Feb
+        const actorName = currentUser.name || "Admin";
+
+        // 2. PERFORM ACTION
         if (newStatus === 'rejected') {
-            // Option A: Delete it entirely
+            // Delete the rejected request
             const { error } = await supabase.from('expenses').delete().eq('id', expenseId);
             if (error) throw error;
+
+            // LOG: Detailed Rejection Message
+            // "Expense request by Ayan of ৳500 (2 Feb) REJECTED by Sakib"
+            await logActivity(
+                `Expense request by ${shopperName} of ৳${amountBn} (${dateStr}) REJECTED by ${actorName}`, 
+                'expense'
+            );
+            
+            showNotification("Expense Request Rejected", "warning");
+
         } else {
-            // Option B: Approve it
+            // Approve the request
             const { error } = await supabase
                 .from('expenses')
                 .update({ status: 'approved' })
                 .eq('id', expenseId);
             if (error) throw error;
+
+            // LOG: Approval
+            await logActivity(
+                `Expense request by ${shopperName} of ৳${amountBn} APPROVED by ${actorName}`, 
+                'expense'
+            );
+            
+            showNotification("Expense Approved", "success");
         }
 
-        // 2. Fetch details for logging (Optional but good for UX)
-        // We can skip fetching if we just want speed, but logging is nice.
-        const actorName = currentUser.name || "Admin";
-        const actionLabel = newStatus === 'approved' ? 'APPROVED' : 'REJECTED';
-        
-        await logActivity(
-            `Expense Request ${actionLabel} by ${actorName}`, 
-            'expense'
-        );
-
-        showNotification(`Expense ${newStatus} successfully`, 'success');
-
-        // 3. Refresh Data
+        // 3. REFRESH UI
         await loadExpenses(); 
-        await loadDashboard(); // Update totals
+        await loadDashboard(); 
 
     } catch (err) {
         console.error('Approval Error:', err);
         showNotification(`Failed: ${err.message}`, 'error');
-        btn.textContent = originalText;
-        btn.disabled = false;
+    } finally {
+        // Only reset button if it still exists (it won't if row was deleted/re-rendered)
+        if (document.body.contains(btn)) {
+            btn.textContent = originalText;
+            btn.disabled = false;
+        }
     }
 };
 
@@ -1072,51 +1111,39 @@ window.handleDepositRejection = async function(depositId) {
 
 
 window.handleDepositAction = async function(depositId, action) {
-    // --- SECURITY CHECK ---
     if (currentUser?.role !== 'admin' && currentUser?.role !== 'manager') {
         showNotification("Permission Denied", "error");
         return;
     }
-    console.log(`Action: ${action} triggered for ID: ${depositId}`);
     
-    // Disable the button to prevent double-clicks
     const btn = event.target;
     btn.disabled = true;
     const originalText = btn.textContent;
     btn.textContent = "...";
 
     try {
+        // 1. FETCH DETAILS FIRST
+        const { data: dep, error: fError } = await supabase
+            .from('deposits')
+            .select('*, members(name)')
+            .eq('id', depositId)
+            .single();
+
+        if (fError || !dep) throw new Error("Could not find the pending request.");
+
+        const actorName = currentUser.name || "Admin";
+        const memberName = dep.members?.name || "User";
+        const amountBn = toBn(dep.amount);
+        const dateObj = new Date(dep.created_at);
+        const dateStr = dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); // e.g. 2 Feb
+
+        // 2. PERFORM ACTION
         if (action === 'approve') {
-            // 1. Fetch the data of the pending request
-            const { data: dep, error: fError } = await supabase
-                .from('deposits')
-                .select('*')
-                .eq('id', depositId)
-                .single();
+            // Delete pending, create approved + settlements
+            const { error: delError } = await supabase.from('deposits').delete().eq('id', depositId);
+            if (delError) throw delError;
 
-            if (fError || !dep) {
-                console.error("Fetch Error:", fError);
-                throw new Error("Could not find the pending request.");
-            }
-
-            console.log("Pending data found. Attempting to delete request row...");
-
-            // 2. DELETE the pending record FIRST. 
-            // If this fails, we stop (prevents duplicates).
-            const { error: delError } = await supabase
-                .from('deposits')
-                .delete()
-                .eq('id', depositId);
-            
-            if (delError) {
-                console.error("Delete Error:", delError);
-                throw new Error("Permission denied or database error during deletion.");
-            }
-
-            console.log("Pending request deleted. Now processing official settlement...");
-
-            // 3. Process the NEW official deposit
-            // We pass status: 'approved' explicitly to ensure it hits the history filter
+            // Process Settlement
             await processDepositWithClientSideSettlement(
                 dep.member_id, 
                 dep.cycle_id, 
@@ -1124,41 +1151,41 @@ window.handleDepositAction = async function(depositId, action) {
                 dep.label || 'Deposit', 
                 dep.notes
             );
-
-
             
-            const actorName = currentUser.name || "Unknown";
-    const actorRole = currentUser.role === 'manager' ? 'Manager' : 'Admin';
-
-    // LOG THE APPROVAL ACT
-    await logActivity(
-        `Deposit Approved: ${dep.members.name}'s request for ${formatCurrency(dep.amount)} was approved by ${actorRole} (${actorName})`, 
-        'deposit'
-    );
-    showNotification("Request Approved", "success");
-
-
+            // LOG: Approval
+            await logActivity(
+                `Deposit Approved: ${memberName}'s request for ৳${amountBn} was approved by ${actorName}`, 
+                'deposit'
+            );
+            showNotification("Request Approved", "success");
 
         } else if (action === 'reject') {
-            const { error: delError } = await supabase
-                .from('deposits')
-                .delete()
-                .eq('id', depositId);
-            
+            // Delete pending row
+            const { error: delError } = await supabase.from('deposits').delete().eq('id', depositId);
             if (delError) throw delError;
+
+            // LOG: Detailed Rejection Message
+            // "Deposit request by Ayan of ৳500 (2 Feb) REJECTED by Sakib"
+            await logActivity(
+                `Deposit request by ${memberName} of ৳${amountBn} (${dateStr}) REJECTED by ${actorName}`, 
+                'deposit'
+            );
+            
             showNotification("Request Rejected", "warning");
         }
         
-        // 4. Force UI update
-        console.log("Refreshing UI...");
+        // 3. REFRESH UI
         await loadDeposits(); 
         if (typeof loadDashboard === 'function') loadDashboard();
 
     } catch (err) {
-        console.error("CRITICAL ERROR in handleDepositAction:", err.message);
+        console.error("Action Error:", err.message);
         showNotification(err.message, "error");
-        btn.disabled = false;
-        btn.textContent = originalText;
+    } finally {
+        if (document.body.contains(btn)) {
+            btn.disabled = false;
+            btn.textContent = originalText;
+        }
     }
 };
 
@@ -1255,6 +1282,7 @@ try {
 
         // Background loading begins after the app is visible
         setTimeout(() => preLoadAllPages(), 2000);
+         initAndroidBackHandler(); 
         
     } catch (err) {
         console.error("Critical Init Error:", err);
@@ -1496,48 +1524,45 @@ function convertTo12Hour(timeStr) {
  * Checks if a specific meal slot is locked based on Bazar Time.
  * Logic: A "Bazar Session" locks Today's Night and Tomorrow's Day.
  */
-function isMealLocked(dateString, mealType) {
+function isMealLocked(targetDateStr, mealType) {
+    // 1. Check Config exists
+    if (!appConfig.lock_time_start || !appConfig.lock_time_end) return false;
+
+    // 2. Get Current Time details
     const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
+    // Use local time comparison
+    const currentHours = now.getHours();
+    const currentMinutes = now.getMinutes();
+    const currentTimeVal = currentHours * 60 + currentMinutes;
 
-    // 1. Determine "Session Date" (The date the Bazar happens)
-    // Night Meal (e.g. 8th Night) -> Bazar is 8th.
-    // Day Meal (e.g. 9th Day) -> Bazar is 8th (Previous Day).
-    
-    let sessionDateStr = dateString;
-    if (mealType === 'day') {
-        const d = new Date(dateString);
-        d.setDate(d.getDate() - 1); // Subtract 1 day
-        sessionDateStr = d.toISOString().split('T')[0];
-    }
-
-    // 2. Past Session Logic
-    // If the bazar day is in the past, it's definitely locked (History).
-    if (sessionDateStr < todayStr) return true;
-
-    // 3. Future Session Logic
-    // If bazar is tomorrow or later, it's Open.
-    if (sessionDateStr > todayStr) return false;
-
-    // 4. TODAY'S Session Logic (sessionDateStr === todayStr)
-    // We are on the day of the Bazar. Check the Time Range.
-    
-    // Parse Config Times
+    // Parse Config Range
     const [sH, sM] = appConfig.lock_time_start.split(':').map(Number);
     const [eH, eM] = appConfig.lock_time_end.split(':').map(Number);
-    
-    const startTime = new Date();
-    startTime.setHours(sH, sM, 0, 0);
-    
-    const endTime = new Date();
-    endTime.setHours(eH, eM, 0, 0); // e.g., 19:00:00
+    const startVal = sH * 60 + sM;
+    const endVal = eH * 60 + eM;
 
-    // Range Logic: Locked ONLY if Start <= Now <= End
-    if (now >= startTime && now <= endTime) {
-        return true; // Locked inside range
+    // 3. Check if NOW is inside the Time Window
+    const isTimeLocked = currentTimeVal >= startVal && currentTimeVal <= endVal;
+    
+    // If we aren't even in the time window, nothing is locked.
+    if (!isTimeLocked) return false;
+
+    // 4. Calculate the "Bazar Date" for the target meal
+    // If Night Button (Feb 2) -> Bazar Date is Feb 2
+    // If Day Button (Feb 3)   -> Bazar Date is Feb 2 (Previous Day)
+    const mealDate = parseLocalDate(targetDateStr);
+    let bazarDateForMeal = new Date(mealDate);
+    
+    if (mealType === 'day') {
+        bazarDateForMeal.setDate(mealDate.getDate() - 1);
     }
 
-    return false; // Open before 5pm, Open after 7pm
+    // 5. Compare "Bazar Date" with "Today"
+    const todayStr = toLocalISO(now);
+    const bazarDateStr = toLocalISO(bazarDateForMeal);
+
+    // Lock ONLY if the Bazar Date is TODAY
+    return bazarDateStr === todayStr;
 }
 
 
@@ -1653,13 +1678,22 @@ async function loadScheduler() {
 
 
 // Function triggered by clicking scheduler buttons
-// Function triggered by clicking scheduler buttons (Profile Page)
 async function toggleSchedulerPlan(date, type, btnElement) {
-    // 1. IMMEDIATE UI UPDATE (Optimistic)
+    // --- SECURITY CHECK (Existing) ---
+    const userRole = currentUser?.role;
+    const isAdmin = (userRole === 'admin' || userRole === 'manager');
+
+    if (!isAdmin && isMealLocked(date, type)) {
+        btnElement.style.animation = 'shake 0.4s ease';
+        setTimeout(() => btnElement.style.animation = '', 400);
+        showNotification(`⛔ This meal is locked until ${convertTo12Hour(appConfig.lock_time_end)}`, "error");
+        return; 
+    }
+
+    // --- OPTIMISTIC UI UPDATE ---
     const statusLabel = btnElement.querySelector('.status-text');
     const wasActive = btnElement.classList.contains('active');
     
-    // Flip classes and text immediately
     if (wasActive) {
         btnElement.classList.remove('active');
         if (statusLabel) statusLabel.textContent = 'OFF';
@@ -1671,7 +1705,7 @@ async function toggleSchedulerPlan(date, type, btnElement) {
     const newCount = wasActive ? 0 : 1;
 
     try {
-        // 2. DATABASE SYNC
+        // --- DATABASE SYNC ---
         const { data: existing } = await supabase
             .from('meal_plans')
             .select('*')
@@ -1692,30 +1726,50 @@ async function toggleSchedulerPlan(date, type, btnElement) {
         const { error } = await supabase.from('meal_plans').upsert(updateData, { onConflict: 'member_id, plan_date' });
         if (error) throw error;
 
-        // 3. LOG ACTIVITY (New Addition)
-        const actorName = currentUser.name || "User";
-        const actionText = newCount > 0 ? "turned ON" : "turned OFF";
-        const typeLabel = type.charAt(0).toUpperCase() + type.slice(1); // "Day" or "Night"
+        // --- CONDITIONAL LOGGING LOGIC (New) ---
+        // 1. Calculate Active Session Dates
+        const activeSessionStr = getStrictSessionDate(); // e.g., "2026-02-02"
         
-        // Format date to look nice (e.g., "12 Jan")
-        const dateObj = new Date(date);
-        const niceDate = dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+        // Calculate the "Next Day" associated with the active session
+        const activeDateObj = parseLocalDate(activeSessionStr);
+        activeDateObj.setDate(activeDateObj.getDate() + 1);
+        const activeNextDayStr = toLocalISO(activeDateObj); // e.g., "2026-02-03"
 
-        // Message: "Ayan turned ON his 12 Jan Night meal"
-        const logMsg = `${actorName} ${actionText} their ${niceDate} ${typeLabel} meal`;
-        
-        await logActivity(logMsg, 'meal');
+        // 2. Check if the clicked button belongs to the Active Session Card
+        let isActiveCard = false;
+
+        if (type === 'night' && date === activeSessionStr) {
+            isActiveCard = true; // It's the Night button of the 1st Card
+        } 
+        else if (type === 'day' && date === activeNextDayStr) {
+            isActiveCard = true; // It's the Day button of the 1st Card
+        }
+
+        // 3. Only Log if it's the Active Card
+        if (isActiveCard) {
+            const actorName = currentUser.name || "User";
+            const actionText = newCount > 0 ? "turned ON" : "turned OFF";
+            const typeLabel = type.charAt(0).toUpperCase() + type.slice(1);
+            
+            // Format nice date
+            const dateObj = new Date(date);
+            const niceDate = dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+
+            const logMsg = `${actorName} ${actionText} their ${niceDate} ${typeLabel} meal`;
+            
+            await logActivity(logMsg, 'meal');
+        } 
+        // Else: Silence (No log for upcoming cards)
 
     } catch (err) {
         console.error("Plan update failed", err);
         showNotification("Failed to save plan", "error");
         
-        // REVERT UI on error
+        // Revert UI on error
         btnElement.classList.toggle('active', wasActive);
         if (statusLabel) statusLabel.textContent = wasActive ? 'ON' : 'OFF';
     }
 }
-
 
 // --- Update loadMasterTracker ---
 async function loadMasterTracker() {
@@ -1954,13 +2008,12 @@ async function loadNotifications() {
                 )
             `)
             .eq('cycle_id', targetCycleId)
-            .order('created_at', { ascending: false })
-            .limit(50);
+            .order('created_at', { ascending: false }); 
+            // REMOVED .limit(50) here to allow unlimited loading
 
         if (error) throw error;
 
         allNotifications = data || [];
-        console.log("✅ Notifications loaded:", allNotifications.length);
         renderNotifications();
         
     } catch (err) {
@@ -3310,7 +3363,7 @@ async function quickToggleSummaryMeal(memberId, dateStr, type, currentVal) {
     const newVal = currentVal > 0 ? 0 : 1;
 
     try {
-        // 2. Fetch existing PLAN to preserve the 'other' side (Day/Night)
+        // 2. Fetch existing PLAN
         const { data: existingPlan } = await supabase
             .from('meal_plans')
             .select('*')
@@ -3339,26 +3392,44 @@ async function quickToggleSummaryMeal(memberId, dateStr, type, currentVal) {
 
         if (error) throw error;
 
-        // 5. IMPROVED LOGGING LOGIC
-        // Get the target member's name from the global list
+        // 5. LOGGING
         const targetMember = allMembers.find(m => m.id === memberId);
         const targetName = targetMember ? targetMember.name : "Member";
-        
-        // Get Actor's name
         const actorName = currentUser.members ? currentUser.members.name : currentUser.name;
         
-        // Format details
         const actionText = newVal > 0 ? "enabled" : "disabled";
-        const typeLabel = type.charAt(0).toUpperCase() + type.slice(1); // "Day" or "Night"
+        const typeLabel = type.charAt(0).toUpperCase() + type.slice(1); 
         const dateObj = new Date(dateStr);
         const niceDate = dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 
-        // Message: "Day meal for 12 Jan enabled for John by Admin"
         const logMsg = `${typeLabel} meal for ${niceDate} ${actionText} for "${targetName}" by "${actorName}"`;
 
         await logActivity(logMsg, 'meal');
 
+        // --- THE FIX STARTS HERE ---
+
+        // A. Refresh Summary Table (Immediate UI feedback)
         await loadSummary();
+
+        // B. Refresh Dashboard Top Card (So totals are correct instantly)
+        if (typeof updateDashboardMealPlan === 'function') {
+            updateDashboardMealPlan();
+        }
+
+        // C. Refresh Scheduler Card (CRITICAL FIX)
+        // If I changed MY OWN meal, update my scheduler immediately
+        if (memberId === currentUser.member_id) {
+            // 1. Force the page to reload next time we visit
+            pageLoaded.profile = false; 
+            
+            // 2. Clear the container so it doesn't show stale data
+            const container = document.getElementById('schedulerList');
+            if(container) container.innerHTML = '<div class="loading">Syncing changes...</div>';
+            
+            // 3. Actually reload it now in the background
+            await loadScheduler();
+        }
+
         showNotification("Schedule updated successfully", "success");
 
     } catch (err) {
@@ -5883,4 +5954,79 @@ function openChangePasswordModal() {
     document.querySelector('#editMemberModal .modal-title').textContent = "Change My Password";
     
     document.getElementById('editMemberModal').classList.add('active');
+}
+
+
+// ============================================
+// SMART BACK BUTTON LOGIC (Android/PWA)
+// ============================================
+
+function initAndroidBackHandler() {
+    // 1. Push a "Guard" state into history on load
+    // This ensures there is a history item to "pop" when the user presses back
+    window.history.pushState({ app: 'active' }, document.title, window.location.href);
+
+    // 2. Listen for the Back Button
+    window.addEventListener('popstate', (event) => {
+        
+        let handled = false;
+
+        // --- CHECK 1: HIGH PRIORITY OVERLAYS ---
+        
+        // A. Sidebar (Mobile Drawer)
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        if (sidebar && sidebar.classList.contains('mobile-active')) {
+            sidebar.classList.remove('mobile-active');
+            if (overlay) overlay.classList.remove('active');
+            handled = true;
+        }
+
+        // B. Bottom Sheet (Expense Form)
+        const sheet = document.getElementById('sheetModal');
+        const sheetOverlay = document.getElementById('sheetOverlay');
+        if (!handled && sheet && sheet.classList.contains('active')) {
+            closeBottomSheet(); // Uses your existing function
+            handled = true;
+        }
+
+        // C. Notification Panel
+        const notifPanel = document.getElementById('notifPanel');
+        if (!handled && notifPanel && notifPanel.classList.contains('active')) {
+            notifPanel.classList.remove('active');
+            handled = true;
+        }
+
+        // D. Any Standard Modal (Meal Edit, Admin Cycle, Member Edit)
+        const activeModal = document.querySelector('.modal.active');
+        if (!handled && activeModal) {
+            activeModal.classList.remove('active');
+            handled = true;
+        }
+
+        // --- CHECK 2: NAVIGATION ---
+        
+        if (!handled) {
+            const activePage = getActivePage(); // Uses your existing helper
+            
+            // If on any page EXCEPT Dashboard, go back to Dashboard
+            if (activePage && activePage !== 'dashboard') {
+                navigateToPage('dashboard');
+                handled = true;
+            }
+        }
+
+        // --- CONCLUSION ---
+        if (handled) {
+            // If we handled a UI action (closed something or navigated), 
+            // we must PUSH THE STATE AGAIN. 
+            // This re-arms the back button so it catches the next press too.
+            window.history.pushState({ app: 'active' }, document.title, window.location.href);
+        } else {
+            // If we didn't handle anything (User is on Dashboard, no modals open),
+            // we DO NOT push state. We let the browser history recede.
+            // This closes the app / minimizes it.
+            console.log("Exiting App...");
+        }
+    });
 }
