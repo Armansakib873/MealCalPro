@@ -1,5 +1,4 @@
 
-
 @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;700&display=swap');
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+Bengali:wght@400;500;600;700;800&family=Poppins:wght@500;600;700;800&display=swap');
@@ -941,6 +940,25 @@ body {
             -webkit-overflow-scrolling: touch; /* Smooth iOS scroll */
             scrollbar-width: none;
         }
+
+
+        /* Style for the mini-date inside buttons */
+.btn-date-micro {
+    font-size: 9px;
+    margin-left: 5px;
+    padding: 2px 5px;
+    border-radius: 4px;
+    background: rgba(0,0,0,0.05);
+    font-weight: 600;
+    opacity: 0.8;
+}
+
+/* Adjust colors when button is active */
+.night-btn.active .btn-date-micro, 
+.day-btn.active .btn-date-micro {
+    background: rgba(255, 255, 255, 0.4); /* Subtle white tint on active green */
+    color: #000000;
+}
 
 #profilePage .scheduler-scroll {
     display: flex !important;           /* Force cards into a row */
@@ -2261,7 +2279,7 @@ body {
         color: #059669; 
     }
 
-    .btn-label { font-size: 11px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+    .btn-label { font-size: 11px; font-weight: 700; display: flex; flex-direction: column; align-items: center; gap: 6px; }
 
 }
 
