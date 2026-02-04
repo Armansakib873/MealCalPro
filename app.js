@@ -1,8 +1,71 @@
-
     const SUPABASE_URL = 'https://bcardtccxcnktkkeszpp.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJjYXJkdGNjeGNua3Rra2VzenBwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ1NzU1NDIsImV4cCI6MjA4MDE1MTU0Mn0.xGxk81ThPGtyQgRCNoOxpvxsnXBUAzgmclrS0ru7g2Q';
     
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+
+    /**
+ * ROBUST ACTION HANDLER
+ * Wraps any async function to handle loading states, errors, and locking automatically.
+ * 
+ * @param {HTMLElement|String} btnElementOrId - The button element or its ID
+ * @param {Function} asyncActionFn - The async code to run (must return a Promise)
+ * @param {String} loadingText - (Optional) Text to show while loading
+ */
+async function runSafeAction(btnElementOrId, asyncActionFn, loadingText = "Processing...") {
+    // 1. Resolve Button
+    const btn = typeof btnElementOrId === 'string' 
+        ? document.getElementById(btnElementOrId) 
+        : btnElementOrId;
+
+    if (!btn) {
+        console.error("SafeAction: Button not found");
+        return;
+    }
+
+    // 2. Lock UI & Save State
+    const originalContent = btn.innerHTML;
+    const originalWidth = btn.offsetWidth; // Keep width to prevent jumping
+    
+    // Apply styling
+    btn.style.width = `${originalWidth}px`; 
+    btn.classList.add('btn-processing');
+    btn.disabled = true;
+    
+    // Show Spinner
+    btn.innerHTML = `<span class="action-spinner"></span> ${loadingText}`;
+
+    try {
+        // 3. EXECUTE THE ACTUAL CODE
+        await asyncActionFn();
+        
+        // 4. Success State (Optional visual feedback)
+        btn.innerHTML = `✓ Done`;
+        btn.classList.add('action-success');
+        
+        // Short delay to show "Done" before reverting (optional)
+        await new Promise(r => setTimeout(r, 500));
+
+    } catch (err) {
+        // 5. Standardized Error Handling
+        console.error("Action Failed:", err);
+        showNotification(err.message || "Operation failed", "error");
+        
+        // Shake animation for error
+        btn.style.animation = 'shake 0.4s ease';
+        setTimeout(() => btn.style.animation = '', 400);
+
+    } finally {
+        // 6. ALWAYS UNLOCK (The Anti-Freeze Guarantee)
+        // Check if button still exists in DOM (it might have been removed by a re-render)
+        if (document.body.contains(btn)) {
+            btn.innerHTML = originalContent;
+            btn.disabled = false;
+            btn.classList.remove('btn-processing', 'action-success');
+            btn.style.width = ''; // Reset width
+        }
+    }
+}
 
     // ============================================
     // STATE MANAGEMENT
@@ -1746,36 +1809,41 @@ async function loadScheduler() {
     }
 }
 
-
-// Function triggered by clicking scheduler buttons
+// Function triggered by clicking scheduler buttons (Optimistic UI Version)
 async function toggleSchedulerPlan(date, type, btnElement) {
-    // --- SECURITY CHECK (Existing) ---
+    // 1. Security Check
     const userRole = currentUser?.role;
     const isAdmin = (userRole === 'admin' || userRole === 'manager');
 
     if (!isAdmin && isMealLocked(date, type)) {
         btnElement.style.animation = 'shake 0.4s ease';
         setTimeout(() => btnElement.style.animation = '', 400);
-        showNotification(`⛔ This meal is locked until ${convertTo12Hour(appConfig.lock_time_end)}`, "error");
+        showNotification(`⛔ Locked until ${convertTo12Hour(appConfig.lock_time_end)}`, "error");
         return; 
     }
 
-    // --- OPTIMISTIC UI UPDATE ---
+    // 2. Prevent Double Clicks
+    if(btnElement.dataset.locking === "true") return;
+    btnElement.dataset.locking = "true";
+
+    // 3. OPTIMISTIC UPDATE (Instant Visual Change)
     const statusLabel = btnElement.querySelector('.status-text');
     const wasActive = btnElement.classList.contains('active');
     
+    // Toggle visual state immediately
     if (wasActive) {
         btnElement.classList.remove('active');
-        if (statusLabel) statusLabel.textContent = 'OFF';
+        if(statusLabel) statusLabel.textContent = 'OFF';
     } else {
         btnElement.classList.add('active');
-        if (statusLabel) statusLabel.textContent = 'ON';
+        if(statusLabel) statusLabel.textContent = 'ON';
     }
 
-    const newCount = wasActive ? 0 : 1;
-
     try {
-        // --- DATABASE SYNC ---
+        // 4. DATABASE UPDATE
+        const newCount = wasActive ? 0 : 1;
+        
+        // Get existing row ID first to avoid constraint errors if needed, or just upsert by key
         const { data: existing } = await supabase
             .from('meal_plans')
             .select('*')
@@ -1783,61 +1851,61 @@ async function toggleSchedulerPlan(date, type, btnElement) {
             .eq('plan_date', date)
             .maybeSingle();
 
-        let updateData = {
+        const upsertData = {
             member_id: currentUser.member_id,
             plan_date: date,
             day_count: existing ? existing.day_count : 0,
             night_count: existing ? existing.night_count : 0
         };
 
-        if (type === 'day') updateData.day_count = newCount;
-        else updateData.night_count = newCount;
+        if (type === 'day') upsertData.day_count = newCount;
+        else upsertData.night_count = newCount;
 
-        const { error } = await supabase.from('meal_plans').upsert(updateData, { onConflict: 'member_id, plan_date' });
+        const { error } = await supabase.from('meal_plans').upsert(upsertData, { onConflict: 'member_id, plan_date' });
+
         if (error) throw error;
 
-        // --- CONDITIONAL LOGGING LOGIC (New) ---
-        // 1. Calculate Active Session Dates
-        const activeSessionStr = getStrictSessionDate(); // e.g., "2026-02-02"
-        
-        // Calculate the "Next Day" associated with the active session
+        // 5. CONDITIONAL LOGGING (Only log if it's the "Active Session" card)
+        const activeSessionStr = getStrictSessionDate(); 
         const activeDateObj = parseLocalDate(activeSessionStr);
         activeDateObj.setDate(activeDateObj.getDate() + 1);
-        const activeNextDayStr = toLocalISO(activeDateObj); // e.g., "2026-02-03"
+        const activeNextDayStr = toLocalISO(activeDateObj);
 
-        // 2. Check if the clicked button belongs to the Active Session Card
         let isActiveCard = false;
+        if (type === 'night' && date === activeSessionStr) isActiveCard = true;
+        else if (type === 'day' && date === activeNextDayStr) isActiveCard = true;
 
-        if (type === 'night' && date === activeSessionStr) {
-            isActiveCard = true; // It's the Night button of the 1st Card
-        } 
-        else if (type === 'day' && date === activeNextDayStr) {
-            isActiveCard = true; // It's the Day button of the 1st Card
-        }
-
-        // 3. Only Log if it's the Active Card
         if (isActiveCard) {
             const actorName = currentUser.name || "User";
             const actionText = newCount > 0 ? "turned ON" : "turned OFF";
             const typeLabel = type.charAt(0).toUpperCase() + type.slice(1);
-            
-            // Format nice date
             const dateObj = new Date(date);
             const niceDate = dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 
-            const logMsg = `${actorName} ${actionText} their ${niceDate} ${typeLabel} meal`;
-            
-            await logActivity(logMsg, 'meal');
-        } 
-        // Else: Silence (No log for upcoming cards)
+            // Log silently
+            logActivity(`${actorName} ${actionText} their ${niceDate} ${typeLabel} meal`, 'meal');
+        }
+        
+        // Update Dashboard Stats immediately if on Dashboard
+        if(!document.getElementById('dashboardPage').classList.contains('hidden')) {
+             updateDashboardMealPlan();
+        }
 
     } catch (err) {
         console.error("Plan update failed", err);
-        showNotification("Failed to save plan", "error");
+        showNotification("Failed to save plan. Reverting...", "error");
         
-        // Revert UI on error
-        btnElement.classList.toggle('active', wasActive);
-        if (statusLabel) statusLabel.textContent = wasActive ? 'ON' : 'OFF';
+        // 6. ROLLBACK ON ERROR
+        if (wasActive) {
+            btnElement.classList.add('active');
+            if(statusLabel) statusLabel.textContent = 'ON';
+        } else {
+            btnElement.classList.remove('active');
+            if(statusLabel) statusLabel.textContent = 'OFF';
+        }
+    } finally {
+        // Unlock
+        btnElement.dataset.locking = "false";
     }
 }
 
@@ -3520,12 +3588,30 @@ async function quickToggleSummaryMeal(memberId, dateStr, type, currentVal) {
     }
 }
 
-    document.getElementById('exportSummaryBtn').addEventListener('click', () => {
-        const table = document.getElementById('summaryTable');
-        const wb = XLSX.utils.table_to_book(table);
-        XLSX.writeFile(wb, `MealCal_Summary_${new Date().toISOString().split('T')[0]}.xlsx`);
-    });
+    // Replace your Export Button Logic with this:
+document.getElementById('exportSummaryBtn').addEventListener('click', async () => {
+    // Check if library exists, if not, load it dynamically
+    if (typeof XLSX === 'undefined') {
+        const btn = document.getElementById('exportSummaryBtn');
+        const originalText = btn.textContent;
+        btn.textContent = "Loading Library...";
+        
+        await new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+            script.onload = resolve;
+            script.onerror = reject;
+            document.body.appendChild(script);
+        });
+        
+        btn.textContent = originalText;
+    }
 
+    // Now run your existing export logic...
+    const table = document.getElementById('summaryTable');
+    const wb = XLSX.utils.table_to_book(table);
+    XLSX.writeFile(wb, `MealCal_Summary.xlsx`);
+});
 
 
 
@@ -3731,130 +3817,57 @@ document.getElementById('exportFullCycleBtn').addEventListener('click', async ()
 
 document.getElementById('expenseForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    
-    // 1. Grab UI Elements
-    const submitBtn = document.getElementById('expenseSubmitBtn');
-    const expenseId = document.getElementById('editExpenseId').value;
-    
-    // 2. Safe Value Extraction
-    const date = document.getElementById('expenseDate').value;
-    const mid = document.getElementById('expenseMember').value;
-    const desc = document.getElementById('expenseDescription').value;
-    const amtVal = document.getElementById('expenseAmount').value;
-    const amt = parseFloat(amtVal); // Don't round yet if you want decimals, or use Math.round(amtVal)
 
-    // 3. Validations
-    if (!currentCycleId) { 
-        showNotification("System Error: No active cycle found.", "error"); 
-        return; 
-    }
-    if (!mid) { 
-        showNotification("Please select a shopper.", "error"); 
-        return; 
-    }
-    if (isNaN(amt) || amt <= 0) { 
-        showNotification("Please enter a valid amount.", "error"); 
-        return; 
-    }
+    // Pass the ID of the submit button, and the async logic
+    await runSafeAction('expenseSubmitBtn', async () => {
+        
+        // 1. GATHER DATA
+        const expenseId = document.getElementById('editExpenseId').value;
+        const date = document.getElementById('expenseDate').value;
+        const mid = document.getElementById('expenseMember').value;
+        const desc = document.getElementById('expenseDescription').value;
+        const amt = parseFloat(document.getElementById('expenseAmount').value);
 
-    // 4. Lock UI
-    const isEditMode = !!expenseId;
-    const originalText = isEditMode ? "Update ✓" : "ADD +";
-    submitBtn.textContent = "Processing...";
-    submitBtn.disabled = true;
+        // Validations
+        if (!currentCycleId) throw new Error("System Error: No active cycle.");
+        if (!mid) throw new Error("Please select a shopper.");
+        if (isNaN(amt) || amt <= 0) throw new Error("Please enter a valid amount.");
 
-    try {
-        // --- SAFE DATA GATHERING ---
-        // Get Shopper Name safely
+        const isEditMode = !!expenseId;
+        const actorName = currentUser.name || "User";
         const shopperSelect = document.getElementById('expenseMember');
-        let shopperName = "Unknown";
-        if (shopperSelect.selectedIndex >= 0) {
-            shopperName = shopperSelect.options[shopperSelect.selectedIndex].text;
-        }
+        const shopperName = shopperSelect.options[shopperSelect.selectedIndex].text;
 
-        // Get Actor Name safely
-        const actorName = currentUser?.name || "User";
-
-        // ===========================
-        // DATABASE OPERATION
-        // ===========================
+        // 2. DATABASE OPERATION
         if (isEditMode) {
-            // --- EDIT MODE ---
-            // 1. Fetch old data for diff logging (Optional - wrapped to not break flow)
-            let oldAmt = 0;
-            const { data: oldData } = await supabase.from('expenses').select('amount').eq('id', expenseId).maybeSingle();
-            if(oldData) oldAmt = oldData.amount;
-
-            // 2. Update
-            const { error: updateError } = await supabase
-                .from('expenses')
-                .update({ 
-                    expense_date: date, 
-                    member_id: mid, 
-                    description: desc, 
-                    amount: amt,
-                    is_edited: true 
-                })
+            const { error } = await supabase.from('expenses')
+                .update({ expense_date: date, member_id: mid, description: desc, amount: amt, is_edited: true })
                 .eq('id', expenseId);
-
-            if (updateError) throw updateError;
-
-            // 3. Log (Non-blocking)
-            logExpenseActivity(`Expense Edited: ৳${oldAmt} ➔ ৳${amt} (${desc}) by ${actorName}`);
+            if (error) throw error;
+            
+            // Log silently
+            logActivity(`Expense Edited: ৳${amt} (${desc}) by ${actorName}`, 'expense');
             showNotification('Expense updated!', 'success');
-
         } else {
-            // --- ADD MODE ---
             const isAdmin = (currentUser.role === 'admin' || currentUser.role === 'manager');
             const status = isAdmin ? 'approved' : 'pending';
+            
+            const { error } = await supabase.from('expenses')
+                .insert({ cycle_id: parseInt(currentCycleId), expense_date: date, member_id: mid, description: desc, amount: amt, status: status });
+            if (error) throw error;
 
-            const { error: insertError } = await supabase
-                .from('expenses')
-                .insert({ 
-                    cycle_id: parseInt(currentCycleId), 
-                    expense_date: date, 
-                    member_id: parseInt(mid), 
-                    description: desc, 
-                    amount: amt,
-                    status: status
-                });
-
-            if (insertError) throw insertError;
-
-            // 3. Log (Non-blocking)
-            const msg = `New Expense: ৳${amt} for "${desc}" by ${shopperName}`;
-            logExpenseActivity(msg);
-
+            logActivity(`New Expense: ৳${amt} (${desc}) by ${shopperName}`, 'expense');
             showNotification(isAdmin ? 'Expense added!' : 'Request sent for approval', 'success');
         }
 
-        // ===========================
-        // SUCCESS CLEANUP
-        // ===========================
-        resetExpenseForm(); // This resets the button text inside it too
+        // 3. CLEANUP
+        resetExpenseForm();
         
-        // Refresh data in background
+        // Refresh Data (Background)
         loadExpenses(); 
         loadDashboard(); 
-
-    } catch (err) {
-        console.error("Expense Submit Error:", err);
-        showNotification(err.message || "Failed to save expense", 'error');
         
-        // Manual Reset of button on error because resetExpenseForm() wasn't called
-        submitBtn.textContent = originalText;
-        submitBtn.disabled = false;
-        
-    } finally {
-        // Double Ensure Button is unlocked in case resetExpenseForm failed
-        if(submitBtn.disabled) {
-           submitBtn.disabled = false;
-           // If resetExpenseForm ran, text is "ADD +", if not, we revert to original
-           if(document.getElementById('expenseAmount').value !== "") {
-               submitBtn.textContent = originalText; 
-           }
-        }
-    }
+    }, "Saving..."); // Custom loading text
 });
 
 // Helper to log without breaking the main flow
@@ -4524,68 +4537,62 @@ async function processDepositWithClientSideSettlement(memberId, cycleId, amount,
 
 document.getElementById('depositForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const btn = e.target.querySelector('button[type="submit"]');
-    const originalText = btn.textContent;
 
-    const memberId = parseInt(document.getElementById('depositMember').value);
-    const type = document.getElementById('depositType').value;
-    const rawAmount = parseFloat(document.getElementById('depositAmount').value);
-    const roundedAmount = Math.round(rawAmount); 
-    const label = document.getElementById('depositLabel').value;
-    const notes = document.getElementById('depositNotes').value;
-    
-    const finalAmount = type === 'charge' ? -Math.abs(roundedAmount) : Math.abs(roundedAmount);
-    const isAdmin = (currentUser.role === 'admin' || currentUser.role === 'manager');
-    const actor = currentUser.members ? currentUser.members.name : "User";
+    // Find button dynamically since it has no ID, or add ID="btnDepositSubmit" to HTML
+    const submitBtn = e.target.querySelector('button[type="submit"]');
 
-    btn.textContent = "Processing...";
-    btn.disabled = true;
+    await runSafeAction(submitBtn, async () => {
+        const memberId = parseInt(document.getElementById('depositMember').value);
+        const type = document.getElementById('depositType').value;
+        const rawAmount = parseFloat(document.getElementById('depositAmount').value);
+        const roundedAmount = Math.round(rawAmount); 
+        const label = document.getElementById('depositLabel').value;
+        const notes = document.getElementById('depositNotes').value;
 
-    try {
+        if (!memberId) throw new Error("Please select a member");
+        if (!roundedAmount) throw new Error("Please enter a valid amount");
+
+        const finalAmount = type === 'charge' ? -Math.abs(roundedAmount) : Math.abs(roundedAmount);
+        const isAdmin = (currentUser.role === 'admin' || currentUser.role === 'manager');
+        const actor = currentUser.name || "User";
         const targetMember = allMembers.find(m => m.id === memberId);
 
         if (isAdmin) {
-            let result;
+            // ADMIN LOGIC: Direct Approval + Settlement
             try {
-                const { data, error } = await supabase.rpc('process_deposit_with_settlement', {
-                    p_member_id: memberId,
-                    p_cycle_id: parseInt(currentCycleId),
-                    p_amount: finalAmount,
-                    p_label: label,
-                    p_notes: notes
+                 // Try RPC first
+                 const { error } = await supabase.rpc('process_deposit_with_settlement', {
+                    p_member_id: memberId, p_cycle_id: parseInt(currentCycleId),
+                    p_amount: finalAmount, p_label: label, p_notes: notes
                 });
-                if (error) throw error;
-                result = data;
-            } catch (rpcError) {
-                result = await processDepositWithClientSideSettlement(memberId, currentCycleId, finalAmount, label, notes);
+                 if (error) throw error;
+            } catch (e) {
+                 // Fallback to client side function
+                 await processDepositWithClientSideSettlement(memberId, currentCycleId, finalAmount, label, notes);
             }
             
-            await logActivity(`Deposit Approved: ${formatCurrency(finalAmount)} added for ${targetMember?.name} by ${actor}`, 'deposit');
+            await logActivity(`Deposit Approved: ${formatCurrency(finalAmount)} for ${targetMember?.name} by ${actor}`, 'deposit');
             showNotification("Transaction completed", 'success');
         } else {
+            // USER LOGIC: Request
             const { error } = await supabase.from('deposits').insert({
-                cycle_id: parseInt(currentCycleId),
-                member_id: memberId,
-                amount: finalAmount,
-                label: label,
-                notes: notes,
-                status: 'pending'
+                cycle_id: parseInt(currentCycleId), member_id: memberId,
+                amount: finalAmount, label: label, notes: notes, status: 'pending'
             });
             if (error) throw error;
 
-            await logActivity(`Deposit Request: ${targetMember?.name} requested ${formatCurrency(finalAmount)} approval via ${actor}`, 'deposit');
+            await logActivity(`Deposit Request: ${targetMember?.name} requested ${formatCurrency(finalAmount)}`, 'deposit');
             showNotification("Request submitted", 'info');
         }
 
+        // Reset Inputs
         document.getElementById('depositAmount').value = '';
         document.getElementById('depositNotes').value = '';
-        await loadDeposits();
-    } catch (err) {
-        showNotification(err.message, 'error');
-    } finally {
-        btn.textContent = originalText;
-        btn.disabled = false;
-    }
+        
+        // Refresh
+        loadDeposits();
+
+    }, "Processing...");
 });
 
     // ============================================
@@ -6115,5 +6122,23 @@ function initAndroidBackHandler() {
             // We let the browser's "Back" action complete, which closes/minimizes the app.
             console.log("Exiting App...");
         }
+    });
+} 
+
+
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+            .then(reg => {
+                reg.onupdatefound = () => {
+                    const installingWorker = reg.installing;
+                    installingWorker.onstatechange = () => {
+                        if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            // New content is available; tell user to refresh
+                            showNotification("New version available! Please refresh.", "info");
+                        }
+                    };
+                };
+            });
     });
 }
