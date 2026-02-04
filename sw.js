@@ -1,62 +1,65 @@
-const CACHE_NAME = 'mealcal-pro-v1';
+const CACHE_NAME = 'mealcal-v4'; // Increment this whenever you change CSS/JS
 
-// Assets to cache immediately so the app opens even if offline
-// Note: We cache the CDN links because your HTML relies on them
 const ASSETS = [
     './',
     './index.html',
+    './style.css',
+    './app.js',
     './192.png',
     './512.png',
     './Mealcal_logo.png',
-    './video3.mp4', 
-    'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js',
-    'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
-    'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js'
+    './manifest.json',
+    'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'
 ];
 
-// Install Event
+// Install: Cache App Shell
 self.addEventListener('install', (evt) => {
-      self.skipWaiting(); 
     evt.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
-            console.log(' caching shell assets');
             return cache.addAll(ASSETS);
+        })
+    );
+    self.skipWaiting();
+});
+
+// Activate: Cleanup old caches
+self.addEventListener('activate', (evt) => {
+    evt.waitUntil(
+        caches.keys().then((keys) => {
+            return Promise.all(
+                keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
+            );
         })
     );
 });
 
-// Activate Event (Cleanup old caches)
-self.addEventListener('activate', (evt) => {
-    evt.waitUntil(
-        Promise.all([
-            // Claim clients immediately so the first load is controlled
-            self.clients.claim(),
-            caches.keys().then((keys) => {
-                return Promise.all(keys
-                    .filter(key => key !== CACHE_NAME)
-                    .map(key => caches.delete(key))
-                );
-            })
-        ])
-    );
-});
-// Fetch Event
+// Fetch Strategy: Stale-While-Revalidate
 self.addEventListener('fetch', (evt) => {
-    // 1. Handle API/Supabase calls (Network Only)
-    // We don't want to cache database data, or the money/meal stats will be wrong
-    if (evt.request.url.includes('supabase.co')) {
-        return; 
-    }
+    // 1. Ignore Supabase/API calls and non-GET requests
+    if (evt.request.url.includes('supabase.co') || evt.request.method !== 'GET') return;
 
-    // 2. Handle Static Assets (Cache First, fall back to Network)
     evt.respondWith(
-        caches.match(evt.request).then((cacheRes) => {
-            return cacheRes || fetch(evt.request).catch(() => {
-                // Optional: Return a specific offline page if needed
-                // For now, we rely on the cached index.html
-                if (evt.request.url.indexOf('.html') > -1) {
-                    return caches.match('./index.html');
-                }
+        caches.open(CACHE_NAME).then((cache) => {
+            return cache.match(evt.request).then((cacheRes) => {
+                
+                // Trigger network fetch regardless of whether cache exists
+                const fetchPromise = fetch(evt.request).then((networkRes) => {
+                    // Check if we received a valid response before caching
+                    if (networkRes && networkRes.status === 200) {
+                        cache.put(evt.request, networkRes.clone());
+                    }
+                    return networkRes;
+                }).catch(() => {
+                    // If network fails and it's a navigation request, show offline page
+                    if (evt.request.mode === 'navigate') {
+                        return cache.match('./index.html');
+                    }
+                });
+
+                // Return the cached version immediately (stale), 
+                // but let the fetchPromise finish in the background (revalidate).
+                // If there is NO cache, wait for the network.
+                return cacheRes || fetchPromise;
             });
         })
     );
