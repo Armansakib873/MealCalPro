@@ -1317,6 +1317,125 @@ window.handleDepositAction = async function (depositId, action) {
   }
 };
 
+window.revertApprovedDeposit = async function (depositId) {
+  if (currentUser?.role !== "admin" && currentUser?.role !== "manager") {
+    showNotification("Permission Denied", "error");
+    return;
+  }
+
+  if (!confirm("⚠️ Are you sure you want to REVERT this deposit?\n\nThis will permanently delete the deposit and automatically un-settle any auto-settlements it originally created. This action cannot be undone.")) {
+    return;
+  }
+
+  const btn = event.target;
+  const originalText = btn.innerHTML;
+  btn.innerHTML = "Reverting...";
+  btn.disabled = true;
+
+  try {
+    // 1. Fetch original deposit
+    const { data: origDep, error: depError } = await supabase
+      .from("deposits")
+      .select("*, members(name)")
+      .eq("id", depositId)
+      .single();
+
+    if (depError || !origDep) throw new Error("Could not find the original deposit.");
+
+    // 2. Define Time Range for Auto-Settlements (± 2 seconds)
+    const timeTarget = new Date(origDep.created_at);
+    const timeTMinus = new Date(timeTarget.getTime() - 2000).toISOString();
+    const timeTPlus = new Date(timeTarget.getTime() + 2000).toISOString();
+
+    // 3. Find any Auto-Settlements that occurred in that EXACT 2 second burst
+    const { data: groupDeposits, error: grpError } = await supabase
+      .from("deposits")
+      .select("*")
+      .eq("cycle_id", origDep.cycle_id)
+      .eq("label", "Auto-Settlement")
+      .gte("created_at", timeTMinus)
+      .lte("created_at", timeTPlus);
+
+    if (grpError) throw grpError;
+
+    // 4. Reverse the specific cycle_dues updates accurately
+    for (const sib of groupDeposits) {
+      if (sib.amount > 0) {
+        // Creditor
+        const { data: creditorDue } = await supabase
+            .from("cycle_dues")
+            .select("*")
+            .eq("to_cycle_id", origDep.cycle_id)
+            .eq("member_id", sib.member_id)
+            .gt("due_amount", 0)
+            .maybeSingle();
+            
+        if (creditorDue) {
+            const newSettledAmount = creditorDue.settled_amount - sib.amount;
+            await supabase.from("cycle_dues").update({
+                settled_amount: newSettledAmount,
+                status: newSettledAmount >= creditorDue.due_amount ? "settled" : (newSettledAmount > 0 ? "settling" : "pending"),
+                settled_at: newSettledAmount >= creditorDue.due_amount ? creditorDue.settled_at : null
+            }).eq("id", creditorDue.id);
+        }
+      } else if (sib.amount < 0) {
+        // Debtor
+        const { data: debtorDue } = await supabase
+            .from("cycle_dues")
+            .select("*")
+            .eq("to_cycle_id", origDep.cycle_id)
+            .eq("member_id", sib.member_id)
+            .lt("due_amount", 0)
+            .maybeSingle();
+
+        if (debtorDue) {
+            // debtorDue returns settled_amount as negative (e.g. -500), sib.amount is -500
+            const newSettledAmount = debtorDue.settled_amount - sib.amount; // -500 - (-500) = 0
+            const isFullySettled = newSettledAmount <= debtorDue.due_amount; 
+            await supabase.from("cycle_dues").update({
+                settled_amount: newSettledAmount,
+                status: isFullySettled ? "settled" : (newSettledAmount < 0 ? "settling" : "pending"),
+                settled_at: isFullySettled ? debtorDue.settled_at : null
+            }).eq("id", debtorDue.id);
+        }
+      }
+    }
+
+    // 5. Delete all linked Auto-Settlement deposits, and the original deposit
+    const idsToDelete = groupDeposits.map(d => d.id);
+    idsToDelete.push(origDep.id);
+
+    const { error: delError } = await supabase
+      .from("deposits")
+      .delete()
+      .in("id", idsToDelete);
+
+    if (delError) throw delError;
+
+    // 6. Log Reversal
+    const actorName = currentUser.name || "Admin";
+    const memName = origDep.members?.name || "Member";
+    await logActivity(
+      `Reversal: ${actorName} reversed an approved deposit of ৳${origDep.amount} originally made to ${memName}.`,
+      "deposit"
+    );
+
+    showNotification("Deposit Fully Reverted!", "success");
+
+    // 7. Refresh Data Layer
+    await loadDeposits();
+    if (typeof loadDashboard === "function") loadDashboard();
+
+  } catch (err) {
+    console.error("Revert Error:", err.message);
+    showNotification("Cannot revert: " + err.message, "error");
+    if (document.body.contains(btn)) {
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+    }
+  }
+};
+
 async function checkSessionAutoSwitch() {
   // 1. Get what the date SHOULD be right now
   const currentCalculatedSession = getStrictSessionDate();
@@ -4338,6 +4457,15 @@ async function loadDeposits() {
                 ${
                   isSettlement && t.notes
                     ? `<div class="transfer-info">📌 ${t.notes}</div>`
+                    : ""
+                }
+                ${
+                  (currentUser?.role === "admin" || currentUser?.role === "manager") && t.status === "approved" && !isSettlement
+                    ? `<div style="margin-top: 8px;">
+                          <button class="btn btn-sm" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); padding: 4px 8px; font-size: 12px; border-radius: 4px;" onclick="revertApprovedDeposit(${t.id})">
+                             ↩ Revert Transaction
+                          </button>
+                       </div>`
                     : ""
                 }
             </div>
