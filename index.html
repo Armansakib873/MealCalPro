@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Basic Meta -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MealCal Pro</title>
+
+    <!-- Theme & Mobile App Capability -->
+    <meta name="theme-color" content="#059669">
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <!-- Apple iOS PWA Support (Legacy but Important) -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="Mealcal_logo.png">
+
+    <link rel="preload" href="style.css" as="style">
+    <link rel="preload" href="app.js" as="script">
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+
+    <!-- Google Fonts (Performance Optimized) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;700&family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Stylesheet -->
+     <style>
+  /* Critical CSS for the Splash Screen - makes FCP instant */
+  .splash-screen {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: #f8fafc; display: flex; justify-content: center;
+    align-items: center; z-index: 9999;
+  }
+  .splash-logo-animated {
+    width: 120px; height: auto;
+    animation: premium-breathe 3s ease-in-out infinite;
+  }
+  @keyframes premium-breathe {
+    0%, 100% { transform: scale(1); filter: drop-shadow(0 10px 10px rgba(5,150,105,0.1)); }
+    50% { transform: scale(1.08); filter: drop-shadow(0 20px 30px rgba(5,150,105,0.4)); }
+  }
+</style>
+    <link rel="stylesheet" href="style.css">
+
+
+          <script>
+        window.supabaseLoadError = false;
+        function handleSupabaseLoadError() {
+            console.error('Failed to load Supabase script');
+            const notification = document.getElementById('login-notification');
+            if (notification) {
+                notification.innerHTML = '<p class="error">Failed to load Supabase. Please check your internet connection and try again later.</p>';
+            }
+            const loader = document.getElementById('loader');
+            if (loader) loader.classList.add('hidden');
+        }
+        </script>
+      
+        <script>
+        if (window.supabaseLoadError) {
+            document.write('<script src="lib/supabase.min.js"><\/script>');
+            console.warn('Loaded local Supabase script as fallback');
+        }
+        </script>
+</head>
+
+<body>
+
+  <!-- The Splash Screen Loader with Video -->
+<!-- The Splash Screen Loader (Optimized) -->
+<div id="initial-loader" class="splash-screen">
+    <div class="splash-content">
+        
+        <!-- NEW: Lightweight Animated Logo -->
+        <!-- width/height attributes are crucial for Lighthouse score -->
+        <img src="Mealcal_logo.png" 
+             alt="MealCal Logo" 
+             class="splash-logo-animated" 
+             width="120" 
+             height="120">
+        
+        <p class="splash-text">Preparing your kitchen...</p>
+        
+        <!-- Keeping your existing clean progress bar -->
+        <div class="loader-progress-container">
+            <div class="loader-progress-bar" id="load-progress"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Enhanced Auth Page -->
+<div id="authPage" class="auth-page-wrapper hidden">    
+    <!-- Animated Background Glows -->
+    <div class="auth-bg-glow glow-1"></div>
+    <div class="auth-bg-glow glow-2"></div>
+
+    <div class="auth-container-premium">
+        <!-- Logo & Branding Section -->
+        <div class="auth-brand">
+            <img src="Mealcal_logo.png" alt="Logo" class="auth-logo-img">
+            <h1 class="auth-app-name">MealCal <span>Pro</span></h1>
+            <p class="auth-subtitle" id="authSubtitle">Your kitchen, professionally managed.</p>
+        </div>
+
+        <!-- The Glass Card -->
+        <div class="auth-card-premium">
+            <div id="authError" class="auth-error-message"></div>
+
+            <form id="authForm">
+                <!-- Username Field (Signup Only) -->
+                <div class="auth-input-group hidden" id="usernameField">
+                    <label class="auth-label">Full Name</label>
+                    <div class="auth-input-wrapper">
+                        <span class="auth-input-icon">👤</span>
+                        <input type="text" id="authUsername" placeholder="e.g. Ayan Rahman">
+                    </div>
+                </div>
+
+                <!-- Email/User Field -->
+                <div class="auth-input-group">
+                    <label class="auth-label" id="emailLabel">Email or Username</label>
+                    <div class="auth-input-combined">
+                        <div class="auth-input-wrapper flex-main">
+                            <span class="auth-input-icon">📧</span>
+                            <input type="text" id="authEmail" placeholder="Enter credentials" required>
+                        </div>
+                        <select id="authUserDropdown" class="auth-select-mini">
+                            <option value="">Select ▼</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Password Field -->
+                <div class="auth-input-group">
+                    <label class="auth-label">Security Password</label>
+                    <div class="auth-input-wrapper">
+                        <span class="auth-input-icon">🔒</span>
+                        <input type="password" id="authPassword" placeholder="••••••••" required>
+                    </div>
+                </div>
+
+                <button type="submit" class="auth-submit-btn" id="authBtn">
+                    <span>Login to Kitchen</span>
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </button>
+            </form>
+
+            <div class="auth-footer">
+                <span id="authToggleText">New to the mess?</span>
+                <button id="authToggleBtn">Create Account</button>
+            </div>
+        </div>
+        
+        <p class="auth-legal">© 2026 MealCal Pro. Secure Cloud Sync.</p>
+    </div>
+</div>
+    <!-- Main App -->
+    <div id="mainApp" class="app-container hidden">
+
+           <!-- FIXED HEADER -->
+<header class="app-header">
+    <div class="header-left">
+        <!-- New logo image before the name -->
+      <img src="Mealcal_logo.png" class="header-logo-icon" width="35" height="35">
+        <div class="app-logo">MealCal Pro</div>
+        <div class="cycle-badge" id="headerCycleName">Loading...</div>
+          
+        </div>
+
+   <div class="header-clock">
+            <div class="clock-time" id="clockTime">00:00:00</div>
+            <div class="clock-date" id="clockDate">Mon, 01 Jan</div>
+            <!-- NEW INDICATOR -->
+            <div id="entryStatusBadge" class="entry-status-badge status-pending">Loading...</div>
+        </div>
+
+        
+
+        <div class="header-right">
+            <div class="user-info">
+                <div class="user-name" id="headerUserName">User</div>
+                <div class="user-role" id="headerUserRole">Role</div>
+            </div>
+            <button class="notif-btn" id="notifBellBtn">
+                🔔
+                <span class="notif-badge hidden" id="notifBadge">0</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- NOTIFICATION PANEL -->
+    <div class="notif-panel" id="notifPanel">
+        <div class="notif-header">
+            <h3>Notifications</h3>
+            <button class="close-modal" id="closeNotifPanel">×</button>
+        </div>
+        <div class="notif-filters">
+            <button class="filter-chip active" data-filter="all">All</button>
+            <button class="filter-chip" data-filter="deposit">Deposits 💰</button>
+            <button class="filter-chip" data-filter="expense">Expenses 🛒</button>
+            <button class="filter-chip" data-filter="meal">Meals 🍽️</button>
+            <button class="filter-chip" data-filter="other">System ⚙️</button>
+        </div>
+        <div class="notif-list" id="notifListContainer">
+            <div class="loading">Loading...</div>
+        </div>
+    </div>
+
+
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+
+            <div class="cycle-selector">
+                <select id="cycleSelect" class="form-select">
+                    <option value="">Loading cycles...</option>
+                </select>
+            </div>
+
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a class="nav-link active" data-page="dashboard">
+                        <span class="nav-icon">📊</span>
+                        Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-page="profile">
+                        <span class="nav-icon">👤</span>
+                        Profile
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-page="tracker">
+                        <span class="nav-icon">📅</span>
+                        Meal Tracker
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-page="summary">
+                        <span class="nav-icon">📈</span>
+                        Summary
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-page="expenses">
+                        <span class="nav-icon">🛒</span>
+                        Expenses
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-page="deposits">
+                        <span class="nav-icon">💰</span>
+                        Deposits
+                    </a>
+                </li>
+                <li class="nav-item" id="adminMenuItem" style="display: none;">
+                    <a class="nav-link" data-page="admin">
+                        <span class="nav-icon">⚙️</span>
+                        Admin Panel
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="logoutBtn">
+                        <span class="nav-icon">🚪</span>
+                        Logout
+                    </a>
+                </li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content" id="mainContent">
+
+
+            <!-- Dashboard Page -->
+<div id="dashboardPage" class="page-content">
+    <!-- Welcome Header -->
+    <div style="display: none;" class="dash-welcome-row">
+        <p>Dashboard Overview</p>
+        <h2 id="welcomeName">Hello!</h2>
+    </div>
+
+ <!-- Modern Meal Plan Card -->
+<div class="meal-pulse-card">
+    <div class="pulse-header-modern">
+        <span class="pulse-header-title">📅 আজকের মিল শিডিউল</span>
+        <span class="pulse-badge">LIVE</span>
+    </div>
+    
+    <div class="pulse-grid-modern">
+        <!-- Night Slot (Today) -->
+        <div class="plan-slot slot-night">
+            <div class="slot-date" id="planNightDate">-- জানুয়ারি --</div>
+            <div class="slot-label">রাত</div>
+            <div class="slot-count" id="planNightTotal">০</div>
+            <div class="slot-menu" id="planNightMenu">менু নেই</div>
+        </div>
+
+        <!-- Day Slot (Tomorrow) -->
+        <div class="plan-slot slot-day">
+            <div class="slot-date" id="planDayDate">-- জানুয়ারি --</div>
+            <div class="slot-label">সেহরি</div>
+            <div class="slot-count" id="planDayTotal">০</div>
+            <div class="slot-menu" id="planDayMenu">মেনু নেই</div>
+        </div>
+    </div>
+</div>
+
+    <!-- 2. Stats Grid (2x2) -->
+    <div class="dash-stats-grid">
+
+
+<!-- Modern Vertical Meter Card -->
+<div class="liquid-card-container state-healthy-liquid" id="messBalanceContainer">
+    <div class="liquid-card-bg"></div>
+    
+    <!-- Vertical Meter -->
+    <div class="liquid-box">
+        <div class="liquid-fill-body" id="liquidFillBar" style="--fill-percent: 50%;">
+            <div class="bubble"></div>
+            <div class="bubble"></div>
+            <div class="bubble"></div>
+            <div class="bubble"></div>
+        </div>
+    </div>
+    
+    <!-- Scale Marks -->
+    <div class="meter-marks">
+        <div class="meter-mark">
+            <div class="meter-mark-line"></div>
+            <div class="meter-mark-label">10k</div>
+        </div>
+        <div class="meter-mark">
+            <div class="meter-mark-line"></div>
+            <div class="meter-mark-label">7.5k</div>
+        </div>
+        <div class="meter-mark">
+            <div class="meter-mark-line"></div>
+            <div class="meter-mark-label">5k</div>
+        </div>
+        <div class="meter-mark">
+            <div class="meter-mark-line"></div>
+            <div class="meter-mark-label">2.5k</div>
+        </div>
+        <div class="meter-mark">
+            <div class="meter-mark-line"></div>
+            <div class="meter-mark-label">0</div>
+        </div>
+    </div>
+
+    <!-- Content -->
+    <div class="liquid-content">
+        <div class="liquid-header">
+            <div class="liquid-title">Mess Liquidity</div>
+            <div class="liquid-capacity-pill">CAP: 10k</div>
+        </div>
+
+        <div class="liquid-value-wrapper">
+            <span class="liquid-currency">৳</span>
+            <span class="liquid-amount" id="statMessBalance">0</span>
+        </div>
+
+        <div class="liquid-meta">
+            <div id="balanceStatusPill" class="liquid-status-badge">
+                Calculating...
+            </div>
+            <div class="liquid-percentage" id="liquidPercent">
+                0%
+            </div>
+        </div>
+    </div>
+</div>
+
+        <div class="stat-pill-card">
+            <div class="label">Meal Rate</div>
+            <div class="val" id="statMealRate">৳0.00</div>
+        </div>
+
+        <!-- 2. NEW CARD: Total Meals -->
+<div class="stat-pill-card">
+    <div class="label">Total Meals</div>
+    <div class="val" id="statTotalMealsDisplay">0</div>
+</div>
+
+
+<!-- 1. DEPOSITS CARD -->
+<div class="stat-pill-card" id="cardDeposit"  onclick="navigateToPending('deposits', event)">
+    <!-- Updated Badge with OnClick -->
+    <div id="badgeDeposit" class="premium-count-badge hidden">0</div>
+    
+    <div class="label">Deposits</div>
+    <div class="val" id="statTotalDeposit" style="color: #059669;">৳0</div>
+</div>
+
+<!-- 2. EXPENSES CARD -->
+<div class="stat-pill-card" id="cardExpense"  onclick="navigateToPending('expenses', event)">
+    <!-- Updated Badge with OnClick -->
+    <div id="badgeExpense" class="premium-count-badge hidden">0</div>
+    
+    <div class="label">Expenses</div>
+    <div class="val" id="statTotalExpense" style="color: #e11d48;">৳0</div>
+</div>
+
+
+    </div>
+
+    <!-- 4. Recent Activity Feed -->
+    <div class="activity-feed-premium">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h3 style="font-size: 13px; font-weight: 800; color: #1e293b; margin: 0;">Recent Activity</h3>
+            <button class="btn btn-sm" onclick="loadRecentActivity()" style="font-size: 9px; background: #f1f5f9; padding: 4px 10px;">Refresh</button>
+        </div>
+        <div id="recentActivity">
+            <div class="loading">Fetching feed...</div>
+        </div>
+    </div>
+</div>
+
+            <!-- Profile Page -->
+<!-- Profile Page -->
+<div id="profilePage" class="page-content hidden">
+    <!-- Premium Banner -->
+    <div class="profile-header-banner">
+        <!-- Text container moved here for asymmetrical look, IDs preserved -->
+        <div style="display: flex;" class="profile-text-container">
+            <h2 class="profile-main-name" id="profileName">Loading...</h2>
+            <div class="profile-main-meta" id="profileRoleDisplay">Member</div>
+
+                <!-- Quick Stats Overview -->
+    <div class="profile-stats-mini">
+        <div class="profile-stat-item">
+            <div class="stat-mini-label">Total Meals</div>
+            <div class="stat-mini-value" id="profileTotalMeals">0</div>
+        </div>
+        <div class="profile-stat-item">
+            <div class="stat-mini-label">Total Paid</div>
+            <div class="stat-mini-value" id="profileTotalDeposit" style="color: var(--success-color);">৳0</div>
+        </div>
+    </div>
+
+
+        </div>
+    </div>
+    
+    <div class="profile-info-section">
+        <div class="profile-avatar-circle" id="profileAvatar">
+            U
+            <div class="profile-status-online"></div>
+        </div>
+    </div>
+
+
+
+    <!-- Balance Focus Card (Fintech Style) -->
+<div class="card balance-card-modern" id="profileBalanceCard">
+    <!-- Left Side -->
+    <div class="balance-card-left">
+        <div class="stat-label">Wallet Balance</div>
+        <div class="stat-value" id="profileBalance">৳0</div>
+    </div>
+
+    <!-- Right Side -->
+    <div class="balance-card-right">
+        <button class="btn btn-sm btn-primary" onclick="navigateToPage('deposits')">Add Cash</button>
+        <div class="cycle-info-text">Cycle: <span id="profileCycleName">...</span></div>
+    </div>
+</div>
+
+    <!-- Attendance Section -->
+    <div class="card premium-card-shadow">
+        <div class="card-header">
+            <h3 class="card-title">🗓️ Meal Attendance</h3>
+            <div id="lockTimeDisplay" class="lock-badge">
+                Restricted: 05:00 PM - 07:00 PM
+            </div>
+        </div>
+
+        <!-- System Health Card (Injected by loadSystemStatus) -->
+        <div class="system-status-pulse">
+            <div id="systemStatusContent">
+                <div class="status-row">
+                    <div class="status-indicator" style="background: #fbbf24;"></div>
+                    <div style="font-size: 12px; font-weight: 700; color: #92400e;">Checking system logs...</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="defaults-container">
+            <div class="defaults-label">
+                <span style="font-size: 0.8rem; font-weight: 700;">Default Meal</span>
+            </div>
+            <div class="defaults-toggles">
+                <button id="defDayBtn" class="def-btn" onclick="toggleDefaultPreference('day')">Day</button>
+                <button id="defNightBtn" class="def-btn" onclick="toggleDefaultPreference('night')">Night</button>
+            </div>
+        </div>
+
+        <div class="scheduler-container">
+            <div class="scheduler-scroll" id="schedulerList">
+                <div class="loading">Generating timeline...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Financial History -->
+    <div class="card premium-card-shadow">
+        <div class="card-header">
+            <h3 class="card-title">💳 Recent Transactions</h3>
+            <span class="view-ledger-link" onclick="navigateToPage('deposits')">View Ledger</span>
+        </div>
+        <div id="profileDepositHistory">
+            <div class="loading">Syncing history...</div>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Tracker Page -->
+<div id="trackerPage" class="page-content hidden">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding: 0 5px;">
+        <h2 style="font-size: 20px; font-weight: 800;">Meal Tracker</h2>
+        <button class="btn btn-sm btn-secondary" onclick="loadMasterTracker()" style="font-size: 10px; border-radius: 20px;">🔄 Sync</button>
+    </div>
+
+
+    <!-- Main Matrix -->
+    <div class="matrix-premium-wrapper">
+        <div class="matrix-wrapper" style="border:none; border-radius:0;"> <!-- Reuse existing scroll logic -->
+            <table class="matrix-table-premium" id="masterMatrixTable">
+                <thead><!-- Injected by JS --></thead>
+                <tbody><!-- Injected by JS --></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Weekly Menu Section -->
+    <div class="menu-editor-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h3 style="font-size: 13px; font-weight: 800; color: #1e293b; margin: 0;">Standard Weekly Menu</h3>
+            <span style="font-size: 9px; color: var(--text-muted); font-weight: 700;">ADMIN ONLY EDIT</span>
+        </div>
+        
+        <table class="menu-table-compact">
+            <tbody id="weeklyMenuBody">
+                <!-- Injected by JS -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+   <!-- Summary Page -->
+<div id="summaryPage" class="page-content hidden">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding: 0 5px;">
+        <h2 style="font-size: 20px; font-weight: 800;">Summary</h2>
+        <div style="display: flex; gap: 10px;">
+        <!-- New Full Export Button -->
+        <button class="btn btn-sm" id="exportFullCycleBtn" style="background-color: #e9e9e9; color: #000000; border-radius: 20px; font-size: 10px;">
+            📥 Full Data Export
+        </button>
+        <!-- Existing Simple Export Button -->
+        <button class="btn btn-sm btn-secondary" id="exportSummaryBtn" style="font-size: 10px; border-radius: 20px;">
+            Table Only
+        </button>
+        </div>
+    </div>
+
+    <!-- Cycle Stats Overview -->
+    <div class="summary-stats-header">
+        <div class="summary-card-mini">
+            <div class="label">Meal Rate</div>
+            <div class="val" id="summaryMealRate">৳0.00</div>
+        </div>
+        <div class="summary-card-mini">
+            <div class="label">Total Cost</div>
+            <div class="val" id="summaryTotalCost">৳0</div>
+        </div>
+        <div class="summary-card-mini">
+            <div class="label">Meals</div>
+            <div class="val" id="summaryTotalMeals">0</div>
+        </div>
+    </div>
+
+    <!-- Main Member Table -->
+    <div class="summary-table-wrapper">
+        <table class="summary-table-premium" id="summaryTable">
+            <thead>
+                <tr>
+                    <th>Member</th>
+                    <th>🌙 Night</th>
+                    <th>🌞 Day</th>
+                    <th>Bazar</th>
+                    <th>Meals</th>
+                    <th>Balance</th>
+                </tr>
+            </thead>
+            <tbody id="summaryTableBody">
+                <tr><td colspan="6" class="loading">Generating report...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Due Settlement Tracker (Updated Section) -->
+    <div id="dueSettlementCard" style="display: none;">
+        <h3 style="font-size: 13px; font-weight: 800; margin: 25px 0 12px 5px; color: #64748b;">DUE SETTLEMENTS</h3>
+        
+        <div class="due-grid-mobile">
+            <!-- Debtors Box -->
+            <div class="due-section-box" style="border: 1px solid #932437;">
+                <div style="font-size: 10px; font-weight: 800; color: #f43f5e; margin-bottom: 10px; text-transform: uppercase;">📉 Outstanding Debts</div>
+                <div id="debtorsList"></div>
+            </div>
+
+            <!-- Creditors Box -->
+            <div class="due-section-box" style="border: 1px solid #0f5f2d;">
+                <div style="font-size: 10px; font-weight: 800; color: #10b981; margin-bottom: 10px; text-transform: uppercase;">📈 Awaiting Settlement</div>
+                <div id="creditorsList"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 5. EXPENSES PAGE -->
+<div id="expensesPage" class="page-content hidden">
+    <div class="card" id="addExpenseCard">
+        <!-- Header changes dynamically via JS -->
+        <h3 class="card-title" id="expenseFormTitle">Add Expense</h3>
+        
+        <form id="expenseForm">
+            <!-- Hidden ID to track editing -->
+            <input type="hidden" id="editExpenseId" value="">
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                <div>
+                    <label class="form-label">Date</label>
+                    <input type="date" id="expenseDate" class="exp-field" required>
+                </div>
+                <div>
+                    <label class="form-label">Shopper</label>
+                    <select id="expenseMember" class="exp-field" required><option value="">Select...</option></select>
+                </div>
+            </div>
+       <div class="form-group">
+    <label class="form-label">Items</label>
+    <input type="text" id="expenseDescription" class="exp-field" placeholder="e.g. Chicken, Oil (Optional)">
+</div>
+            <div style="display: flex; gap: 10px; align-items: flex-end;">
+                <div style="flex: 1;">
+                    <label class="form-label">Amount (৳)</label>
+                    <input type="number" id="expenseAmount" class="exp-field" required>
+                </div>
+                
+                <!-- Buttons Container -->
+                <div style="display: flex; gap: 8px;">
+                    <button type="button" id="expenseCancelBtn" class="btn btn-secondary hidden" onclick="resetExpenseForm()">Cancel</button>
+                    <button type="submit" id="expenseSubmitBtn" class="btn btn-primary">ADD +</button>
+                </div>
+            </div>
+        </form>
+    </div>
+    
+  <!-- 1. Pending Approvals Container -->
+<div id="pendingExpensesCard" class="pending-box-premium" style="display: none; background: #fff7ed; border-color: #fdba74;">
+    <h3 style="font-size: 11px; font-weight: 800; color: #9a3412; margin-bottom: 10px; text-transform: uppercase;">⏳ Pending Bazar Requests</h3>
+    <div id="pendingExpensesList"></div>
+</div>
+
+<!-- 2. History List -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin: 20px 0 10px 0;">
+    <h3 style="font-size: 13px; font-weight: 800; color: var(--text-secondary);">HISTORY</h3>
+    <span style="font-size: 10px; color: var(--text-muted); font-weight: 700;">APPROVED ONLY</span>
+</div>
+<div id="expenseList"><div class="loading">Loading...</div></div>
+
+</div> <!-- <<< THIS CLOSING DIV WAS LIKELY MISSING -->
+
+
+<!-- Deposits Page (Should be separate, NOT inside expensesPage) -->
+<div id="depositsPage" class="page-content hidden">
+    <div style="display: none; justify-content: space-between; align-items: center; margin-bottom: 15px; padding: 0 5px;">
+        <h2 style="font-size: 20px; font-weight: 800;">Wallet</h2>
+        <div style="font-size: 10px; color: var(--text-muted); font-weight: 700;">FINANCE CENTER</div>
+    </div>
+
+    <!-- 1. Pending Approvals -->
+    <div id="pendingDepositsCard" class="pending-box-premium" style="display: none;">
+        <h3 style="font-size: 11px; font-weight: 800; color: #b91c1c; margin-bottom: 10px; text-transform: uppercase;">⏳ Pending Requests</h3>
+        <div id="pendingDepositList"></div>
+    </div>
+
+    <!-- 2. Transaction Form -->
+    <div class="wallet-form-container">
+        <form id="depositForm" class="wallet-grid">
+            <div class="exp-input-group">
+                <label>Member</label>
+                <select id="depositMember" class="exp-field" onchange="loadSelectedMemberHistory(this.value)" required>
+                    <option value="">Select...</option>
+                </select>
+            </div>
+            <div class="exp-input-group">
+                <label>Type</label>
+                <select id="depositType" class="exp-field" onchange="autoUpdateDepositLabel()">
+                    <option value="deposit">💰 Add Cash</option>
+                    <option value="charge">🔻 Deduction</option>
+                </select>
+            </div>
+            <div class="exp-input-group">
+                <label>Amount (৳)</label>
+                <input type="number" style="border: 2px solid rgb(176, 0, 0);" id="depositAmount" class="exp-field" placeholder="0" required oninput="this.value = Math.round(this.value)">
+            </div>
+            <div class="exp-input-group">
+                <label>Label</label>
+                <input type="text" id="depositLabel" class="exp-field" value="Deposit">
+            </div>
+            <div class="notes-btn-row">
+                <div style="flex: 1;">
+                    <label style="font-size: 10px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Notes</label>
+                    <input type="text" id="depositNotes" class="exp-field" placeholder="Optional notes..." style="height: 38px;">
+                </div>
+                <button type="submit" class="btn-wallet-submit">SUBMIT</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- 3. SELECTED MEMBER HISTORY (The Part I skipped) -->
+    <div class="card Individual" style="margin-top: 20px; padding: 15px; border: 1px solid var(--premium-indigo); background: #e2b7b7b5;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h3 style="font-size: 13px; font-weight: 800; color: rgb(33, 33, 33);">Individual Ledger</h3>
+            <span id="historyMemberName" style="font-size: 11px; font-weight: 700; color: var(--premium-indigo); background: #000000b5; padding: 2px 8px; border-radius: 10px;">No member selected</span>
+        </div>
+        <div id="selectedMemberHistoryList" style="max-height: 250px; overflow-y: auto;">
+            <div class="loading" style="font-size: 11px;">Select a member to view their specific log.</div>
+        </div>
+    </div>
+
+    <!-- 4. Global Feed -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin: 25px 0 12px 5px;">
+        <h3 style="font-size: 13px; font-weight: 800; color: #64748b;">GLOBAL LOG</h3>
+        <select id="depositLogFilter" class="exp-field" style="width: auto; height: 28px; font-size: 10px; padding: 0 8px;" onchange="loadDeposits()">
+            <option value="">All Members</option>
+        </select>
+    </div>
+
+    <div id="depositList">
+        <div class="loading">Syncing global ledger...</div>
+    </div>
+</div>
+
+            <!-- Admin Page -->
+            <div id="adminPage" class="page-content hidden">
+                <h2 style="margin-bottom: 20px;">Admin Panel</h2>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Cycle Management</h3>
+                    </div>
+
+
+                    <form id="createCycleForm">
+                        <div class="form-group">
+                            <label class="form-label">Cycle Name</label>
+                            <input type="text" id="cycleName" class="form-input" placeholder="e.g., April 2025" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Start Date</label>
+                            <input type="date" id="cycleStartDate" class="form-input" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">End Date</label>
+                            <input type="date" id="cycleEndDate" class="form-input" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Create Cycle</button>
+                    </form>
+
+                    <!-- Inside Admin Page, replace closeMonthBtn div -->
+<div class="form-group" style="margin-top: 20px; padding-top: 20px; border-top: 2px solid var(--border-color);">
+    <label class="form-label" style="color: var(--danger-color); font-size: 16px;">
+        ⚠️ Danger Zone: Close Current Cycle
+    </label>
+    <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 10px;">
+        This will finalize the current cycle, calculate balances, and create a new cycle with automatic due forwarding.
+    </p>
+    <button type="button" class="btn btn-danger" id="closeMonthBtn" style="width: 100%;">
+        🔒 Close Current Cycle & Create New
+    </button>
+</div>
+
+
+
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Member Management</h3>
+                        <div style="font-size:12px; color:var(--text-secondary);">Adding a member automatically creates a user with password "123"</div>
+                    </div>
+                    <form id="addMemberForm">
+                        <div class="form-group">
+                            <label class="form-label">Member Name</label>
+                            <input type="text" id="memberName" class="form-input" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Add Member</button>
+                    </form>
+                    <div id="membersList" style="margin-top: 20px;">
+                        <div class="loading">Loading members...</div>
+                    </div>
+                </div>
+
+
+                <!-- Inside Admin Page, add this card -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">System Settings</h3>
+    </div>
+  <form id="adminSettingsForm">
+        <div class="form-group">
+            <label class="form-label">Restricted Bazar Range (Lock Time)</label>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <div style="flex:1">
+                    <label for="settingLockTime" style="font-size: 11px;">Start Time</label>
+                    <input type="time" id="settingLockTime" class="form-input" required>
+                </div>
+                <div style="font-weight:bold;">-</div>
+                <div style="flex:1">
+                    <label style="font-size: 11px;">End Time</label>
+                    <input type="time" id="settingLockTimeEnd" class="form-input" required>
+                </div>
+            </div>
+            <small style="color: var(--text-secondary); display:block; margin-top:5px;">
+                Users cannot change meal status between these times on the day of the bazar.
+            </small>
+        </div>
+        <button type="submit" class="btn btn-primary">Save Settings</button>
+    </form>
+
+    <!-- Inside adminSettingsForm -->
+       <!-- Inside adminSettingsForm -->
+<div class="form-group" style="margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
+    <label class="form-label">Auto-Entry / Finalize Time</label>
+    <div style="display:flex; gap:10px; align-items:flex-end;">
+        <input type="time" id="settingAutoTime" class="form-input" style="flex:1;" required>
+        
+        <!-- NEW BUTTON -->
+        <button type="button" class="btn btn-danger" onclick="triggerManualAutoEntry()" style="font-size:12px; white-space:nowrap;">
+            ⚡ Force Run Now
+        </button>
+    </div>
+    <small style="color: var(--primary-color);">
+        System will snapshot meals at this time. Use "Force Run" to apply plans to tracker immediately.
+    </small>
+</div>
+
+</div>
+
+            </div>
+        </main>
+
+    <!-- HIGH-DENSITY PREMIUM BOTTOM NAV (7 ITEMS) -->
+<nav class="bottom-nav">
+    <ul class="bottom-nav-list">
+        <li class="bottom-nav-item">
+            <a class="bottom-nav-link active" data-page="dashboard">
+                <span>🏠</span><label>Home</label>
+            </a>
+        </li>
+        <li class="bottom-nav-item">
+            <a class="bottom-nav-link" data-page="profile">
+                <span>👤</span><label>User</label>
+            </a>
+        </li>
+        <li class="bottom-nav-item">
+            <a class="bottom-nav-link" data-page="tracker">
+                <span>📅</span><label>Track</label>
+            </a>
+        </li>
+        <li class="bottom-nav-item">
+            <a class="bottom-nav-link" data-page="summary">
+                <span>📊</span><label>Sum</label>
+            </a>
+        </li>
+        <li class="bottom-nav-item">
+            <a class="bottom-nav-link" data-page="expenses">
+                <span>🛒</span><label>Exp</label>
+            </a>
+        </li>
+        <li class="bottom-nav-item">
+            <a class="bottom-nav-link" data-page="deposits">
+                <span>💰</span><label>Wallet</label>
+            </a>
+        </li>
+        <li class="bottom-nav-item">
+            <a class="bottom-nav-link" id="mobileMenuBtn">
+                <span>☰</span><label>Menu</label>
+            </a>
+        </li>
+    </ul>
+</nav>
+
+
+    <!-- Modals -->
+<!-- Edit Meal Modal (Session Edition) -->
+<div id="mealModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title" id="mealModalTitle">Edit Session</h3>
+            <span class="close-modal" onclick="closeMealModal()">×</span>
+        </div>
+        <form id="mealForm">
+            <!-- Hidden Fields store the TWO dates we are editing -->
+            <input type="hidden" id="mealMemberId">
+            <input type="hidden" id="mealDateSession"> <!-- For Night -->
+            <input type="hidden" id="mealDateNext">    <!-- For Day -->
+
+<div class="form-group">
+                <label class="form-label" id="mealNightLabel">Night Meal</label>
+                <!-- Added min="0", step="1" and oninput logic -->
+                <input type="number" id="mealNightCount" class="form-input" step="1" min="0" 
+                       oninput="this.value = !!this.value && Math.abs(this.value) >= 0 ? Math.abs(Math.round(this.value)) : null">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" id="mealDayLabel">Day Meal</label>
+                <!-- Added min="0", step="1" and oninput logic -->
+                <input type="number" id="mealDayCount" class="form-input" step="1" min="0" 
+                       oninput="this.value = !!this.value && Math.abs(this.value) >= 0 ? Math.abs(Math.round(this.value)) : null">
+            </div>
+            
+            <div style="font-size:11px; color:var(--text-secondary); margin-bottom:15px; background:var(--bg-color); padding:8px; border-radius:6px;">
+                ℹ️ This updates the <strong>Night</strong> meal of the Bazar Date and the <strong>Day</strong> meal of the following morning.
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width:100%;">Save Session</button>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Member Modal -->
+<div id="editMemberModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">Edit Member</h3>
+            <span class="close-modal" onclick="document.getElementById('editMemberModal').classList.remove('active')">×</span>
+        </div>
+        <form id="editMemberForm">
+            <input type="hidden" id="editMemberId">
+            <input type="hidden" id="editUserId">
+            <div class="form-group">
+                <label class="form-label">Name</label>
+                <input type="text" id="editMemberName" class="form-input" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">New Password (leave blank to keep current)</label>
+                <input type="password" id="editMemberPassword" class="form-input" placeholder="New password...">
+            </div>
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+        </form>
+    </div>
+</div>
+
+<!-- Cycle Close/Creation Modal -->
+<!-- Cycle Close/Creation Modal (Strict Validation) -->
+<div id="cycleCloseModal" class="modal">
+    <div class="modal-content" style="max-width: 450px;">
+        <div class="modal-header">
+            <h3 class="modal-title">Finalize Cycle</h3>
+            <span class="close-modal" onclick="document.getElementById('cycleCloseModal').classList.remove('active')">×</span>
+        </div>
+
+        <!-- 1. VALIDATION CHECKLIST AREA -->
+        <div id="cycleValidationArea">
+            <div class="checklist-container">
+                <div class="checklist-header">System Health Check</div>
+                <div id="checklistItems">
+                    <div class="loading">Running diagnostics...</div>
+                </div>
+            </div>
+            
+            <!-- Hint box for fixing balance -->
+            <div id="balanceFixHint" class="balance-fix-hint"></div>
+        </div>
+
+        <!-- 2. NEXT CYCLE FORM (Hidden until validation passes) -->
+        <form id="cycleCloseForm" style="display: none; opacity: 0; transition: opacity 0.5s;">
+            
+            <div style="margin: 15px 0; padding-top: 15px; border-top: 2px solid #e2e8f0;">
+                <h4 style="font-size: 13px; font-weight: 800; margin-bottom: 10px; color: var(--primary-color);">✅ Ready to Create Next Cycle</h4>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Select Target Month</label>
+                <div style="display: flex; gap: 10px;">
+                    <select id="newCycleMonth" class="form-select" style="flex: 2;"></select>
+                    <input type="number" id="newCycleYear" class="form-input" style="flex: 1;">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">New Cycle Name</label>
+                <input type="text" id="newCycleName" class="form-input" placeholder="e.g. February 2026">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Start Date</label>
+                <input type="date" id="newCycleStart" class="form-input" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">End Date</label>
+                <input type="date" id="newCycleEnd" class="form-input" required>
+            </div>
+
+            <button type="submit" class="btn btn-danger" style="width: 100%;">🔒 Close & Start New</button>
+        </form>
+
+        <!-- Blocked Message -->
+        <div id="cycleBlockedMsg" style="display:none; text-align:center; color:#ef4444; font-size:12px; font-weight:700; margin-top:10px;">
+            ⛔ Cannot close cycle until all checks pass.
+        </div>
+    </div>
+</div>
+
+
+<!-- Toast Notification Container -->
+<div id="toast-container"></div>
+
+
+<!-- Sidebar Overlay (Must be added right after body tag or before sidebar) -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <div id="realtimeStatus" class="realtime-status">⚫ Connecting...</div>
+
+
+  <!-- MOBILE FAB -->
+<button class="mobile-fab" id="globalAddBtn" onclick="openBottomSheet()">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+</button>
+
+<!-- BOTTOM SHEET MODAL -->
+<div class="sheet-overlay" id="sheetOverlay" onclick="closeBottomSheet()"></div>
+
+<!-- The container has the theme class (default: expense) -->
+<div class="bottom-sheet sheet-theme-expense" id="sheetModal">
+    
+    <!-- Fixed Header -->
+    <div class="sheet-header">
+        <div class="sheet-title" id="sheetMainTitle">New Expense</div>
+        <div class="sheet-close" onclick="closeBottomSheet()">✕</div>
+    </div>
+
+    <!-- Fixed Tabs -->
+    <div class="sheet-tabs">
+        <div class="sheet-tab active" id="tabExpense" onclick="switchSheetTab('expense')">Expense</div>
+        <div class="sheet-tab" id="tabDeposit" onclick="switchSheetTab('deposit')">Deposit</div>
+    </div>
+
+    <!-- Scrollable Form Area -->
+    <div class="sheet-scroll-content">
+        
+        <!-- Big Input -->
+        <div class="big-input-wrapper">
+            <span class="currency-symbol">৳</span>
+            <input type="number" id="sheetAmount" class="big-amount-input" placeholder="0" inputmode="decimal">
+        </div>
+
+        <!-- Date & Member -->
+        <div class="sheet-grid">
+            <div>
+                <div class="sheet-section-label">DATE</div>
+                <input type="date" id="sheetDate" class="sheet-field">
+            </div>
+            <div>
+                <div class="sheet-section-label">MEMBER</div>
+                <select id="sheetMember" class="sheet-field">
+                    <option value="">Select...</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Expense Specific: Category Chips -->
+        <div id="expenseExtras">
+            <div class="sheet-section-label">CATEGORY / ITEM</div>
+            <div class="sheet-chips">
+                <div class="sheet-chip" onclick="selectChip('Bazar')">Bazar</div>
+                <div class="sheet-chip" onclick="selectChip('Transport')">Transport</div>
+                <div class="sheet-chip" onclick="selectChip('Snacks')">Snacks</div>
+                <div class="sheet-chip" onclick="selectChip('Utilities')">Utilities</div>
+                <div class="sheet-chip" onclick="selectChip('Meal Rate')">Meal Rate</div>
+            </div>
+            <input type="text" id="sheetDesc" class="sheet-field" placeholder="Item details (e.g. Chicken, Oil)" onfocus="ensureVisible(this)">
+        </div>
+
+        <!-- Deposit Specific: Type Chips -->
+        <div id="depositExtras" style="display: none;">
+            <div class="sheet-section-label">TRANSACTION TYPE</div>
+            <div class="sheet-chips">
+                <div class="sheet-chip selected" onclick="selectDepositType('deposit')">Add Cash (+৳)</div>
+                <div class="sheet-chip" onclick="selectDepositType('charge')">Deduction (-৳)</div>
+            </div>
+            <input type="hidden" id="sheetDepType" value="deposit">
+            
+            <div class="sheet-section-label" style="margin-top:10px;">LABEL</div>
+            <input type="text" id="sheetLabel" class="sheet-field" placeholder="e.g. Monthly Fee" value="Deposit" onfocus="ensureVisible(this)">
+        </div>
+
+        <!-- Common Note -->
+        <div class="sheet-section-label" style="margin-top:10px;">NOTE (OPTIONAL)</div>
+        <input type="text" id="sheetNotes" class="sheet-field" placeholder="Add a note..." onfocus="ensureVisible(this)">
+
+        <!-- Spacer for keyboard -->
+        <div style="height: 20px;"></div>
+
+        <!-- Save Button -->
+        <button class="sheet-save-btn" id="sheetSubmitBtn" onclick="submitMobileEntry()">Save Expense</button>
+        
+        <!-- Extra Spacer for safe area scrolling -->
+        <div style="height: 50px;"></div>
+    </div>
+</div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js" onerror="window.supabaseLoadError = true; handleSupabaseLoadError();"></script>
+
+  <script src="app.js" defer></script>
+
+<!-- PWA Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js')
+                .then((reg) => console.log('Service Worker registered', reg))
+                .catch((err) => console.log('Service Worker not registered', err));
+        }
+    </script>
+
+    <!-- <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script> -->
+</body>
+</html>
