@@ -5299,14 +5299,23 @@ async function runCycleDiagnostics() {
             supabase.from('expenses').select('amount').eq('cycle_id', currentCycleId).eq('status', 'approved'),
             // 4. Approved Deposits Sum
             supabase.from('deposits').select('amount').eq('cycle_id', currentCycleId).neq('status', 'pending'),
-            // 5. Outstanding Dues (From previous cycle into current)
-            supabase.from('cycle_dues').select('*', { count: 'exact', head: true }).eq('to_cycle_id', currentCycleId).neq('status', 'settled')
+            
+            // 5. Outstanding Dues (FETCH ACTUAL ROWS NOW INSTEAD OF COUNTING)
+            supabase.from('cycle_dues').select('due_amount, settled_amount').eq('to_cycle_id', currentCycleId).neq('status', 'settled')
         ]);
 
         // --- STEP B: CALCULATE ---
         const pendingDepositsCount = pendDep.count || 0;
         const pendingExpensesCount = pendExp.count || 0;
-        const outstandingDuesCount = activeDues.count || 0;
+
+        // NEW: Filter out fractional un-settlements just like the frontend UI does
+        const activeDuesList = activeDues.data?.filter(d => {
+            const remaining = Math.abs(d.due_amount) - Math.abs(d.settled_amount);
+            return remaining >= 1; // Only flag as unsettled if they owe 1 Taka or more
+        }) ||[];
+        
+        // Count only the truly active dues
+        const outstandingDuesCount = activeDuesList.length;
 
         const totalExpenses = allExp.data?.reduce((sum, item) => sum + parseFloat(item.amount), 0) || 0;
         const totalDeposits = allDep.data?.reduce((sum, item) => sum + parseFloat(item.amount), 0) || 0;
@@ -5317,7 +5326,7 @@ async function runCycleDiagnostics() {
         const isBalanceZero = Math.abs(netBalance) < 0.1; 
 
         // --- STEP C: RENDER CHECKLIST ---
-        const checks = [
+        const checks =[
             { label: "Pending Deposits", val: pendingDepositsCount, pass: pendingDepositsCount === 0, text: pendingDepositsCount === 0 ? "0 (Clean)" : `${pendingDepositsCount} Pending` },
             { label: "Pending Expenses", val: pendingExpensesCount, pass: pendingExpensesCount === 0, text: pendingExpensesCount === 0 ? "0 (Clean)" : `${pendingExpensesCount} Pending` },
             { label: "Unsettled Past Dues", val: outstandingDuesCount, pass: outstandingDuesCount === 0, text: outstandingDuesCount === 0 ? "All Settled" : `${outstandingDuesCount} Unpaid` },
