@@ -1866,9 +1866,9 @@ async function loadScheduler() {
 
     if (memberData) updateDefaultButtons(memberData);
 
-    // Generate 7 Days based on the DB-confirmed Session Date
+    // Generate 8 Days (Last session + 7 Upcoming)
     const dates = [];
-    for (let i = 0; i <= 8; i++) {
+    for (let i = -1; i <= 8; i++) {
       const d = new Date(sessionDateObj);
       d.setDate(sessionDateObj.getDate() + i);
       dates.push(toLocalISO(d));
@@ -1889,13 +1889,17 @@ async function loadScheduler() {
       return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
     };
 
-    for (let i = 0; i < 7; i++) {
-      const dateSession = dates[i];
-      const dateNextDay = dates[i + 1];
+    for (let i = -1; i < 7; i++) {
+      // Map i (-1 to 6) to the array indices bounds (0 to 8)
+      const arrayIndex = i + 1;
+      const dateSession = dates[arrayIndex];
+      const dateNextDay = dates[arrayIndex + 1];
 
       const sessionLabel = fmt(dateSession);
       const nextDayLabel = fmt(dateNextDay);
+
       const isFirstCard = i === 0;
+      const isPastCard = i === -1;
 
       const nPlan = planMap[dateSession];
       const dPlan = planMap[dateNextDay];
@@ -1906,25 +1910,35 @@ async function loadScheduler() {
       // Lock Logic (Visual Only - Security is in toggle function)
       const userRole = currentUser?.role;
       const isAdmin = userRole === "admin" || userRole === "manager";
-      const isNightLocked = !isAdmin && isMealLocked(dateSession, "night");
-      const isDayLocked = !isAdmin && isMealLocked(dateNextDay, "day");
+      
+      let isNightLocked = !isAdmin && isMealLocked(dateSession, "night");
+      let isDayLocked = !isAdmin && isMealLocked(dateNextDay, "day");
+      
+      if (isPastCard) {
+          isNightLocked = true;
+          isDayLocked = true;
+      }
+      
       const lockIcon = `<span style="font-size:10px; margin-left:4px;">🔒</span>`;
 
+      const cardOpacityStyle = isPastCard ? 'style="opacity: 0.6; pointer-events: none; filter: grayscale(1); border-left: 3px solid #6b7280;"' : '';
+      const subLabelText = isPastCard ? "LAST SESSION" : (isFirstCard ? "ACTIVE SESSION" : "UPCOMING");
+
       newHTML += `
-            <div class="scheduler-card ${isFirstCard ? "is-today" : ""}">
+            <div class="scheduler-card ${isFirstCard ? "is-today" : ""}" ${cardOpacityStyle}>
                 <div class="sched-date-main">${sessionLabel} Bazar</div>
-                <div class="sched-sub-label">${isFirstCard ? "ACTIVE SESSION" : "UPCOMING"}</div>
+                <div class="sched-sub-label">${subLabelText}</div>
                 
                 <div class="sched-actions">
                     <button class="sched-btn night-btn ${nightActive ? "active" : ""}" 
-                        onclick="toggleSchedulerPlan('${dateSession}', 'night', this)"
+                        ${isPastCard ? "" : `onclick="toggleSchedulerPlan('${dateSession}', 'night', this)"`}
                         style="${isNightLocked ? "opacity: 0.6;" : ""}">
                         <span class="status-text">${nightActive ? "ON" : "OFF"}</span>
                         <span class="btn-label">🌙 Night <span class="btn-date-micro">${sessionLabel}</span> ${isNightLocked ? lockIcon : ""}</span>
                     </button>
                     
                     <button class="sched-btn day-btn ${dayActive ? "active" : ""}" 
-                        onclick="toggleSchedulerPlan('${dateNextDay}', 'day', this)"
+                        ${isPastCard ? "" : `onclick="toggleSchedulerPlan('${dateNextDay}', 'day', this)"`}
                         style="${isDayLocked ? "opacity: 0.6;" : ""}">
                         <span class="status-text">${dayActive ? "ON" : "OFF"}</span>
                         <span class="btn-label">🌞 Day <span class="btn-date-micro">${nextDayLabel}</span> ${isDayLocked ? lockIcon : ""}</span>
