@@ -4,6 +4,135 @@ const SUPABASE_ANON_KEY =
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// ============================================
+// SESSION HEALTH MONITOR & TOKEN REFRESH
+// ============================================
+
+let _sessionHealthInterval = null;
+let _realtimeHealthInterval = null;
+let _lastSessionCheck = 0;
+
+/**
+ * Ensures the Supabase session is still valid.
+ * If expired, attempts to refresh. If refresh fails, warns user.
+ * Called periodically and before critical operations.
+ */
+async function ensureValidSession() {
+  try {
+    const { data: { session }, error } = await supabase.auth.getSession();
+
+    if (error || !session) {
+      console.warn("⚠️ Session invalid or expired, attempting refresh...");
+      const { data, error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError || !data.session) {
+        console.error("❌ Session refresh failed:", refreshError?.message);
+        showNotification("Session expired. Please reload the page.", "warning");
+        updateConnectionStatus("TIMED_OUT");
+        return false;
+      }
+      console.log("✅ Session refreshed successfully");
+      // Reset pageLoaded flags so stale cached pages get refreshed
+      Object.keys(pageLoaded).forEach((k) => (pageLoaded[k] = false));
+      return true;
+    }
+
+    // Check if token expires within next 5 minutes (preemptive refresh)
+    const expiresAt = session.expires_at; // Unix timestamp in seconds
+    const now = Math.floor(Date.now() / 1000);
+    if (expiresAt && (expiresAt - now) < 300) {
+      console.log("🔄 Token expiring soon, preemptively refreshing...");
+      const { error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError) {
+        console.warn("⚠️ Preemptive refresh failed:", refreshError.message);
+      } else {
+        console.log("✅ Preemptive token refresh succeeded");
+      }
+    }
+
+    _lastSessionCheck = Date.now();
+    return true;
+  } catch (err) {
+    console.error("Session health check error:", err);
+    return false;
+  }
+}
+
+/**
+ * Starts periodic session health checks (every 4 minutes).
+ * Prevents the JWT from silently expiring during long usage sessions.
+ */
+function startSessionHealthMonitor() {
+  if (_sessionHealthInterval) clearInterval(_sessionHealthInterval);
+  _sessionHealthInterval = setInterval(async () => {
+    if (document.hidden) return; // Don't check while tab is hidden
+    console.log("🔄 Periodic session health check...");
+    await ensureValidSession();
+  }, 4 * 60 * 1000); // Every 4 minutes
+  console.log("✅ Session health monitor started (every 4 min)");
+}
+
+/**
+ * Wraps a Supabase query to detect JWT/auth errors and auto-retry after refresh.
+ * Use for critical user-facing operations (saves, inserts, updates).
+ *
+ * @param {Function} queryFn - A function that returns a Supabase query result
+ * @returns {Object} - The Supabase query result ({ data, error })
+ */
+async function safeSupabaseCall(queryFn) {
+  let result = await queryFn();
+
+  // Check for JWT/auth related errors
+  if (result.error) {
+    const msg = (result.error.message || "").toLowerCase();
+    const code = result.error.code || "";
+    if (
+      msg.includes("jwt") ||
+      msg.includes("token") ||
+      msg.includes("expired") ||
+      msg.includes("not authenticated") ||
+      code === "PGRST301" ||
+      code === "401"
+    ) {
+      console.warn("🔄 Auth error detected in DB call, refreshing session...");
+      const refreshed = await ensureValidSession();
+      if (refreshed) {
+        // Retry the query once with fresh token
+        result = await queryFn();
+        if (!result.error) {
+          console.log("✅ Retry succeeded after session refresh");
+        }
+      }
+    }
+  }
+  return result;
+}
+
+/**
+ * Monitors realtime channel health and auto-reconnects if stale.
+ */
+function startRealtimeHealthMonitor() {
+  if (_realtimeHealthInterval) clearInterval(_realtimeHealthInterval);
+  _realtimeHealthInterval = setInterval(() => {
+    if (document.hidden) return;
+    if (realtimeChannels.length === 0) {
+      console.warn("⚠️ No realtime channels found, reinitializing...");
+      initRealtimeSync();
+      return;
+    }
+    // Check each channel's state
+    for (const channel of realtimeChannels) {
+      const state = channel.state;
+      if (state === "closed" || state === "errored") {
+        console.warn(`⚠️ Realtime channel in '${state}' state, reconnecting...`);
+        cleanupRealtimeChannels();
+        initRealtimeSync();
+        return;
+      }
+    }
+  }, 30 * 1000); // Every 30 seconds
+  console.log("✅ Realtime health monitor started (every 30s)");
+}
+
 /**
  * ROBUST ACTION HANDLER
  * Wraps any async function to handle loading states, errors, and locking automatically.
@@ -955,19 +1084,25 @@ document.addEventListener("visibilitychange", () => {
     }
   } else {
     console.log("▶️ Tab visible - resuming UI updates");
-    updateEntryStatusIndicator();
-    checkGlobalBalanceWarning();
 
-    // Refresh current page to catch up on any missed updates
-    const activePage = getActivePage();
-    if (activePage) {
-      console.log("🔄 Refreshing", activePage, "after tab became visible");
-      debounceRefresh(
-        () => loadPageData(activePage),
-        "visibility-refresh",
-        500,
-      );
-    }
+    // Verify session is still valid before doing anything
+    ensureValidSession().then((valid) => {
+      if (!valid) return; // Session expired, user will be prompted
+
+      updateEntryStatusIndicator();
+      checkGlobalBalanceWarning();
+
+      // Force refresh current page to catch up on any missed updates
+      const activePage = getActivePage();
+      if (activePage) {
+        console.log("🔄 Force-refreshing", activePage, "after tab became visible");
+        debounceRefresh(
+          () => loadPageData(activePage, true),
+          "visibility-refresh",
+          500,
+        );
+      }
+    });
   }
 });
 
@@ -1243,6 +1378,11 @@ window.handleDepositAction = async function (depositId, action) {
   btn.textContent = "...";
 
   try {
+    // 0. VERIFY SESSION BEFORE CRITICAL OPERATION
+    if (!(await ensureValidSession())) {
+      throw new Error("Session expired. Please reload and try again.");
+    }
+
     // 1. FETCH DETAILS FIRST
     const { data: dep, error: fError } = await supabase
       .from("deposits")
@@ -1568,6 +1708,8 @@ async function initializeApp() {
     // Finalize internal settings
     updateEntryStatusIndicator();
     initRealtimeSync();
+    startSessionHealthMonitor();
+    startRealtimeHealthMonitor();
     setProgress(100);
 
     // Final Progress
@@ -1991,6 +2133,11 @@ async function toggleSchedulerPlan(date, type, btnElement) {
   }
 
   try {
+    // 3.5. VERIFY SESSION BEFORE DB WRITE
+    if (!(await ensureValidSession())) {
+      throw new Error("Session expired. Please reload.");
+    }
+
     // 4. DATABASE UPDATE
     const newCount = wasActive ? 0 : 1;
 
@@ -4186,70 +4333,9 @@ document
 // ============================================
 // EXPENSES PAGE
 // ============================================
+// [REMOVED] Duplicate handleDepositAction — the correct version with permission checks,
+// settlement engine, and Bengali formatting is defined earlier (around line 1234).
 
-window.handleDepositAction = async function (depositId, action) {
-  console.log(`Action: ${action} triggered for ID: ${depositId}`);
-  const btn = event.target;
-  btn.disabled = true;
-  const originalText = btn.textContent;
-  btn.textContent = "...";
-
-  try {
-    const { data: dep, error: fError } = await supabase
-      .from("deposits")
-      .select("*, members(name)")
-      .eq("id", depositId)
-      .single();
-
-    if (fError || !dep) throw new Error("Could not find the pending request.");
-
-    const actor = currentUser.members ? currentUser.members.name : "Admin";
-
-    if (action === "approve") {
-      const { error: delError } = await supabase
-        .from("deposits")
-        .delete()
-        .eq("id", depositId);
-      if (delError) throw delError;
-
-      await processDepositWithClientSideSettlement(
-        dep.member_id,
-        dep.cycle_id,
-        dep.amount,
-        dep.label || "Deposit",
-        dep.notes,
-      );
-
-      // LOG THE APPROVAL ACT
-      await logActivity(
-        `Deposit Approved: ${dep.members.name}'s request for ${formatCurrency(dep.amount)} was approved by ${actor}`,
-        "deposit",
-      );
-      showNotification("Request Approved", "success");
-    } else if (action === "reject") {
-      const { error: delError } = await supabase
-        .from("deposits")
-        .delete()
-        .eq("id", depositId);
-      if (delError) throw delError;
-
-      // LOG THE REJECTION ACT
-      await logActivity(
-        `Deposit Rejected: ${dep.members.name}'s request for ${formatCurrency(dep.amount)} was rejected by ${actor}`,
-        "deposit",
-      );
-      showNotification("Request Rejected", "warning");
-    }
-
-    await loadDeposits();
-    if (typeof loadDashboard === "function") loadDashboard();
-  } catch (err) {
-    console.error("CRITICAL ERROR:", err.message);
-    showNotification(err.message, "error");
-    btn.disabled = false;
-    btn.textContent = originalText;
-  }
-};
 
 document.getElementById("expenseForm").addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -4258,6 +4344,11 @@ document.getElementById("expenseForm").addEventListener("submit", async (e) => {
   await runSafeAction(
     "expenseSubmitBtn",
     async () => {
+      // 0. VERIFY SESSION BEFORE CRITICAL OPERATION
+      if (!(await ensureValidSession())) {
+        throw new Error("Session expired. Please reload and try again.");
+      }
+
       // 1. GATHER DATA
       const expenseId = document.getElementById("editExpenseId").value;
       const date = document.getElementById("expenseDate").value;
@@ -4946,6 +5037,11 @@ async function processDepositWithClientSideSettlement(
   notes,
 ) {
   try {
+    // Verify session before settlement engine runs
+    if (!(await ensureValidSession())) {
+      throw new Error("Session expired during settlement. Please reload.");
+    }
+
     const targetCycleId = parseInt(cycleId);
 
     // 1. Insert the official REAL cash deposit (Approved)
@@ -5092,6 +5188,11 @@ document.getElementById("depositForm").addEventListener("submit", async (e) => {
   await runSafeAction(
     submitBtn,
     async () => {
+      // Verify session before saving deposit
+      if (!(await ensureValidSession())) {
+        throw new Error("Session expired. Please reload and try again.");
+      }
+
       const memberId = parseInt(document.getElementById("depositMember").value);
       const type = document.getElementById("depositType").value;
       const rawAmount = parseFloat(
@@ -6751,6 +6852,11 @@ async function submitMobileEntry() {
   btn.disabled = true;
 
   try {
+    // Verify session before saving
+    if (!(await ensureValidSession())) {
+      throw new Error("Session expired. Please reload and try again.");
+    }
+
     const amountVal = parseFloat(document.getElementById("sheetAmount").value);
     const date = document.getElementById("sheetDate").value;
     const memberId = document.getElementById("sheetMember").value;
