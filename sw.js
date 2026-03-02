@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mealcal-v6'; // Incremented: session health monitor + button freeze fix
+const CACHE_NAME = 'mealcal-v4'; // Increment this whenever you change CSS/JS
 
 const ASSETS = [
     './',
