@@ -2977,9 +2977,11 @@ body {
 }
 
 .cell-val-half.night.zero {
-    color: #c7d2fe;
-    font-weight: 400;
+    color: #ff0000;
+    font-weight: 600;
 }
+
+
 
 /* Day half — warm amber tint */
 .cell-val-half.day {
@@ -2988,12 +2990,12 @@ body {
 
 .cell-val-half.day.active {
     background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(245, 158, 11, 0.1) 100%);
-    color: #b45309;
+        color: #120600;
 }
 
 .cell-val-half.day.zero {
-    color: #fde68a;
-    font-weight: 400;
+    color: #ff0000;
+    font-weight: 600;
 }
 
 /* Fallback for cells without night/day class */

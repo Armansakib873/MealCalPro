@@ -1982,14 +1982,14 @@ async function loadScheduler() {
                         ${isPastCard ? "" : `onclick="toggleSchedulerPlan('${dateSession}', 'night', this)"`}
                         style="${isNightLocked ? "opacity: 0.6;" : ""}">
                         <span class="status-text">${nightActive ? "ON" : "OFF"}</span>
-                        <span class="btn-label">🌙 Night <span class="btn-date-micro">${sessionLabel}</span> ${isNightLocked ? lockIcon : ""}</span>
+                        <span class="btn-label"> Night <span class="btn-date-micro">${sessionLabel}</span> ${isNightLocked ? lockIcon : ""}</span>
                     </button>
                     
                     <button class="sched-btn day-btn ${dayActive ? "active" : ""}" 
                         ${isPastCard ? "" : `onclick="toggleSchedulerPlan('${dateNextDay}', 'day', this)"`}
                         style="${isDayLocked ? "opacity: 0.6;" : ""}">
                         <span class="status-text">${dayActive ? "ON" : "OFF"}</span>
-                        <span class="btn-label">🌞 Day <span class="btn-date-micro">${nextDayLabel}</span> ${isDayLocked ? lockIcon : ""}</span>
+                        <span class="btn-label"> Day <span class="btn-date-micro">${nextDayLabel}</span> ${isDayLocked ? lockIcon : ""}</span>
                     </button>
                 </div>
             </div>`;
@@ -2152,23 +2152,23 @@ async function loadMasterTracker() {
 
     let currentIter = parseLocalDate(cycle.start_date);
     let endIter = parseLocalDate(cycle.end_date);
-    const todayStr = toLocalISO(new Date());
+    
+    // --- THE CRITICAL FIX ---
+    // 1. Get the actual Active Bazar Session Date (This accounts for whether auto-entry has run)
+    const activeSessionDateObj = await getActiveSessionDate();
+    const activeSessionStr = toLocalISO(activeSessionDateObj);
 
     let headerHTML = `
             <thead>
                 <tr>
                     <th style="vertical-align: bottom; padding: 0;">
                         <div style="padding: 12px 8px 6px;">BAZAR</div>
-                        <div style="font-size: 9px; color: #64748b; padding-bottom: 6px; letter-spacing: 1px;">
-                            🌙 NIGHT &nbsp;|&nbsp; ☀️ DAY
-                        </div>
                     </th>
                     ${allMembers.map((m) => `
                     <th style="padding: 0; vertical-align: bottom;">
                         <div style="padding: 12px 8px 6px;">${m.name.split(" ")[0]}</div>
                         <div style="display: flex; width: 100%; border-top: 1px dashed rgba(0,0,0,0.1); background: rgba(0,0,0,0.02);">
-                            <span class="legend-night" style="flex: 1; padding: 4px 0; border-right: 1px dashed rgba(0,0,0,0.1);">🌙</span>
-                            <span class="legend-day" style="flex: 1; padding: 4px 0;">☀️</span>
+                
                         </div>
                     </th>`).join("")}
                 </tr>
@@ -2182,11 +2182,18 @@ async function loadMasterTracker() {
       dNext.setDate(currentIter.getDate() + 1);
       const dateNextStr = toLocalISO(dNext);
 
+      // --- UNIFIED PENDING CHECK ---
+      // Both Night and Day meals of this row belong to the same "Bazar Session".
+      // If this Bazar Session is >= the Active Session, it means auto-entry hasn't finalized it.
+      const isPendingSession = dateSessionStr >= activeSessionStr;
+
       const displayDate = currentIter.toLocaleDateString("en-GB", {
         day: "2-digit",
         month: "short",
       });
-      const isTodayRow = dateSessionStr === todayStr;
+      
+      // Highlight the currently active pending row
+      const isTodayRow = dateSessionStr === activeSessionStr;
 
       bodyHTML += `<tr ${isTodayRow ? 'style="background: #f0f9ff;"' : ""}>
                 <td>${displayDate}</td>
@@ -2194,11 +2201,16 @@ async function loadMasterTracker() {
                   .map((m) => {
                     const nVal = matrixData[dateSessionStr]?.[m.id]?.n || 0;
                     const dVal = matrixData[dateNextStr]?.[m.id]?.d || 0;
+                    
+                    // Both share the exact same logic based on isPendingSession. No split logic.
+                    const nDisplay = nVal > 0 ? nVal : (isPendingSession ? "-" : "0");
+                    const dDisplay = dVal > 0 ? dVal : (isPendingSession ? "-" : "0");
+                    
                     return `
                         <td>
                             <div class="cell-split-premium" onclick="openMealModal('${m.id}', '${dateSessionStr}', ${nVal}, ${dVal})">
-                                <div class="cell-val-half night ${nVal > 0 ? "active" : "zero"}">${nVal > 0 ? nVal : "-"}</div>
-                                <div class="cell-val-half day ${dVal > 0 ? "active" : "zero"}">${dVal > 0 ? dVal : "-"}</div>
+                                <div class="cell-val-half night ${nVal > 0 ? "active" : "zero"}">${nDisplay}</div>
+                                <div class="cell-val-half day ${dVal > 0 ? "active" : "zero"}">${dDisplay}</div>
                             </div>
                         </td>`;
                   })
@@ -3628,11 +3640,15 @@ async function loadMemberCalendar(memberId) {
         ? parseFloat(meal.day_count) + parseFloat(meal.night_count)
         : 0;
 
+      const todayStr = toLocalISO(new Date());
+      const isFuture = dateStr > todayStr;
+      const displayMeals = totalMeals > 0 ? totalMeals.toFixed(1) : (isFuture ? "-" : "0");
+
       const dayDiv = document.createElement("div");
       dayDiv.className = "calendar-day" + (totalMeals > 0 ? " has-meal" : "");
       dayDiv.innerHTML = `
                     <div class="calendar-day-number">${d.getDate()}</div>
-                    <div class="calendar-day-meals">${totalMeals > 0 ? totalMeals.toFixed(1) : "-"}</div>
+                    <div class="calendar-day-meals">${displayMeals}</div>
                 `;
 
       // Only managers and admins can edit
@@ -5804,7 +5820,6 @@ async function loadSystemStatus() {
       container.innerHTML = `
                 <div class="status-box pending">
                     <div>
-                        <div class="status-title">Waiting for Auto-Entry Meals are editable</div>
                         <div class="status-meta">
                             SCHEDULED TIME: ${targetTime12}
                         </div>
