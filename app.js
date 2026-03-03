@@ -83,6 +83,9 @@ let lastRenderedSessionDate = null;
 // Interval tracking (prevents stacking on re-init)
 let _restrictedUIInterval = null;
 let _sessionSwitchInterval = null;
+let statusCycleInterval = null; // Global variables for Badge Rotation
+let statusQueue = [];
+let currentStatusIndex = 0;
 
 // Master Local Mirror of the Database
 let appState = {
@@ -3290,56 +3293,68 @@ function triggerMascotReaction(type) {
     const mascot = document.getElementById('mascotCharacter');
     if (!mascot) return;
 
-    const reactClass = type === 'approval-deposit' || type === 'deposit' || type === 'celebrate' ? 'react-deposit' : 'react-expense';
-    
+    const reactClass =
+        type === 'approval-deposit' || type === 'deposit' || type === 'celebrate'
+            ? 'react-deposit'
+            : 'react-expense';
+
     // Play contextual sound
     if (type === 'deposit' || type === 'celebrate') playMascotSound('boing');
     if (type === 'expense') playMascotSound('pop');
     if (type.startsWith('approval')) playMascotSound('bleep');
 
+    /* ================= DEPOSIT ================= */
     if (type === 'deposit') {
         const phrases = [
-            'Ka-ching! 💰 More money for the mess!',
-            'Funds received! I\'m doing a happy dance! 🕺',
-            'Wallet getting fat! 💵 Good job members!',
-            'New deposit request! I\'ll keep it safe! 🏦',
-            'I love the smell of fresh deposits! 🤑'
-        ];
-        showMascotSpeech(pickRandom(phrases), 3500);
-    } else if (type === 'expense') {
-        const phrases = [
-            'Ouch! Money going out! 💸',
-            'Another bazaar cost? 🛒 Budget hit!',
-            'Spending money... hopefully it was worth it! 🥗',
-            'Expense request recorded. Careful with the budget! 📉',
-            'My digital heart breaks at every expense! 😢'
-        ];
-        showMascotSpeech(pickRandom(phrases), 3500);
-    } else if (type === 'approval-deposit') {
-        const phrases = [
-            'Admin Approved! 💸 Balance boosted!',
-            'Deposit officially verified! 🫡 Good work!',
-            'The manager said yes! 💰 Funds applied!',
-            'Approved! Our liquidity is looking healthier! 📈'
-        ];
-        showMascotSpeech(pickRandom(phrases), 3500);
-    } else if (type === 'approval-expense') {
-        const phrases = [
-            'Expense Approved! 🥗 Bazaar is a go!',
-            'The manager signed off on this. 📋 Funds cleared!',
-            'Payment verified! 💸 Keep the receipts!',
-            'Expense approved. Watching the budget closely! 🧐'
+            "ওহো টাকা ঢুকলো নাকি? এবার মেসের বিল নিয়ে কথা কম হবে 😂",
+            "ডিপোজিট আসছে… এখন আমি একটু খুশি হওয়ার নাটক করি 💰😏",
+            "টাকা এলে সবাই ভালো লাগে, আমি তো শুধু হিসাব রাখি ভাই!",
+            "আরে বাহ! ওয়ালেট একটু মোটা হলো দেখি 🤑",
+            "ডিপোজিট নোটেড… কিন্তু খরচের সময় কাঁপবো না তো? 😆"
         ];
         showMascotSpeech(pickRandom(phrases), 3500);
     }
 
+    /* ================= EXPENSE ================= */
+    else if (type === 'expense') {
+        const phrases = [
+            "আবার খরচ? মেসের বাজার নাকি ভাই? 💸😂",
+            "টাকা বের হলো… এখন ব্যালেন্স কাঁদতেছে 😏",
+            "এত খরচ করলে আমি কি করবো বলো? 📉",
+            "Expense রেকর্ড হলো… কিন্তু রসিদ আছে তো? 🧐",
+            "ভাই সাবধানে খরচ করো, ব্যাংক না এটা!"
+        ];
+        showMascotSpeech(pickRandom(phrases), 3500);
+    }
 
+    /* ================= APPROVAL DEPOSIT ================= */
+    else if (type === 'approval-deposit') {
+        const phrases = [
+            "এডমিন বলছে OK… টাকা এখন অফিসিয়ালি ঢুকে গেছে 💰🫡",
+            "অনুমোদন মিললো! ব্যালেন্স আপডেট হয়ে গেলো 📈",
+            "ম্যানেজার সাইন দিলো — এখন হিসাব ক্লিয়ার!",
+            "Approved! Liquidity একটু শান্ত হলো 😌"
+        ];
+        showMascotSpeech(pickRandom(phrases), 3500);
+    }
+
+    /* ================= APPROVAL EXPENSE ================= */
+    else if (type === 'approval-expense') {
+        const phrases = [
+            "Expense Approve! বাজার এখন অফিসিয়ালি শুরু 🥗😂",
+            "সাইন হয়ে গেছে… টাকা চলে যাবে এখন 💸",
+            "রিসিপ্ট রাখো ভাই, পরে হিসাব লাগবে 😏",
+            "Approved… কিন্তু আমি চোখ রাখছি ব্যালেন্সে 👀"
+        ];
+        showMascotSpeech(pickRandom(phrases), 3500);
+    }
 
     if (reactClass) {
         mascot.classList.add(reactClass);
         setTimeout(() => mascot.classList.remove(reactClass), 2500);
     }
 }
+
 
 
 /**
@@ -3371,19 +3386,27 @@ const idlePhrases = {
     'হিসাব করি, জীবন চলে… 😐'
   ],
 
-  'mood-worried': [
-    'ভাই একটু হিসাব টাইট হয়ে গেছে 😰',
-    'কে কে এখনো টাকা দেয় নাই? 👀',
-    'চাল কম খাইলে চলবে নাকি? ⚠️',
-    'এই মাসে টেনশন ফ্রি না 😓'
-  ],
+ 'mood-worried': [
+  'ভাই একটু হিসাব টাইট হয়ে গেছে 😰',
+  'কে কে এখনো টাকা দেয় নাই? 👀',
+  'চাল কম খাইলে চলবে নাকি? ⚠️',
+  'এই মাসে টেনশন ফ্রি না 😓',
+  'টাকা দেস না কেন ভাই? হিসাব তো আটকে আছে! 💸',
+  'বিল তো নিজেরে নিজে পে করবে না 😅',
+  'সবাই চুপ… কিন্তু টাকা জমা নাই কেন? 🤨',
+  'ভাই আগে দেনা মেটাও, তারপর আরাম করো!'
+],
 
-  'mood-critical': [
-    'ভাই চাঁদা না দিলে গ্যাস বন্ধ! 🔥',
-    'ডিম অর্ধেক করে ভাগ করমু নাকি? 🥚',
-    'হিসাব বই কাঁদতেছে 😭',
-    'এই মাসে শুধু আলু ভর্তা 🥔'
-  ]
+'mood-critical': [
+  'ভাই চাঁদা না দিলে গ্যাস বন্ধ! 🔥',
+  'ডিম অর্ধেক করে ভাগ করমু নাকি? 🥚',
+  'হিসাব বই কাঁদতেছে 😭',
+  'এই মাসে শুধু আলু ভর্তা 🥔',
+  'টাকা দেস না কেন ভাই? মেস চালানো তো ফ্রি না! 😤',
+  'ফান্ড শূন্য… এখন সিরিয়াস হও সময় 😬',
+  'ব্যালেন্স লাল হয়ে গেছে, আগে সেটেল করো! 🚨',
+  'দায় এড়িয়ে গেলে হিসাব মাফ হয় না ভাই 😏'
+]
 };
 
             const phrases = idlePhrases[currentMascotMood] || idlePhrases['mood-neutral'];
@@ -6050,11 +6073,7 @@ async function triggerManualAutoEntry() {
 // ENTRY STATUS INDICATOR LOGIC
 // ==========================================
 
-// Global rotation variable
-// Global variables for Badge Rotation
-let statusCycleInterval = null;
-let statusQueue = [];
-let currentStatusIndex = 0;
+// Global rotation variables moved to top of file
 
 async function updateEntryStatusIndicator() {
   const badge = document.getElementById("entryStatusBadge");
