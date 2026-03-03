@@ -1,3 +1,5 @@
+background: linear-gradient(135deg, rgb(255 222 136 / 15%) 0%, rgba(245, 158, 11, 0.1) 100%);
+
 # MealCal Pro — Developer & AI Guide
 
 This document is designed to give human developers and AI coding assistants a complete, page-by-page understanding of the "MealCal Pro" application. It covers architecture, state management, complex database logic, and UI behaviors so that new features and upgrades can be implemented safely without breaking existing logic.

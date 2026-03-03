@@ -1195,6 +1195,7 @@ window.handleExpenseApproval = async function (expenseId, newStatus) {
       );
 
       showNotification("Expense Approved", "success");
+      triggerMascotReaction('approval-expense');
     }
 
     // 3. REFRESH UI
@@ -1333,6 +1334,7 @@ window.handleDepositAction = async function (depositId, action) {
         "deposit",
       );
       showNotification("Request Approved", "success");
+      triggerMascotReaction('approval-deposit');
     } else if (action === "reject") {
       // Delete pending row
       const { error: delError } = await supabase
@@ -1675,6 +1677,10 @@ function hideSplash(delay = 800) {
   if (loader) {
     setTimeout(() => {
       loader.classList.add("splash-hidden");
+      // 🤖 Mascot Greeting
+      if (typeof triggerMascotGreeting === "function") {
+          triggerMascotGreeting();
+      }
     }, delay);
   }
 }
@@ -2991,6 +2997,441 @@ function updateLiquidityMeter(liquidity) {
     pill.style.background = "#fef2f2";
     pill.style.border = "1px solid #fecaca";
   }
+
+  // 🤖 Update Mr. Taka's mood
+  updateMascotMood(liquidity);
+}
+
+// ==========================================
+// 🤖 MR. TAKA - MASCOT MOOD ENGINE
+// ==========================================
+
+const MASCOT_MOODS = ['mood-ecstatic', 'mood-happy', 'mood-neutral', 'mood-worried', 'mood-critical'];
+let currentMascotMood = '';
+let mascotSpeechTimeout = null;
+let mascotIdleInterval = null;
+let mascotPhysicalIdleTimeout = null;
+let lastLiquidity = null;
+let mascotInitialized = false;
+let mascotAudioCtx = null;
+
+/**
+ * Initializes Audio Context on first interaction (required by browsers)
+ */
+function initMascotAudio() {
+    if (mascotAudioCtx) return;
+    mascotAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+
+/**
+ * Synthesizes a cartoonish sound effect using Web Audio API
+ */
+function playMascotSound(type = 'pop') {
+    if (!mascotAudioCtx) initMascotAudio();
+    if (mascotAudioCtx.state === 'suspended') mascotAudioCtx.resume();
+
+    const osc = mascotAudioCtx.createOscillator();
+    const gain = mascotAudioCtx.createGain();
+    
+    osc.connect(gain);
+    gain.connect(mascotAudioCtx.destination);
+
+    const now = mascotAudioCtx.currentTime;
+
+    if (type === 'pop') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(400, now);
+        osc.frequency.exponentialRampToValueAtTime(100, now + 0.1);
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+        osc.start(now);
+        osc.stop(now + 0.1);
+    } else if (type === 'boing') {
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(150, now);
+        osc.frequency.exponentialRampToValueAtTime(600, now + 0.2);
+        gain.gain.setValueAtTime(0.1, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+        osc.start(now);
+        osc.stop(now + 0.2);
+    } else if (type === 'bleep') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(800, now);
+        osc.frequency.setValueAtTime(1200, now + 0.05);
+        gain.gain.setValueAtTime(0.1, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+        osc.start(now);
+        osc.stop(now + 0.1);
+    } else if (type === 'tada') {
+        // High pitched sparkle sound
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1200, now);
+        osc.frequency.exponentialRampToValueAtTime(2000, now + 0.3);
+        gain.gain.setValueAtTime(0.1, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+        osc.start(now);
+        osc.stop(now + 0.3);
+    }
+}
+
+
+/**
+ * Initializes touch and click interactions for the mascot.
+ */
+function initMascotInteractions() {
+    const mascot = document.getElementById('mascotCharacter');
+    if (!mascot || mascotInitialized) return;
+
+    let pressTimer;
+    let startX, startY;
+
+    // --- Tap / Click ---
+    // Single click handler for standard taps
+    mascot.addEventListener('click', (e) => {
+        const diffX = Math.abs(e.clientX - startX);
+        const diffY = Math.abs(e.clientY - startY);
+        // Only trigger if it wasn't a long drag/swipe
+        if (diffX < 10 && diffY < 10) {
+            triggerTapReaction();
+        }
+    });
+    
+    mascot.addEventListener('mousedown', (e) => handleStart(e.clientX, e.clientY));
+    mascot.addEventListener('touchstart', (e) => {
+        const touch = e.touches[0];
+        handleStart(touch.clientX, touch.clientY);
+    }, { passive: true });
+
+    const handleStart = (x, y) => {
+        startX = x;
+        startY = y;
+        mascot.classList.add('tapped');
+        
+        // Play click/tap sound
+        playMascotSound(Math.random() > 0.5 ? 'pop' : 'bleep');
+
+        pressTimer = setTimeout(() => {
+            showMascotSpeech("আমাকে চাপ দিয়ে ধরলে  সব ঠিক হয়ে যাবে ভাবছো? এত সহজ না ভাই 😎", 3000);
+            mascot.classList.add('long-pressed');
+        }, 800);
+    };
+
+    const handleEnd = (x, y) => {
+        clearTimeout(pressTimer);
+        
+        // Brief delay for the tap animation to finish
+        setTimeout(() => {
+            mascot.classList.remove('tapped', 'long-pressed');
+        }, 300);
+
+
+        if (startX === undefined) return; // Guard
+
+        const diffX = x - startX;
+        const diffY = y - startY;
+
+        // Swipe Detection - only if dragged significantly
+        if (Math.abs(diffX) > 50) {
+            const direction = diffX > 0 ? 'right' : 'left';
+            mascot.classList.add(`lean-${direction}`);
+            showMascotSpeech(direction === 'right' ? "Whoa, tilting right! 🎢" : "Leaning left! 🎡", 1500);
+            setTimeout(() => mascot.classList.remove(`lean-${direction}`), 1000);
+        }
+    };
+
+    mascot.addEventListener('mouseup', (e) => handleEnd(e.clientX, e.clientY));
+    mascot.addEventListener('touchend', (e) => {
+        const touch = e.changedTouches[0];
+        handleEnd(touch.clientX, touch.clientY);
+    }, { passive: true });
+
+    mascotInitialized = true;
+}
+
+function triggerTapReaction() {
+    const phrases = [
+        "এই এই, গুঁতাগুঁতি কেন? 😆",
+        "জি বলেন, আবার মুরগি হবে নাকি, লালটা না সাদাটা ? 📋",
+        "হিসাব খুলে বসি নাকি এখনই? 🧐",
+        "ম্যানেজারকে বেশি চাপ দিয়েন না ভাই 👔",
+        "কি রে বস, আবার ব্যালেন্স চেক? ব্যাংক না এটা! 😂",
+        "ক্লিক করলেই ব্যালেন্স বাড়ে না কিন্তু! 😂",
+        "চা খাইতে দাও, তারপর বলো ☕",
+        "হিসাব ঠিক আছে, টেনশন নাই 👍"
+    ];
+    showMascotSpeech(pickRandom(phrases), 2000);
+
+    // Physical Movement: Rapid Shake + Bounce
+    const head = document.querySelector('.mascot-head');
+    if (head) {
+        head.style.animation = "mascotWorryShake 0.2s ease-in-out 2";
+        setTimeout(() => {
+            head.style.animation = "";
+        }, 400);
+    }
+}
+
+
+/**
+ * Special greeting when app starts or user logins.
+ */
+function triggerMascotGreeting() {
+    const mascot = document.getElementById('mascotCharacter');
+    if (!mascot) return;
+
+    // Initialization check
+    if (!mascotInitialized) initMascotInteractions();
+
+    setTimeout(() => {
+setTimeout(() => {
+    const phrases = [
+        "আবার ফিরে আসছো নাকি ভাই? 😄",
+        "কাজ শুরু করবো নাকি নাকি শুধু ঘুরতে আসছো? 😉",
+        "হিসাব দেখার সময় হলো, অলস বসে থাকলে চলবে না 😅",
+        "কি অবস্থা? সব ঠিকঠাক তো? 👀",
+        "আরে ভাই, আমি তো রেডি — তুমিও রেডি তো?",
+        "আজ একটু কাজ করি নাকি, পরে আড্ডা দিবো 😂",
+        "ব্যালেন্স চেক করবা নাকি শুধু দেখতে আসছো? 😏",
+        "চলো শুরু করি, সময় তো ফাঁকা বসে থাকার না!"
+    ];
+
+    showMascotSpeech(pickRandom(phrases), 2000);
+}, 1000);
+      
+        
+        // Jump/Dance reaction
+        triggerMascotReaction('celebrate');
+        playMascotSound('tada');
+    }, 1000);
+}
+
+
+
+
+/**
+ * Updates Mr. Taka's mood based on the current liquidity percentage.
+ * Called from updateLiquidityMeter().
+ */
+function updateMascotMood(liquidity) {
+    const mascot = document.getElementById('mascotCharacter');
+    if (!mascot) return;
+
+    if (!mascotInitialized) initMascotInteractions();
+
+    const percent = Math.max(0, Math.min(100, (liquidity / 10000) * 100));
+    let newMood = '';
+    let speechText = '';
+
+    // --- Trend Detection ---
+    if (lastLiquidity !== null) {
+        const diff = liquidity - lastLiquidity;
+        if (diff < -1500) { // Sudden drop > 1500
+            triggerMascotReaction('shock');
+            showMascotSpeech("WHOA! That was a big drop! 😱", 4000);
+        } else if (diff > 1500) { // Sudden growth > 1500
+            triggerMascotReaction('celebrate');
+            showMascotSpeech("Wow! Big growth! 🚀📈", 4000);
+        }
+    }
+    lastLiquidity = liquidity;
+
+    if (percent >= 85) {
+        newMood = 'mood-ecstatic';
+        speechText = pickRandom(['WOHOOO! 🕺', 'Rich as a king! 👑', 'Surplus vibes! 💰', 'Party funded! 🥳']);
+    } else if (percent >= 60) {
+        newMood = 'mood-happy';
+        speechText = pickRandom(['Feeling great! 😊', 'Healthy budget! ✅', 'Looking solid! 💪']);
+    } else if (percent >= 30) {
+        newMood = 'mood-neutral';
+        speechText = pickRandom(['Steady as she goes. 🚢', 'Everything\'s normal. 📊', 'Monitoring... 🧐']);
+    } else if (percent >= 15) {
+        newMood = 'mood-worried';
+        speechText = pickRandom(['Budget getting thin... 😰', 'Deposit please? 🙏', 'Careful now! ⚠️']);
+    } else {
+        newMood = 'mood-critical';
+        speechText = pickRandom(['EMERGENCY! 🆘', 'Broken piggy bank! 😭', 'Funds depleted! 💀']);
+    }
+
+    if (newMood !== currentMascotMood) {
+        MASCOT_MOODS.forEach(m => mascot.classList.remove(m));
+        mascot.classList.add(newMood);
+        currentMascotMood = newMood;
+        showMascotSpeech(speechText);
+    }
+
+    if (!mascotIdleInterval) startMascotIdleSpeech();
+}
+
+
+/**
+ * Shows a speech bubble above Mr. Taka for a few seconds.
+ */
+function showMascotSpeech(text, duration = 4000) {
+    const mascot = document.getElementById('mascotCharacter');
+    const speechEl = document.getElementById('mascotSpeech');
+    if (!mascot || !speechEl) return;
+
+    // Clear previous timeout
+    if (mascotSpeechTimeout) clearTimeout(mascotSpeechTimeout);
+
+    speechEl.textContent = text;
+    mascot.classList.add('show-speech');
+
+    mascotSpeechTimeout = setTimeout(() => {
+        mascot.classList.remove('show-speech');
+    }, duration);
+}
+
+/**
+ * Triggers a temporary emotional reaction animation.
+ * type: 'deposit' | 'expense'
+ */
+function triggerMascotReaction(type) {
+    const mascot = document.getElementById('mascotCharacter');
+    if (!mascot) return;
+
+    const reactClass = type === 'approval-deposit' || type === 'deposit' || type === 'celebrate' ? 'react-deposit' : 'react-expense';
+    
+    // Play contextual sound
+    if (type === 'deposit' || type === 'celebrate') playMascotSound('boing');
+    if (type === 'expense') playMascotSound('pop');
+    if (type.startsWith('approval')) playMascotSound('bleep');
+
+    if (type === 'deposit') {
+        const phrases = [
+            'Ka-ching! 💰 More money for the mess!',
+            'Funds received! I\'m doing a happy dance! 🕺',
+            'Wallet getting fat! 💵 Good job members!',
+            'New deposit request! I\'ll keep it safe! 🏦',
+            'I love the smell of fresh deposits! 🤑'
+        ];
+        showMascotSpeech(pickRandom(phrases), 3500);
+    } else if (type === 'expense') {
+        const phrases = [
+            'Ouch! Money going out! 💸',
+            'Another bazaar cost? 🛒 Budget hit!',
+            'Spending money... hopefully it was worth it! 🥗',
+            'Expense request recorded. Careful with the budget! 📉',
+            'My digital heart breaks at every expense! 😢'
+        ];
+        showMascotSpeech(pickRandom(phrases), 3500);
+    } else if (type === 'approval-deposit') {
+        const phrases = [
+            'Admin Approved! 💸 Balance boosted!',
+            'Deposit officially verified! 🫡 Good work!',
+            'The manager said yes! 💰 Funds applied!',
+            'Approved! Our liquidity is looking healthier! 📈'
+        ];
+        showMascotSpeech(pickRandom(phrases), 3500);
+    } else if (type === 'approval-expense') {
+        const phrases = [
+            'Expense Approved! 🥗 Bazaar is a go!',
+            'The manager signed off on this. 📋 Funds cleared!',
+            'Payment verified! 💸 Keep the receipts!',
+            'Expense approved. Watching the budget closely! 🧐'
+        ];
+        showMascotSpeech(pickRandom(phrases), 3500);
+    }
+
+
+
+    if (reactClass) {
+        mascot.classList.add(reactClass);
+        setTimeout(() => mascot.classList.remove(reactClass), 2500);
+    }
+}
+
+
+/**
+ * Starts a random idle speech system so Mr. Taka talks occasionally.
+ */
+function startMascotIdleSpeech() {
+    const scheduleNextSpeech = () => {
+        const delay = 10000 + Math.random() * 20000;
+        mascotIdleInterval = setTimeout(() => {
+const idlePhrases = {
+  'mood-ecstatic': [
+    'এই মাসে তো রাজা আমি! 👑',
+    'আজকে মুরগি এক্সট্রা দাও! 🍗',
+    'হিসাব বই দেখে আম্মুও খুশি হতো! 😎',
+    'বাজেট দেখে মনটা নাচতেছে 💃'
+  ],
+
+  'mood-happy': [
+    'চাল ডাল ঠিকঠাক চলছে 👍',
+    'এইভাবেই থাকলে বেঁচে যামু 😌',
+    'মেসে আজ শান্তি বিরাজ করছে 🏠',
+    'হিসাব মিলছে, মনও মিলছে 😄'
+  ],
+
+  'mood-neutral': [
+    'বাজারের দাম আবার বাড়লো নাকি? 🛒',
+    'ক্যালকুলেটরটা গরম হয়ে গেছে 🔢',
+    'চা ছাড়া কাজ চলে নাকি ভাই ☕',
+    'হিসাব করি, জীবন চলে… 😐'
+  ],
+
+  'mood-worried': [
+    'ভাই একটু হিসাব টাইট হয়ে গেছে 😰',
+    'কে কে এখনো টাকা দেয় নাই? 👀',
+    'চাল কম খাইলে চলবে নাকি? ⚠️',
+    'এই মাসে টেনশন ফ্রি না 😓'
+  ],
+
+  'mood-critical': [
+    'ভাই চাঁদা না দিলে গ্যাস বন্ধ! 🔥',
+    'ডিম অর্ধেক করে ভাগ করমু নাকি? 🥚',
+    'হিসাব বই কাঁদতেছে 😭',
+    'এই মাসে শুধু আলু ভর্তা 🥔'
+  ]
+};
+
+            const phrases = idlePhrases[currentMascotMood] || idlePhrases['mood-neutral'];
+            
+            // Randomly do a "Dance Break" if balance is good
+            if (currentMascotMood === 'mood-ecstatic' && Math.random() > 0.7) {
+                showMascotSpeech("DANCE BREAK! 🕺✨", 2000);
+            } else {
+                showMascotSpeech(pickRandom(phrases), 3500);
+            }
+
+            scheduleNextSpeech();
+
+        }, delay);
+    };
+
+    const scheduleNextPhysicalMove = () => {
+        const delay = 5000 + Math.random() * 10000;
+        mascotPhysicalIdleTimeout = setTimeout(() => {
+            const mascot = document.getElementById('mascotCharacter');
+            if (!mascot) return;
+
+            // Random small physical animations via temporary classes or direct styles
+            const head = document.querySelector('.mascot-head');
+            if (head) {
+                const moves = [
+                    () => head.style.transform = "translateX(-50%) rotate(5deg)",
+                    () => head.style.transform = "translateX(-50%) rotate(-5deg)",
+                    () => head.style.transform = "translateX(-50%) translateY(-3px)",
+                    () => triggerMascotReaction('nothing') // Just the bounce
+                ];
+                pickRandom(moves)();
+                setTimeout(() => head.style.transform = "", 1000);
+            }
+            scheduleNextPhysicalMove();
+        }, delay);
+    };
+
+    scheduleNextSpeech();
+    scheduleNextPhysicalMove();
+}
+
+
+/**
+ * Utility: Pick a random element from an array.
+ */
+function pickRandom(arr) {
+    return arr[Math.floor(Math.random() * arr.length)];
 }
 
 // ==========================================
@@ -6858,6 +7299,7 @@ async function submitMobileEntry() {
           "expense",
         );
         showNotification("Request Sent for Approval", "success");
+        triggerMascotReaction('expense');
       }
 
       if (typeof loadExpenses === "function") loadExpenses();
@@ -6878,6 +7320,7 @@ async function submitMobileEntry() {
       });
       if (error) throw error;
       showNotification("Request Sent for Approval", "info");
+      triggerMascotReaction('deposit');
 
       if (typeof loadDeposits === "function") loadDeposits();
     }
