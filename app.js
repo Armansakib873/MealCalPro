@@ -5,6 +5,16 @@ const SUPABASE_ANON_KEY =
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 /**
+ * Wraps any Promise with a strict timeout to prevent indefinite network hanging.
+ */
+function withTimeout(promise, ms = 15000, errorMsg = "Network timeout") {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(errorMsg)), ms))
+  ]);
+}
+
+/**
  * ROBUST ACTION HANDLER
  * Wraps any async function to handle loading states, errors, and locking automatically.
  *
@@ -1012,22 +1022,38 @@ document.addEventListener("visibilitychange", () => {
   } else {
     console.log("▶️ Tab visible - forcing reconnect and resuming UI updates");
     
-    // Force a fresh socket connection in case OS killed it silently
-    initRealtimeSync();
-    
-    updateEntryStatusIndicator();
-    checkGlobalBalanceWarning();
-
-    // Refresh current page to catch up on missed data
-    const activePage = getActivePage();
-    if (activePage) {
-      console.log("🔄 Refreshing", activePage, "after tab became visible");
-      debounceRefresh(
-        () => loadPageData(activePage),
-        "visibility-refresh",
-        500,
-      );
+    if (!navigator.onLine) {
+       console.log("Network offline, skipping visible refresh");
+       return;
     }
+    
+    // 💡 BUG FIX: Delay the network calls by 1 second to allow OS network adapters to fully wake up
+    // Otherwise, fast fetch() requests might fire before the OS resolves the connection, causing permanent hanging.
+    setTimeout(() => {
+        // Force a fresh socket connection
+        initRealtimeSync();
+        
+        updateEntryStatusIndicator();
+        checkGlobalBalanceWarning();
+
+        // Refresh current page to catch up on missed data
+        const activePage = getActivePage();
+        if (activePage) {
+          console.log("🔄 Refreshing", activePage, "after tab became visible");
+          debounceRefresh(
+            async () => {
+                try {
+                    // Wrap in strict timeout so background refreshing doesn't lock up JS thread
+                    await withTimeout(loadPageData(activePage, true), 10000, "Background sync timed out");
+                } catch (e) {
+                    console.warn("Background data refresh timed out (safe ignore):", e);
+                }
+            },
+            "visibility-refresh",
+            500,
+          );
+        }
+    }, 1000);
   }
 });
 
@@ -1044,7 +1070,7 @@ window.addEventListener("beforeunload", () => {
 window.addEventListener("online", () => {
   console.log("🌐 Network reconnected - reinitializing realtime");
   showNotification("Connection restored", "success");
-  initRealtimeSync();
+  setTimeout(() => initRealtimeSync(), 1000);
 });
 
 window.addEventListener("offline", () => {
@@ -3028,6 +3054,9 @@ let mascotPhysicalIdleTimeout = null;
 let lastLiquidity = null;
 let mascotInitialized = false;
 let mascotAudioCtx = null;
+let userHasInteracted = false;
+document.addEventListener('click', () => { userHasInteracted = true; }, { once: true });
+document.addEventListener('touchstart', () => { userHasInteracted = true; }, { once: true });
 
 /**
  * Initializes Audio Context on first interaction (required by browsers)
@@ -3041,6 +3070,7 @@ function initMascotAudio() {
  * Synthesizes a cartoonish sound effect using Web Audio API
  */
 function playMascotSound(type = 'pop') {
+    if (!userHasInteracted) return;
     if (!mascotAudioCtx) initMascotAudio();
     if (mascotAudioCtx.state === 'suspended') mascotAudioCtx.resume();
 

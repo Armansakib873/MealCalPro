@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mealcal-v10'; // Increment this whenever you change CSS/JS
+const CACHE_NAME = 'mealcal-v11'; // Increment this whenever you change CSS/JS
 
 const ASSETS = [
     './',
@@ -49,11 +49,12 @@ self.addEventListener('fetch', (evt) => {
                         cache.put(evt.request, networkRes.clone());
                     }
                     return networkRes;
-                }).catch(() => {
+                }).catch((error) => {
                     // If network fails and it's a navigation request, show offline page
                     if (evt.request.mode === 'navigate') {
                         return cache.match('./index.html');
                     }
+                    return new Response('Network error occurred', { status: 408, headers: { 'Content-Type': 'text/plain' } });
                 });
 
                 // Return the cached version immediately (stale), 
