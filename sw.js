@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mealcal-v15'; // Incremented for PWA mobile fix
+const CACHE_NAME = 'mealcal-v16'; // Incremented for PWA mobile fix
 
 const ASSETS = [
     './',
