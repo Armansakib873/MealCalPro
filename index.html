@@ -1221,9 +1221,17 @@
 <!-- PWA Service Worker Registration -->
     <script>
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./sw.js')
-                .then((reg) => console.log('Service Worker registered', reg))
-                .catch((err) => console.log('Service Worker not registered', err));
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then((reg) => {
+                        console.log('Service Worker registered', reg);
+                        // Force update on mobile
+                        if (reg.active && !reg.active.scriptURL.includes('mealcal-v15')) {
+                            reg.update();
+                        }
+                    })
+                    .catch((err) => console.log('Service Worker registration failed:', err));
+            });
         }
     </script>
 
