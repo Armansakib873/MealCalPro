@@ -1042,6 +1042,7 @@ document.addEventListener("visibilitychange", () => {
     // -------------------------------------------------------
     if (bgDuration > 30000) {
       console.log("🔄 Extended background detected — forcing full reload");
+      sessionStorage.setItem('bg_reload', '1');
       window.location.reload();
       return;
     }
@@ -1071,6 +1072,7 @@ document.addEventListener("visibilitychange", () => {
                 await withTimeout(loadPageData(activePage, true), 10000, "Background sync timed out");
               } catch (e) {
                 console.warn("Soft refresh timed out, forcing reload:", e.message);
+                sessionStorage.setItem('bg_reload', '1');
                 window.location.reload();
               }
             },
@@ -1080,6 +1082,7 @@ document.addEventListener("visibilitychange", () => {
         }
       } catch (e) {
         console.error("Resume reconnect failed, forcing reload:", e);
+        sessionStorage.setItem('bg_reload', '1');
         window.location.reload();
       }
     }, 1500);
@@ -1092,6 +1095,7 @@ window.addEventListener("pageshow", (event) => {
   // bfcache restoration — the page was literally frozen and thawed
   if (event.persisted) {
     console.log("🧊 Page restored from bfcache — forcing reload");
+    sessionStorage.setItem('bg_reload', '1');
     window.location.reload();
   }
 });
@@ -1100,6 +1104,7 @@ window.addEventListener("focus", () => {
   // If we were hidden for a long time and visibilitychange didn't fire
   if (_appHiddenAt && (Date.now() - _appHiddenAt > 30000)) {
     console.log("🔄 Focus detected after long background — forcing reload");
+    sessionStorage.setItem('bg_reload', '1');
     window.location.reload();
   }
 });
@@ -1761,15 +1766,25 @@ async function preLoadAllPages() {
 
 function hideSplash(delay = 800) {
   const loader = document.getElementById("initial-loader");
-  if (loader) {
-    setTimeout(() => {
-      loader.classList.add("splash-hidden");
-      // 🤖 Mascot Greeting
-      if (typeof triggerMascotGreeting === "function") {
-          triggerMascotGreeting();
-      }
-    }, delay);
+  if (!loader) return;
+
+  // If this page load was triggered by a background auto-reload,
+  // skip the splash animation entirely for a seamless experience.
+  const isBgReload = sessionStorage.getItem('bg_reload');
+  if (isBgReload) {
+    sessionStorage.removeItem('bg_reload');
+    loader.classList.add("splash-hidden");
+    // Skip the mascot greeting on silent reloads
+    return;
   }
+
+  setTimeout(() => {
+    loader.classList.add("splash-hidden");
+    // 🤖 Mascot Greeting
+    if (typeof triggerMascotGreeting === "function") {
+        triggerMascotGreeting();
+    }
+  }, delay);
 }
 
 function showSplash(text = "Preparing your kitchen...") {
