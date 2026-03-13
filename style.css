@@ -4900,7 +4900,7 @@ background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(245, 158, 
 /* --- Ground Shadow --- */
 .mascot-ground-shadow {
     position: absolute;
-    bottom: -4px;
+    bottom: 22px;
     left: 50%;
     transform: translateX(-50%);
     width: 45px;
@@ -5441,6 +5441,6 @@ background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(245, 158, 
 
 /* --- Mobile --- */
 @media (max-width: 480px) {
-    .mascot-wrapper { transform: translateX(50%) scale(1.1); bottom: -5px; }
+    .mascot-wrapper { transform: translateX(50%) scale(1.1); bottom: -5px; right: 200px; }
     .mascot-wrapper:active { transform: translateX(50%) scale(1.14); }
 }
