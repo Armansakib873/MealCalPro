@@ -1006,54 +1006,101 @@ function updateConnectionStatus(status) {
 
 // ============================================
 // VISIBILITY & LIFECYCLE MANAGEMENT
+// (Mobile Background Resume - Production Fix)
 // ============================================
 
-// Pause/Resume real-time when tab visibility changes
+// Track when app goes to background so we know how long it was asleep
+let _appHiddenAt = 0;
+let _visibilityResumeTimer = null;
+
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) {
-    console.log(
-      "⏸️ Tab hidden - keeping realtime active but pausing UI updates",
-    );
-    // Keep realtime channels active but pause status indicator
+    // === APP GOING TO BACKGROUND ===
+    _appHiddenAt = Date.now();
+    console.log("⏸️ App hidden at:", new Date().toLocaleTimeString());
+
     if (statusCycleInterval) {
       clearInterval(statusCycleInterval);
       statusCycleInterval = null;
     }
   } else {
-    console.log("▶️ Tab visible - forcing reconnect and resuming UI updates");
-    
-    if (!navigator.onLine) {
-       console.log("Network offline, skipping visible refresh");
-       return;
+    // === APP COMING BACK TO FOREGROUND ===
+    const bgDuration = Date.now() - _appHiddenAt;
+    const bgSeconds = Math.round(bgDuration / 1000);
+    console.log(`▶️ App resumed after ${bgSeconds}s in background`);
+
+    // Clear any pending resume timer from a previous rapid switch
+    if (_visibilityResumeTimer) clearTimeout(_visibilityResumeTimer);
+
+    // -------------------------------------------------------
+    // STRATEGY 1: HARD RELOAD after extended background (>30s)
+    // Mobile browsers freeze the entire JS context when backgrounded.
+    // After ~30s, the Supabase client's internal WebSocket state,
+    // pending fetch promises, and connection pool are all corrupted
+    // beyond what a soft reconnect can fix. A full page reload is
+    // the only reliable way to get a clean state.
+    // -------------------------------------------------------
+    if (bgDuration > 30000) {
+      console.log("🔄 Extended background detected — forcing full reload");
+      window.location.reload();
+      return;
     }
-    
-    // 💡 BUG FIX: Delay the network calls by 1 second to allow OS network adapters to fully wake up
-    // Otherwise, fast fetch() requests might fire before the OS resolves the connection, causing permanent hanging.
-    setTimeout(() => {
-        // Force a fresh socket connection
+
+    // -------------------------------------------------------
+    // STRATEGY 2: SOFT RECONNECT for short background (<30s)
+    // Give the OS 1.5s to wake up the network adapter, then
+    // reconnect realtime and refresh the current page.
+    // -------------------------------------------------------
+    _visibilityResumeTimer = setTimeout(() => {
+      if (!navigator.onLine) {
+        console.log("📡 Network offline, skipping soft reconnect");
+        return;
+      }
+
+      try {
         initRealtimeSync();
-        
         updateEntryStatusIndicator();
         checkGlobalBalanceWarning();
 
-        // Refresh current page to catch up on missed data
         const activePage = getActivePage();
         if (activePage) {
-          console.log("🔄 Refreshing", activePage, "after tab became visible");
+          console.log("🔄 Soft-refreshing", activePage);
           debounceRefresh(
             async () => {
-                try {
-                    // Wrap in strict timeout so background refreshing doesn't lock up JS thread
-                    await withTimeout(loadPageData(activePage, true), 10000, "Background sync timed out");
-                } catch (e) {
-                    console.warn("Background data refresh timed out (safe ignore):", e);
-                }
+              try {
+                await withTimeout(loadPageData(activePage, true), 10000, "Background sync timed out");
+              } catch (e) {
+                console.warn("Soft refresh timed out, forcing reload:", e.message);
+                window.location.reload();
+              }
             },
             "visibility-refresh",
             500,
           );
         }
-    }, 1000);
+      } catch (e) {
+        console.error("Resume reconnect failed, forcing reload:", e);
+        window.location.reload();
+      }
+    }, 1500);
+  }
+});
+
+// BACKUP: Some mobile browsers (especially Samsung Internet, older WebView)
+// don't reliably fire visibilitychange. These listeners act as fallbacks.
+window.addEventListener("pageshow", (event) => {
+  // bfcache restoration — the page was literally frozen and thawed
+  if (event.persisted) {
+    console.log("🧊 Page restored from bfcache — forcing reload");
+    window.location.reload();
+  }
+});
+
+window.addEventListener("focus", () => {
+  // If we were hidden for a long time and visibilitychange didn't fire
+  if (_appHiddenAt && (Date.now() - _appHiddenAt > 30000)) {
+    console.log("🔄 Focus detected after long background — forcing reload");
+    window.location.reload();
   }
 });
 
