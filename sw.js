@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mealcal-v9'; // Increment this whenever you change CSS/JS
+const CACHE_NAME = 'mealcal-v10'; // Increment this whenever you change CSS/JS
 
 const ASSETS = [
     './',

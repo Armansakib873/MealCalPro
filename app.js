@@ -41,8 +41,13 @@ async function runSafeAction(
   btn.innerHTML = `<span class="action-spinner"></span> ${loadingText}`;
 
   try {
-    // 3. EXECUTE THE ACTUAL CODE
-    await asyncActionFn();
+    // 3. EXECUTE THE ACTUAL CODE WITH TIMEOUT
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error("Network Timeout: The connection seems broken. Please reload.")), 15000);
+    });
+    
+    // Race the actual function against the 15-second timeout
+    await Promise.race([asyncActionFn(), timeoutPromise]);
 
     // 4. Success State (Optional visual feedback)
     btn.innerHTML = `✓ Done`;
@@ -1005,11 +1010,15 @@ document.addEventListener("visibilitychange", () => {
       statusCycleInterval = null;
     }
   } else {
-    console.log("▶️ Tab visible - resuming UI updates");
+    console.log("▶️ Tab visible - forcing reconnect and resuming UI updates");
+    
+    // Force a fresh socket connection in case OS killed it silently
+    initRealtimeSync();
+    
     updateEntryStatusIndicator();
     checkGlobalBalanceWarning();
 
-    // Refresh current page to catch up on any missed updates
+    // Refresh current page to catch up on missed data
     const activePage = getActivePage();
     if (activePage) {
       console.log("🔄 Refreshing", activePage, "after tab became visible");
@@ -1134,13 +1143,20 @@ window.addEventListener("DOMContentLoaded", () => {
 
 // Explicitly attach to 'window' to ensure HTML buttons can find it
 // Attach to window so HTML onClick works
+
+// Global lock to prevent double clicks on admin actions
+let isProcessingApproval = false;
+
 window.handleExpenseApproval = async function (expenseId, newStatus) {
+  if (isProcessingApproval) return;
+
   const userRole = currentUser?.role;
   if (userRole !== "admin" && userRole !== "manager") {
     showNotification("Permission Denied", "error");
     return;
   }
 
+  isProcessingApproval = true;
   const btn = event.target;
   const originalText = btn.textContent;
   btn.textContent = "...";
@@ -1168,10 +1184,10 @@ window.handleExpenseApproval = async function (expenseId, newStatus) {
 
     // 2. PERFORM ACTION
     if (newStatus === "rejected") {
-      // Delete the rejected request
+      // Update the rejected request to preserve audit trail
       const { error } = await supabase
         .from("expenses")
-        .delete()
+        .update({ status: "rejected" })
         .eq("id", expenseId);
       if (error) throw error;
 
@@ -1268,12 +1284,12 @@ window.handleDepositApproval = async function (depositId) {
 };
 
 window.handleDepositRejection = async function (depositId) {
-  if (!confirm("Reject and delete this request?")) return;
+  if (!confirm("Reject this request?")) return;
 
   try {
     const { error } = await supabase
       .from("deposits")
-      .delete()
+      .update({ status: "rejected" })
       .eq("id", depositId);
     if (error) throw error;
     showNotification("Request Rejected", "warning");
@@ -1339,10 +1355,10 @@ window.handleDepositAction = async function (depositId, action) {
       showNotification("Request Approved", "success");
       triggerMascotReaction('approval-deposit');
     } else if (action === "reject") {
-      // Delete pending row
+      // Update pending row to preserve audit trail
       const { error: delError } = await supabase
         .from("deposits")
-        .delete()
+        .update({ status: "rejected" })
         .eq("id", depositId);
       if (delError) throw delError;
 
@@ -1363,6 +1379,7 @@ window.handleDepositAction = async function (depositId, action) {
     console.error("Action Error:", err.message);
     showNotification(err.message, "error");
   } finally {
+    isProcessingApproval = false;
     if (document.body.contains(btn)) {
       btn.disabled = false;
       btn.textContent = originalText;
@@ -1395,19 +1412,13 @@ window.revertApprovedDeposit = async function (depositId) {
 
     if (depError || !origDep) throw new Error("Could not find the original deposit.");
 
-    // 2. Define Time Range for Auto-Settlements (± 2 seconds)
-    const timeTarget = new Date(origDep.created_at);
-    const timeTMinus = new Date(timeTarget.getTime() - 2000).toISOString();
-    const timeTPlus = new Date(timeTarget.getTime() + 2000).toISOString();
-
-    // 3. Find any Auto-Settlements that occurred in that EXACT 2 second burst
+    // 3. Find any Auto-Settlements linked to this parent deposit
     const { data: groupDeposits, error: grpError } = await supabase
       .from("deposits")
       .select("*")
       .eq("cycle_id", origDep.cycle_id)
       .eq("label", "Auto-Settlement")
-      .gte("created_at", timeTMinus)
-      .lte("created_at", timeTPlus);
+      .eq("parent_deposit_id", origDep.id);
 
     if (grpError) throw grpError;
 
@@ -4417,6 +4428,23 @@ async function loadSummary() {
 
 // Function to instantly toggle meal from Summary Page
 async function quickToggleSummaryMeal(memberId, dateStr, type, currentVal) {
+  // --- PREVENT EDITS TO PAST CYCLES ---
+  // Find which cycle this date belongs to
+  const targetDateObj = parseLocalDate(dateStr);
+  const targetCycle = allCycles.find(c => {
+    const sDate = parseLocalDate(c.start_date);
+    const eDate = parseLocalDate(c.end_date);
+    // Include the boundary day (end_date + 1) which belongs to the final session
+    const boundaryDate = new Date(eDate);
+    boundaryDate.setDate(boundaryDate.getDate() + 1);
+    return targetDateObj >= sDate && targetDateObj <= boundaryDate;
+  });
+
+  if (targetCycle && !targetCycle.is_active) {
+    showNotification("Cannot edit past cycle data", "error");
+    return;
+  }
+
   const btn = event.target; // Optimistic UI
   const originalText = btn.textContent;
   btn.textContent = "...";
@@ -4587,10 +4615,10 @@ document
         (sum, e) => sum + parseFloat(e.amount),
         0,
       );
-      const totalMeals = meals.reduce(
-        (sum, m) => sum + (parseFloat(m.day_count) + parseFloat(m.night_count)),
-        0,
-      );
+      
+      const boundaryMeals = await fetchBoundaryDayMeals(currentCycleId);
+      const totalMeals = adjustMealTotal(meals || [], boundaryMeals, cycle.start_date);
+
       const totalDeposits = deposits.reduce(
         (sum, d) => sum + parseFloat(d.amount),
         0,
@@ -4639,12 +4667,7 @@ document
       ]);
 
       members.forEach((m) => {
-        const mMeals = meals
-          .filter((x) => x.member_id === m.id)
-          .reduce(
-            (s, x) => s + (parseFloat(x.day_count) + parseFloat(x.night_count)),
-            0,
-          );
+        const mMeals = adjustMealTotal(meals || [], boundaryMeals, cycle.start_date, m.id);
 
         const mDep = deposits
           .filter((x) => x.member_id === m.id)
@@ -5477,6 +5500,9 @@ function renderHistoryItem(t) {
     </div>`;
 }
 
+// Global lock for deposits
+let isProcessingDepositSettlement = false;
+
 // Add this NEW function BEFORE the depositForm handler
 async function processDepositWithClientSideSettlement(
   memberId,
@@ -5485,6 +5511,8 @@ async function processDepositWithClientSideSettlement(
   label,
   notes,
 ) {
+  if (isProcessingDepositSettlement) throw new Error("A settlement is already processing. Please wait.");
+  isProcessingDepositSettlement = true;
   try {
     const targetCycleId = parseInt(cycleId);
 
@@ -5557,7 +5585,7 @@ async function processDepositWithClientSideSettlement(
 
       if (settleAmount <= 0) continue;
 
-      // 4. Create Transfer Logs (Auto-Settlements)
+      // 4. Create Transfer Logs (Auto-Settlements) WITH parent_deposit_id
       await supabase.from("deposits").insert([
         {
           cycle_id: targetCycleId,
@@ -5566,6 +5594,7 @@ async function processDepositWithClientSideSettlement(
           label: "Auto-Settlement",
           notes: `Paid to ${creditor.members.name}`,
           status: "approved",
+          parent_deposit_id: mainDeposit.id,
         },
         {
           cycle_id: targetCycleId,
@@ -5574,6 +5603,7 @@ async function processDepositWithClientSideSettlement(
           label: "Auto-Settlement",
           notes: `Received from ${memberObj.name}`,
           status: "approved",
+          parent_deposit_id: mainDeposit.id,
         },
       ]);
 
@@ -5620,6 +5650,8 @@ async function processDepositWithClientSideSettlement(
   } catch (err) {
     console.error("Settlement Logic Crash:", err);
     throw err;
+  } finally {
+    isProcessingDepositSettlement = false;
   }
 }
 
@@ -6927,6 +6959,18 @@ async function checkGlobalBalanceWarning() {
 async function saveDayMenu(dayIndex) {
   const night = document.getElementById(`night-${dayIndex}`).value;
   const day = document.getElementById(`day-${dayIndex}`).value;
+
+  // --- PREVENT EDITS IF CURRENT CYCLE IS INACTIVE ---
+  // Assuming weekly menu changes apply to the currently viewed cycle logic
+  if (currentCycleId) {
+    const cycle = allCycles.find(c => c.id == currentCycleId);
+    if (cycle && !cycle.is_active) {
+      showNotification("Cannot edit menus for past cycles", "error");
+      
+      // visual reset would be nice but returning is crucial
+      return;
+    }
+  }
 
   // Visual feedback: briefly highlight the inputs
   const inputs = [
