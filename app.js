@@ -1198,6 +1198,18 @@ window.addEventListener("DOMContentLoaded", () => {
   // NEW: Load the users into the login dropdown
   loadLoginUserDropdown();
 });
+
+// Restore last page after app is fully initialized (after showApp completes)
+window.addEventListener('load', () => {
+  // Wait for app to be ready, then restore page
+  setTimeout(() => {
+    const lastPage = sessionStorage.getItem('last_page');
+    if (lastPage && document.getElementById(lastPage + 'Page')) {
+      console.log('🔄 Restoring last page:', lastPage);
+      navigateToPage(lastPage, false);
+    }
+  }, 2000); // Wait for initializeApp to complete
+});
 // ==========================================
 // EXPENSE APPROVAL HANDLER (GLOBAL)
 // ==========================================
@@ -2803,6 +2815,9 @@ function populateMemberSelects() {
 
 async function navigateToPage(pageName, addToHistory = true) {
   if (!pageName) return;
+
+  // --- Save current page to sessionStorage for restore after reload ---
+  sessionStorage.setItem('last_page', pageName);
 
   // --- SECURITY CHECK ---
   if (pageName === "admin") {
