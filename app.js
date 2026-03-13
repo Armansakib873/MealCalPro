@@ -4,6 +4,16 @@ const SUPABASE_ANON_KEY =
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// Instant splash-hide for background auto-reloads (must run before anything else)
+(function() {
+  if (sessionStorage.getItem('bg_reload')) {
+    sessionStorage.removeItem('bg_reload');
+    window._isBgReload = true;
+    const loader = document.getElementById('initial-loader');
+    if (loader) loader.style.display = 'none';
+  }
+})();
+
 /**
  * Wraps any Promise with a strict timeout to prevent indefinite network hanging.
  */
@@ -1009,104 +1019,77 @@ function updateConnectionStatus(status) {
 // (Mobile Background Resume - Production Fix)
 // ============================================
 
-// Track when app goes to background so we know how long it was asleep
+// -------------------------------------------------------
+// HEARTBEAT: Detects JS freeze INSTANTLY when engine wakes
+// setInterval callbacks queued during freeze fire the
+// absolute instant JS resumes — often before
+// visibilitychange is even dispatched by the browser.
+// -------------------------------------------------------
+let _lastHeartbeat = Date.now();
 let _appHiddenAt = 0;
-let _visibilityResumeTimer = null;
+let _appStartedAt = Date.now();
+
+function _bgReload() {
+  sessionStorage.setItem('bg_reload', '1');
+  window.location.reload();
+}
+
+setInterval(() => {
+  const now = Date.now();
+  const gap = now - _lastHeartbeat;
+  // Only trigger if app has been running for at least 5s (avoid reload loops on slow startup)
+  // and if the gap is > 5s (real freeze, not just slow page load)
+  if (gap > 5000 && (now - _appStartedAt > 5000)) {
+    console.log(`💓 Heartbeat gap: ${Math.round(gap/1000)}s — JS was frozen, reloading`);
+    _bgReload();
+    return;
+  }
+  _lastHeartbeat = now;
+}, 1000);
 
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) {
-    // === APP GOING TO BACKGROUND ===
     _appHiddenAt = Date.now();
-    console.log("⏸️ App hidden at:", new Date().toLocaleTimeString());
-
     if (statusCycleInterval) {
       clearInterval(statusCycleInterval);
       statusCycleInterval = null;
     }
   } else {
-    // === APP COMING BACK TO FOREGROUND ===
-    const bgDuration = Date.now() - _appHiddenAt;
-    const bgSeconds = Math.round(bgDuration / 1000);
-    console.log(`▶️ App resumed after ${bgSeconds}s in background`);
-
-    // Clear any pending resume timer from a previous rapid switch
-    if (_visibilityResumeTimer) clearTimeout(_visibilityResumeTimer);
-
-    // -------------------------------------------------------
-    // STRATEGY 1: HARD RELOAD after extended background (>30s)
-    // Mobile browsers freeze the entire JS context when backgrounded.
-    // After ~30s, the Supabase client's internal WebSocket state,
-    // pending fetch promises, and connection pool are all corrupted
-    // beyond what a soft reconnect can fix. A full page reload is
-    // the only reliable way to get a clean state.
-    // -------------------------------------------------------
-    if (bgDuration > 30000) {
-      console.log("🔄 Extended background detected — forcing full reload");
-      sessionStorage.setItem('bg_reload', '1');
-      window.location.reload();
+    // IMMEDIATE reload when returning from background - no delay!
+    if (_appHiddenAt) {
+      _bgReload();
       return;
     }
-
-    // -------------------------------------------------------
-    // STRATEGY 2: SOFT RECONNECT for short background (<30s)
-    // Give the OS 1.5s to wake up the network adapter, then
-    // reconnect realtime and refresh the current page.
-    // -------------------------------------------------------
-    _visibilityResumeTimer = setTimeout(() => {
-      if (!navigator.onLine) {
-        console.log("📡 Network offline, skipping soft reconnect");
-        return;
-      }
-
+    // Short background (<5s): soft reconnect
+    setTimeout(() => {
+      if (!navigator.onLine) return;
       try {
         initRealtimeSync();
         updateEntryStatusIndicator();
         checkGlobalBalanceWarning();
-
         const activePage = getActivePage();
         if (activePage) {
-          console.log("🔄 Soft-refreshing", activePage);
           debounceRefresh(
             async () => {
               try {
-                await withTimeout(loadPageData(activePage, true), 10000, "Background sync timed out");
-              } catch (e) {
-                console.warn("Soft refresh timed out, forcing reload:", e.message);
-                sessionStorage.setItem('bg_reload', '1');
-                window.location.reload();
-              }
+                await withTimeout(loadPageData(activePage, true), 10000, "Sync timeout");
+              } catch (e) { _bgReload(); }
             },
             "visibility-refresh",
             500,
           );
         }
-      } catch (e) {
-        console.error("Resume reconnect failed, forcing reload:", e);
-        sessionStorage.setItem('bg_reload', '1');
-        window.location.reload();
-      }
+      } catch (e) { _bgReload(); }
     }, 1500);
   }
 });
 
-// BACKUP: Some mobile browsers (especially Samsung Internet, older WebView)
-// don't reliably fire visibilitychange. These listeners act as fallbacks.
 window.addEventListener("pageshow", (event) => {
-  // bfcache restoration — the page was literally frozen and thawed
-  if (event.persisted) {
-    console.log("🧊 Page restored from bfcache — forcing reload");
-    sessionStorage.setItem('bg_reload', '1');
-    window.location.reload();
-  }
+  if (event.persisted) _bgReload();
 });
 
 window.addEventListener("focus", () => {
-  // If we were hidden for a long time and visibilitychange didn't fire
-  if (_appHiddenAt && (Date.now() - _appHiddenAt > 30000)) {
-    console.log("🔄 Focus detected after long background — forcing reload");
-    sessionStorage.setItem('bg_reload', '1');
-    window.location.reload();
-  }
+  if (_appHiddenAt && (Date.now() - _appHiddenAt > 5000)) _bgReload();
 });
 
 // Cleanup on page unload
@@ -1768,18 +1751,14 @@ function hideSplash(delay = 800) {
   const loader = document.getElementById("initial-loader");
   if (!loader) return;
 
-  // If this page load was triggered by a background auto-reload,
-  // skip the splash animation entirely for a seamless experience.
-  const isBgReload = sessionStorage.getItem('bg_reload');
-  if (isBgReload) {
-    sessionStorage.removeItem('bg_reload');
-    loader.classList.add("splash-hidden");
-    // Skip the mascot greeting on silent reloads
+  // If this is a background auto-reload, splash is already hidden by top-of-file IIFE
+  if (window._isBgReload) {
     return;
   }
 
   setTimeout(() => {
     loader.classList.add("splash-hidden");
+    loader.style.display = '';
     // 🤖 Mascot Greeting
     if (typeof triggerMascotGreeting === "function") {
         triggerMascotGreeting();
