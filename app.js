@@ -2257,13 +2257,15 @@ async function loadMasterTracker() {
     const activeSessionDateObj = await getActiveSessionDate();
     const activeSessionStr = toLocalISO(activeSessionDateObj);
 
+    const activeMembers = allMembers.filter(m => !m.archived_from_cycle_id || parseInt(currentCycleId) < m.archived_from_cycle_id);
+
     let headerHTML = `
             <thead>
                 <tr>
                     <th style="vertical-align: bottom; padding: 0;">
                         <div style="padding: 12px 8px 6px;">BAZAR</div>
                     </th>
-                    ${allMembers.map((m) => `
+                    ${activeMembers.map((m) => `
                     <th style="padding: 0; vertical-align: bottom;">
                         <div style="padding: 12px 8px 6px;">${m.name.split(" ")[0]}</div>
                         <div style="display: flex; width: 100%; border-top: 1px dashed rgba(0,0,0,0.1); background: rgba(0,0,0,0.02);">
@@ -2296,7 +2298,7 @@ async function loadMasterTracker() {
 
       bodyHTML += `<tr ${isTodayRow ? 'style="background: #f0f9ff;"' : ""}>
                 <td>${displayDate}</td>
-                ${allMembers
+                ${activeMembers
                   .map((m) => {
                     const nVal = matrixData[dateSessionStr]?.[m.id]?.n || 0;
                     const dVal = matrixData[dateNextStr]?.[m.id]?.d || 0;
@@ -2783,7 +2785,8 @@ function populateMemberSelects() {
     select.appendChild(defaultOption);
 
     // Populate Members
-    allMembers.forEach((member) => {
+    const activeMembersForCycle = allMembers.filter(m => !m.archived_from_cycle_id || parseInt(currentCycleId) < m.archived_from_cycle_id);
+    activeMembersForCycle.forEach((member) => {
       const option = document.createElement("option");
       option.value = member.id;
       option.textContent = member.name;
@@ -4466,7 +4469,8 @@ async function loadSummary() {
             `;
     }
 
-    tbody.innerHTML = allMembers
+    const activeSummaryMembers = allMembers.filter(m => !m.archived_from_cycle_id || parseInt(currentCycleId) < m.archived_from_cycle_id);
+    tbody.innerHTML = activeSummaryMembers
       .map((member) => {
         const memMeals = adjustMealTotal(meals, boundaryMeals, cycleStartDate, member.id);
 
@@ -6722,6 +6726,7 @@ async function loadMembersList() {
         const isManager = member.role === "manager";
         const isAdmin = member.role === "admin";
         const hasLogin = member.user_id !== null;
+        const isArchived = member.archived_from_cycle_id && parseInt(currentCycleId) >= member.archived_from_cycle_id;
 
         // --- FIXED AVATAR LOGIC (Inside the loop) ---
         const avatarHtml =
@@ -6743,6 +6748,7 @@ async function loadMembersList() {
                         ${member.name} 
                         ${isAdmin ? '<span style="font-size:9px; background:#0f172a; color:white; padding:2px 6px; border-radius:6px; margin-left:5px;">ADMIN</span>' : ""}
                         ${isManager ? '<span style="font-size:9px; background:#10b981; color:white; padding:2px 6px; border-radius:6px; margin-left:5px;">MANAGER</span>' : ""}
+                        ${isArchived ? '<span style="font-size:9px; background:#ef4444; color:white; padding:2px 6px; border-radius:6px; margin-left:5px;">ARCHIVED</span>' : ""}
                     </div>
                     <div class="list-item-subtitle" style="font-size: 11px;">
                         ${hasLogin ? '<span style="color:#10b981">● Active User</span>' : '<span style="color:#f59e0b">○ No Login Linked</span>'}
@@ -6768,6 +6774,7 @@ async function loadMembersList() {
                             onclick="openEditMemberModal('${member.id}', '${member.name}', '${member.user_id || ""}')">
                         Edit
                     </button>
+                    ${!isAdmin && !isArchived ? `<button class="btn btn-sm btn-danger" style="font-size: 10px; padding: 6px 10px;" onclick="archiveMember('${member.id}', '${member.name}', '${member.user_id || ""}')">Archive</button>` : ""}
                 </div>
             </div>
             `;
@@ -6809,43 +6816,74 @@ async function toggleManagerRole(memberId, currentRole) {
   }
 }
 
-// --- Action 2: Delete Member ---
-async function deleteMember(memberId, userId) {
-  if (
-    !confirm(
-      "WARNING: Deleting a member will remove their user account. If they have existing meal/deposit records, this might fail or cause data issues. Continue?",
-    )
-  )
-    return;
+// --- Action 2: Archive Member (Safe Deletion) ---
+async function archiveMember(memberId, memberName, userId) {
+  if (!confirm(`Are you sure you want to remove ${memberName} from the current and future cycles?`)) return;
 
   try {
-    // 1. Delete User Account first (if exists)
-    if (userId) {
-      const { error: uError } = await supabase
-        .from("users")
-        .delete()
-        .eq("id", userId);
-      if (uError) throw uError;
+    showNotification("Validating balances...", "info");
+
+    const sessionDateStr = toLocalISO(await getActiveSessionDate());
+    // 1. Calculate Current Balance natively
+    const [duesRes, myDepsRes, mealsRes, expsRes, allMealsRes] = await Promise.all([
+      supabase.from("cycle_dues").select("due_amount, settled_amount").eq("member_id", memberId).neq("status", "settled"),
+      supabase.from("deposits").select("amount").eq("member_id", memberId).eq("cycle_id", currentCycleId).neq("status", "pending"),
+      supabase.from("meals").select("*").eq("member_id", memberId).eq("cycle_id", currentCycleId),
+      supabase.from("expenses").select("amount").eq("cycle_id", currentCycleId).eq("status", "approved"),
+      supabase.from("meals").select("*").eq("cycle_id", currentCycleId)
+    ]);
+
+    const boundaryMeals = await fetchBoundaryDayMeals(currentCycleId);
+    const cycleStartDate = allCycles.find(c => c.id == currentCycleId)?.start_date;
+    
+    const totalExp = expsRes.data?.reduce((s, e) => s + parseFloat(e.amount), 0) || 0;
+    const totalGlobalMeals = adjustMealTotal(allMealsRes.data || [], boundaryMeals, cycleStartDate) || 1;
+    const mealRate = totalExp / totalGlobalMeals;
+
+    const myDeposit = myDepsRes.data?.reduce((s, d) => s + parseFloat(d.amount), 0) || 0;
+    const myMealCost = adjustMealTotal(mealsRes.data || [], boundaryMeals, cycleStartDate, memberId) * mealRate;
+    
+    // Balance calculation identically to status badge
+    const myBalance = myDeposit - myMealCost;
+
+    // 2. Sum historical unpaid dues (Negative is debt, positive is credit)
+    let historicalDue = 0;
+    duesRes.data?.forEach(d => {
+        const netDueForRecord = Math.abs(d.due_amount) - Math.abs(d.settled_amount || 0);
+        if (d.due_amount < 0) historicalDue -= netDueForRecord; // Debt
+        else historicalDue += netDueForRecord; // Credit awaiting settlement
+    });
+
+    const totalNetStatus = historicalDue + myBalance;
+
+    if (totalNetStatus < -2 || totalNetStatus > 2) {
+      showNotification(`Cannot remove ${memberName}. Net balance across all cycles is ${totalNetStatus < 0 ? "-" : ""}৳${Math.abs(totalNetStatus).toFixed(2)}. Must be settled to ±৳2.`, "error");
+      return;
     }
 
-    // 2. Delete Member
+    // Validation Passed. Archive Member.
     const { error: mError } = await supabase
       .from("members")
-      .delete()
+      .update({ archived_from_cycle_id: parseInt(currentCycleId) })
       .eq("id", memberId);
-    if (mError) {
-      // If foreign key constraint fails (has meals/deposits)
-      throw new Error(
-        "Cannot delete member: They likely have associated meals or deposits.",
-      );
+
+    if (mError) throw mError;
+    
+    // To optionally remove user login so they can't mess with old data:
+    if (userId) {
+        await supabase.from("users").delete().eq("id", userId);
     }
 
-    showNotification("Member deleted successfully", "success");
-    await loadMembersList();
-    await loadMembers(); // Refresh global list
+    showNotification(`${memberName} successfully archived.`, "success");
+    await loadMembers(); 
+    await loadMembersList(); 
   } catch (err) {
-    console.error("Delete error:", err);
-    showNotification(err.message, "error");
+    console.error("Archive error:", err);
+    if (err.message && err.message.includes("archived_from_cycle_id")) {
+        showNotification("CRITICAL: 'archived_from_cycle_id' column missing in Supabase. Check Admin Guide.", "error");
+    } else {
+        showNotification(err.message, "error");
+    }
   }
 }
 
