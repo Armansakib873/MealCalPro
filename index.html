@@ -262,6 +262,12 @@
                         Admin Panel
                     </a>
                 </li>
+                <li class="nav-item" id="installAppMenuItem" style="display:none;">
+                    <a class="nav-link" id="sidebarInstallBtn" style="background: linear-gradient(135deg, #059669, #0891b2); color: white; border-radius: 10px; margin: 5px 0;" onclick="triggerPWAInstall()">
+                        <span class="nav-icon">📲</span>
+                        Install App
+                    </a>
+                </li>
                 <li class="nav-item">
                     <a class="nav-link" id="logoutBtn">
                         <span class="nav-icon">🚪</span>
@@ -990,6 +996,66 @@
 
             </div>
         </main>
+
+<!-- PWA Install Banner -->
+<div id="pwaInstallBanner" style="
+    display: none;
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(100% - 32px);
+    max-width: 420px;
+    z-index: 9990;
+    background: linear-gradient(135deg, #064e3b, #065f46);
+    color: white;
+    border-radius: 18px;
+    padding: 14px 16px;
+    box-shadow: 0 8px 32px rgba(5,150,105,0.45);
+    display: none;
+    align-items: center;
+    gap: 12px;
+    animation: slideUpBanner 0.4s cubic-bezier(0.34,1.56,0.64,1);
+">
+    <img src="Mealcal_logo.png" width="40" height="40" style="border-radius:10px; flex-shrink:0;">
+    <div style="flex:1; min-width:0;">
+        <div style="font-weight:800; font-size:14px; white-space:nowrap;">Install MealCal Pro</div>
+        <div style="font-size:11px; opacity:0.8; margin-top:2px;">Add to Home Screen for the best experience</div>
+    </div>
+    <button onclick="triggerPWAInstall()" style="
+        background: white;
+        color: #059669;
+        border: none;
+        border-radius: 10px;
+        padding: 8px 14px;
+        font-weight: 800;
+        font-size: 12px;
+        cursor: pointer;
+        flex-shrink: 0;
+        white-space: nowrap;
+    ">Install ↓</button>
+    <button onclick="dismissInstallBanner()" style="
+        background: rgba(255,255,255,0.15);
+        border: none;
+        color: white;
+        border-radius: 8px;
+        width: 28px;
+        height: 28px;
+        font-size: 14px;
+        cursor: pointer;
+        flex-shrink: 0;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+    ">✕</button>
+</div>
+
+<style>
+@keyframes slideUpBanner {
+    from { opacity:0; transform: translateX(-50%) translateY(20px); }
+    to   { opacity:1; transform: translateX(-50%) translateY(0); }
+}
+</style>
 
     <!-- HIGH-DENSITY PREMIUM BOTTOM NAV (7 ITEMS) -->
 <nav class="bottom-nav">

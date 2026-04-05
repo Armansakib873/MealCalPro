@@ -8591,3 +8591,106 @@ if ("serviceWorker" in navigator) {
     });
   });
 }
+
+// ============================================
+// PWA INSTALL PROMPT SYSTEM
+// ============================================
+
+let _pwaInstallEvent = null; // Store the deferred event
+let _bannerDismissTimer = null;
+
+// 1. Capture the install event as early as possible
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault(); // Stop the browser mini-bar from showing automatically
+  _pwaInstallEvent = e;
+
+  // Show sidebar Install button
+  const menuItem = document.getElementById("installAppMenuItem");
+  if (menuItem) menuItem.style.display = "block";
+
+  // Auto-show the banner after 2 seconds (non-intrusive)
+  setTimeout(() => showInstallBanner(), 2000);
+
+  console.log("✅ PWA install prompt captured and ready.");
+});
+
+// 2. Show the floating install banner
+function showInstallBanner() {
+  const banner = document.getElementById("pwaInstallBanner");
+  if (!banner || banner.dataset.dismissed === "true") return;
+
+  banner.style.display = "flex";
+
+  // Auto-dismiss after 12 seconds if user ignores it
+  _bannerDismissTimer = setTimeout(() => {
+    hideBannerSilently();
+  }, 12000);
+}
+
+// 3. User clicks "Install ↓" — trigger the native browser prompt
+async function triggerPWAInstall() {
+  if (_pwaInstallEvent) {
+    // Native prompt available (Chrome, Edge, Android)
+    _pwaInstallEvent.prompt();
+    const { outcome } = await _pwaInstallEvent.userChoice;
+    console.log("PWA install outcome:", outcome);
+
+    if (outcome === "accepted") {
+      showNotification("🎉 MealCal Pro installed successfully!", "success");
+      _pwaInstallEvent = null;
+      hideBannerSilently();
+      const menuItem = document.getElementById("installAppMenuItem");
+      if (menuItem) menuItem.style.display = "none";
+    }
+  } else {
+    // Fallback for iOS Safari / already installed
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const isStandalone = window.navigator.standalone === true ||
+                         window.matchMedia("(display-mode: standalone)").matches;
+
+    if (isStandalone) {
+      showNotification("✅ MealCal Pro is already installed!", "info");
+    } else if (isIOS) {
+      showNotification(
+        '📱 To install on iOS: tap the Share icon ⬆️ → "Add to Home Screen"',
+        "info",
+        6000
+      );
+    } else {
+      showNotification(
+        "ℹ️ To install: open browser menu → 'Install App' or 'Add to Home Screen'",
+        "info",
+        6000
+      );
+    }
+    hideBannerSilently();
+  }
+}
+
+// 4. User clicks ✕
+function dismissInstallBanner() {
+  const banner = document.getElementById("pwaInstallBanner");
+  if (banner) banner.dataset.dismissed = "true";
+  hideBannerSilently();
+}
+
+function hideBannerSilently() {
+  clearTimeout(_bannerDismissTimer);
+  const banner = document.getElementById("pwaInstallBanner");
+  if (!banner) return;
+  banner.style.opacity = "0";
+  banner.style.transition = "opacity 0.3s ease";
+  setTimeout(() => { banner.style.display = "none"; banner.style.opacity = ""; }, 320);
+}
+
+// 5. Clean up after successful installation
+window.addEventListener("appinstalled", () => {
+  console.log("✅ App installed via appinstalled event.");
+  _pwaInstallEvent = null;
+  showNotification("🎉 MealCal Pro has been added to your home screen!", "success");
+  hideBannerSilently();
+  const menuItem = document.getElementById("installAppMenuItem");
+  if (menuItem) menuItem.style.display = "none";
+});
+
+
