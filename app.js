@@ -6666,42 +6666,91 @@ document
   .addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    const name = document.getElementById("memberName").value;
+    const name     = document.getElementById("memberName").value.trim();
+    const email    = document.getElementById("memberEmail").value.trim();
+    const password = document.getElementById("memberPassword").value;
+    const role     = document.getElementById("memberRole").value;
+    const avatar   = document.getElementById("memberAvatar").value.trim();
+
+    // Basic validation
+    if (!name)             return showNotification("Full name is required.", "error");
+    if (!email)            return showNotification("Login email is required.", "error");
+    if (password.length < 6) return showNotification("Password must be at least 6 characters.", "error");
+
+    const btn = e.target.querySelector('button[type="submit"]');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = "⏳ Creating...";
+    btn.disabled = true;
 
     try {
-      // 1. Insert Member
-      const { data: memberData, error: memberError } = await supabase
+      // 1. Create Supabase Auth user account
+      const { data: authData, error: authError } = await supabase.auth.admin
+        ? // Try admin API if available
+          await supabase.auth.admin.createUser({
+            email: email,
+            password: password,
+            email_confirm: true,
+            user_metadata: { display_name: name }
+          })
+        : { data: null, error: new Error("admin") };
+
+      let authUserId = authData?.user?.id || null;
+
+      // Fallback: use signUp (works without admin key, but sends confirmation email)
+      if (!authUserId) {
+        // Use RPC to create auth user without triggering confirmation emails
+        const { data: rpcData, error: rpcError } = await supabase.rpc("admin_create_user", {
+          p_email: email,
+          p_password: password,
+          p_display_name: name
+        });
+
+        if (rpcError) {
+          // Final fallback: standard signUp (will send confirmation email)
+          console.warn("admin_create_user RPC not found, using signUp fallback:", rpcError.message);
+          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+            email: email,
+            password: password,
+            options: { data: { display_name: name } }
+          });
+          if (signUpError) throw signUpError;
+          authUserId = signUpData?.user?.id || null;
+          if (authUserId) showNotification("⚠️ A confirmation email was sent to " + email + ". They must confirm before logging in.", "warning");
+        } else {
+          authUserId = rpcData; // RPC returns the new user UUID
+        }
+      }
+
+      // 2. Insert member record linked to auth account
+      const { error: memberError } = await supabase
         .from("members")
-        .insert({ name: name })
-        .select()
-        .maybeSingle();
+        .insert({
+          name: name,
+          email: email,
+          role: role,
+          avatar_url: avatar || null,
+          user_id: authUserId || null,
+        });
 
       if (memberError) throw memberError;
 
-      // 2. Automatically create User
-      const defaultPass = await hashPassword("123");
-
-      await supabase.from("users").insert({
-        username: name,
-        password: defaultPass,
-        role: "user",
-        member_id: memberData.id,
-      });
-
-      await logActivity(`New member added & user created: ${name}`, "other");
+      // 3. Log & refresh
+      await logActivity(`New member added: ${name} (${email}) by ${currentUser.name || "Admin"}`, "other");
 
       document.getElementById("addMemberForm").reset();
       await loadMembers();
       await loadMembersList();
-      showNotification(
-        'Member added successfully. Default password is "123"',
-        "success",
-      );
+      showNotification(`✅ ${name} added! They can now log in with their email and password.`, "success");
+
     } catch (err) {
       console.error("Error adding member:", err);
-      showNotification("Failed to add member", "error");
+      showNotification("Failed to add member: " + err.message, "error");
+    } finally {
+      btn.innerHTML = originalText;
+      btn.disabled = false;
     }
   });
+
 
 async function loadMembersList() {
   const container = document.getElementById("membersList");
@@ -6771,7 +6820,7 @@ async function loadMembersList() {
                     
                     <button class="btn btn-sm btn-primary" 
                             style="font-size: 10px; padding: 6px 10px;"
-                            onclick="openEditMemberModal('${member.id}', '${member.name}', '${member.user_id || ""}')">
+                            onclick="openEditMemberModal('${member.id}')">
                         Edit
                     </button>
                     ${!isAdmin && !isArchived ? `<button class="btn btn-sm btn-danger" style="font-size: 10px; padding: 6px 10px;" onclick="archiveMember('${member.id}', '${member.name}', '${member.user_id || ""}')">Archive</button>` : ""}
@@ -6888,12 +6937,80 @@ async function archiveMember(memberId, memberName, userId) {
 }
 
 // --- Action 3: Edit Member (Modal & Save) ---
-function openEditMemberModal(memberId, currentName, userId) {
-  document.getElementById("editMemberId").value = memberId;
-  document.getElementById("editUserId").value = userId;
-  document.getElementById("editMemberName").value = currentName;
-  document.getElementById("editMemberPassword").value = ""; // Reset password field
+async function openEditMemberModal(memberId) {
+  // 1. Try allMembers first (full global list, always loaded)
+  let m = allMembers.find(mem => mem.id == memberId);
+  // 2. If not found, try appState.members
+  if (!m) m = appState.members.find(mem => mem.id == memberId);
+  // 3. Final fallback: fetch directly from Supabase
+  if (!m) {
+    try {
+      const { data } = await supabase.from("members").select("*").eq("id", memberId).maybeSingle();
+      if (data) m = data;
+    } catch (err) {
+      console.error("Fallback member fetch failed:", err);
+    }
+  }
+
+  if (!m) {
+    showNotification("Member data not found. Please reload the page.", "error");
+    return;
+  }
+
+  // Populate base fields
+  document.getElementById("editMemberId").value = m.id;
+  document.getElementById("editUserId").value = m.user_id || "";
+  document.getElementById("editMemberName").value = m.name || "";
+  document.getElementById("editMemberEmail").value = m.email || "";
+  document.getElementById("editAuthEmail").value = ""; // will be fetched
+  document.getElementById("editMemberAvatar").value = m.avatar_url || "";
+  document.getElementById("editMemberRole").value = m.role || "user";
+  document.getElementById("editMemberPassword").value = "";
+
+  // Hide mismatch banner while loading
+  document.getElementById("emailMismatchBanner").style.display = "none";
+
+  // Reset title
+  document.querySelector("#editMemberModal .modal-title").textContent = "Edit Member Details";
   document.getElementById("editMemberModal").classList.add("active");
+
+  // Fetch the REAL Auth email via RPC (runs after modal opens for responsiveness)
+  if (m.user_id) {
+    try {
+      const { data: authData, error: authErr } = await supabase.rpc("admin_get_user_email", {
+        target_user_id: m.user_id
+      });
+
+      const realAuthEmail = authData || "";
+      document.getElementById("editAuthEmail").value = realAuthEmail;
+
+      // Check for mismatch
+      const memberEmail = (m.email || "").toLowerCase().trim();
+      const authEmail = realAuthEmail.toLowerCase().trim();
+
+      if (authEmail && memberEmail && authEmail !== memberEmail) {
+        document.getElementById("emailMismatchBanner").style.display = "block";
+        document.getElementById("emailMismatchDetail").textContent =
+          `Auth Login: "${realAuthEmail}" vs Member Record: "${m.email}" — Fix by clicking "↺ Copy from Auth" then Save.`;
+      }
+    } catch (err) {
+      console.warn("Could not fetch auth email (RPC may not exist):", err.message);
+      // Fallback: just show member email in both fields
+      document.getElementById("editAuthEmail").value = m.email || "";
+    }
+  } else {
+    document.getElementById("editAuthEmail").value = "No linked auth account";
+  }
+}
+
+// Helper: Copy Auth email into the Members Table email field
+function syncEmailFromAuth() {
+  const authEmail = document.getElementById("editAuthEmail").value.trim();
+  if (authEmail && authEmail !== "No linked auth account") {
+    document.getElementById("editMemberEmail").value = authEmail;
+    document.getElementById("emailMismatchBanner").style.display = "none";
+    showNotification("Profile email updated. Click Save to apply.", "info");
+  }
 }
 
 document
@@ -6901,93 +7018,113 @@ document
   .addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    // 1. Get Elements
+    // 1. Get all form values
     const memberId = document.getElementById("editMemberId").value;
-    const userId = document.getElementById("editUserId").value; // The Auth User ID
-    const newName = document.getElementById("editMemberName").value;
+    const userId = document.getElementById("editUserId").value;
+    const newName = document.getElementById("editMemberName").value.trim();
+    const newMemberEmail = document.getElementById("editMemberEmail").value.trim();
+    const newAuthEmail = document.getElementById("editAuthEmail").value.trim();
+    const newAvatar = document.getElementById("editMemberAvatar").value.trim();
+    const newRole = document.getElementById("editMemberRole").value;
     const newPassword = document.getElementById("editMemberPassword").value;
 
-    // Select the button specifically inside this form
     const submitBtn = e.target.querySelector('button[type="submit"]');
-    const originalText = "Save Changes";
+    const originalText = submitBtn.innerHTML;
 
     // 2. Lock UI
-    submitBtn.textContent = "Saving...";
+    submitBtn.innerHTML = "⏳ Saving...";
     submitBtn.disabled = true;
 
     try {
-      // --- A. Update Display Name ---
+      // --- A. Update members table ---
       const { error: mError } = await supabase
         .from("members")
-        .update({ name: newName })
+        .update({
+          name: newName,
+          email: newMemberEmail,
+          avatar_url: newAvatar,
+          role: newRole
+        })
         .eq("id", memberId);
 
       if (mError) throw mError;
 
-      // --- B. Handle Password Change ---
-      if (newPassword && newPassword.trim() !== "") {
-        // Check if the user ID exists (some old members might not have logins)
-        if (!userId || userId === "null" || userId === "undefined") {
-          throw new Error(
-            "This member does not have a linked User Account, so password cannot be changed.",
-          );
-        }
-
-        // SCENARIO 1: Changing MY OWN password
+      // --- B. Sync Auth email if it changed ---
+      const isValidUserId = userId && userId !== "null" && userId !== "undefined";
+      if (isValidUserId && newAuthEmail && newAuthEmail !== "No linked auth account") {
+        // Update own auth email
         if (currentUser && currentUser.id === userId) {
-          const { error: authError } = await supabase.auth.updateUser({
-            password: newPassword,
-          });
-          if (authError) throw authError;
-          console.log("Updated own password via Auth API");
-        }
-
-        // SCENARIO 2: Admin changing SOMEONE ELSE'S password
-        else {
-          // Call the SQL function we created in Step 1
-          const { error: rpcError } = await supabase.rpc(
-            "admin_reset_password",
-            {
+          const { error: ownAuthErr } = await supabase.auth.updateUser({ email: newAuthEmail });
+          if (ownAuthErr) {
+            showNotification("⚠️ Members table updated but auth email change failed: " + ownAuthErr.message, "warning");
+          } else {
+            console.log("Updated own auth email.");
+          }
+        } else {
+          // Update other user's auth email via admin RPC
+          try {
+            const { error: rpcErr } = await supabase.rpc("admin_update_user_email", {
               target_user_id: userId,
-              new_password: newPassword,
-            },
-          );
-
-          if (rpcError) throw rpcError;
-          console.log("Updated user password via Admin RPC");
+              new_email: newAuthEmail
+            });
+            if (rpcErr) {
+              showNotification("⚠️ Members table saved but Auth email update failed: " + rpcErr.message, "warning");
+            } else {
+              console.log("Admin updated auth email via RPC.");
+            }
+          } catch (rpcEx) {
+            console.warn("admin_update_user_email RPC not found – skipping auth email sync:", rpcEx.message);
+          }
         }
       }
 
-      // --- C. Log & Notify ---
-      const actor = currentUser.members ? currentUser.members.name : "Admin";
-      await logActivity(
-        `Profile Update: ${newName}'s details updated by ${actor}`,
-        "other",
-      );
+      // --- C. Handle password change ---
+      if (newPassword && newPassword.trim() !== "") {
+        if (!isValidUserId) {
+          throw new Error("This member has no linked User Account, so the password cannot be changed.");
+        }
 
-      // Close Modal
+        if (currentUser && currentUser.id === userId) {
+          const { error: authError } = await supabase.auth.updateUser({ password: newPassword });
+          if (authError) throw authError;
+        } else {
+          const { error: rpcError } = await supabase.rpc("admin_reset_password", {
+            target_user_id: userId,
+            new_password: newPassword,
+          });
+          if (rpcError) throw rpcError;
+        }
+      }
+
+      // --- D. Log & notify ---
+      const actor = currentUser.name || "Admin";
+      await logActivity(`Profile Update: ${newName}'s details updated by ${actor}`, "other");
+
       document.getElementById("editMemberModal").classList.remove("active");
-      showNotification("Member updated successfully", "success");
+      showNotification("✅ Member updated successfully", "success");
 
-      // Refresh Lists
-      await loadMembersList(); // Admin list
-      await loadMembers(); // Global dropdowns
+      // Refresh lists
+      await loadMembersList();
+      await loadMembers();
 
-      // If updating self, update header name immediately
+      // If updating self, update in-memory currentUser
       if (currentUser.member_id == memberId) {
+        currentUser.name = newName;
+        currentUser.role = newRole;
         document.getElementById("profileName").textContent = newName;
         document.getElementById("headerUserName").textContent =
-          `${newName} (${currentUser.role.toUpperCase()})`;
+          `${newName} (${newRole.toUpperCase()})`;
       }
     } catch (err) {
       console.error("Edit error:", err);
       showNotification("Update failed: " + err.message, "error");
     } finally {
-      // --- 3. FIX: Reset Button State Always ---
-      submitBtn.textContent = originalText;
+      submitBtn.innerHTML = originalText;
       submitBtn.disabled = false;
     }
   });
+
+
 
 // ============================================
 // UTILITY: LOG ACTIVITY
@@ -8338,21 +8475,14 @@ async function submitMobileEntry() {
 // [REMOVED] Duplicate visibilitychange and beforeunload — the correct handlers are defined earlier in the file.
 
 
-// Open the existing Edit Member modal, but configured for the current user
+// Open the existing Edit Member modal for the current user (Profile edit)
 function openChangePasswordModal() {
   if (!currentUser || !currentUser.member_id) return;
-
-  // Reuse your existing Edit Member Modal logic
-  document.getElementById("editMemberId").value = currentUser.member_id;
-  document.getElementById("editUserId").value = currentUser.id; // Supabase Auth ID
-  document.getElementById("editMemberName").value = currentUser.name;
-  document.getElementById("editMemberPassword").value = ""; // Clean field
-
-  // Change Title to look like a User Action
-  document.querySelector("#editMemberModal .modal-title").textContent =
-    "Change My Password";
-
-  document.getElementById("editMemberModal").classList.add("active");
+  // Reuse the fully-featured openEditMemberModal
+  openEditMemberModal(currentUser.member_id).then(() => {
+    // Override title for user-facing context
+    document.querySelector("#editMemberModal .modal-title").textContent = "Update My Profile";
+  });
 }
 
 // ============================================

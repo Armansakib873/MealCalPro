@@ -893,15 +893,46 @@
 
                 <div class="card">
                     <div class="card-header">
-                        <h3 class="card-title">Member Management</h3>
-                        <div style="font-size:12px; color:var(--text-secondary);">Adding a member automatically creates a user with password "123"</div>
+                        <h3 class="card-title">Add New Member</h3>
+                        <div style="font-size:12px; color:var(--text-secondary);">Creates a login account and links it to the member profile.</div>
                     </div>
                     <form id="addMemberForm">
-                        <div class="form-group">
-                            <label class="form-label">Member Name</label>
-                            <input type="text" id="memberName" class="form-input" required>
+
+                        <!-- Row 1: Name + Email -->
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                            <div class="form-group">
+                                <label class="form-label">Full Name <span style="color:#ef4444;">*</span></label>
+                                <input type="text" id="memberName" class="form-input" placeholder="e.g. Ayan Rahman" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Login Email <span style="color:#ef4444;">*</span></label>
+                                <input type="email" id="memberEmail" class="form-input" placeholder="user@gmail.com" required>
+                            </div>
                         </div>
-                        <button type="submit" class="btn btn-primary">Add Member</button>
+
+                        <!-- Row 2: Password + Role -->
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                            <div class="form-group">
+                                <label class="form-label">Password <span style="color:#ef4444;">*</span></label>
+                                <input type="password" id="memberPassword" class="form-input" placeholder="Min 6 characters" required minlength="6">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Role</label>
+                                <select id="memberRole" class="form-select">
+                                    <option value="user">Member (Regular)</option>
+                                    <option value="manager">Manager</option>
+                                    <option value="admin">Admin</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Row 3: Profile Picture (optional) -->
+                        <div class="form-group">
+                            <label class="form-label">Profile Picture URL <span style="font-size:10px; color:var(--text-muted);">(optional)</span></label>
+                            <input type="url" id="memberAvatar" class="form-input" placeholder="https://example.com/photo.jpg">
+                        </div>
+
+                        <button type="submit" class="btn btn-primary" style="width:100%;">➕ Add Member & Create Account</button>
                     </form>
                     <div id="membersList" style="margin-top: 20px;">
                         <div class="loading">Loading members...</div>
@@ -909,12 +940,14 @@
                 </div>
 
 
-                <!-- Inside Admin Page, add this card -->
+                <!-- System Settings Card -->
 <div class="card">
     <div class="card-header">
         <h3 class="card-title">System Settings</h3>
     </div>
-  <form id="adminSettingsForm">
+    <form id="adminSettingsForm">
+
+        <!-- Lock Time Range -->
         <div class="form-group">
             <label class="form-label">Restricted Bazar Range (Lock Time)</label>
             <div style="display: flex; gap: 10px; align-items: center;">
@@ -932,32 +965,29 @@
                 Users cannot change meal status between these times on the day of the bazar.
             </small>
         </div>
-       
+
+        <!-- Auto-Entry Time -->
+        <div class="form-group" style="margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
+            <label class="form-label">Auto-Entry / Finalize Time</label>
+            <div style="display:flex; gap:10px; align-items:flex-end;">
+                <input type="time" id="settingAutoTime" class="form-input" style="flex:1;" required>
+                <button type="button" class="btn btn-danger" onclick="triggerManualAutoEntry()" style="font-size:12px; white-space:nowrap;">
+                    ⚡ Force Run Now
+                </button>
+            </div>
+            <small style="color: var(--primary-color);">
+                System will snapshot meals at this time. Use "Force Run" to apply plans to tracker immediately.
+            </small>
+        </div>
+
+        <!-- Save Button (INSIDE the form) -->
+        <div style="text-align: center; margin-top: 20px;">
+            <button type="submit" class="btn btn-primary" style="min-width: 160px;">💾 Save Settings</button>
+        </div>
+
     </form>
-
-    <!-- Inside adminSettingsForm -->
-       <!-- Inside adminSettingsForm -->
-<div class="form-group" style="margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
-    <label class="form-label">Auto-Entry / Finalize Time</label>
-    <div style="display:flex; gap:10px; align-items:flex-end;">
-        <input type="time" id="settingAutoTime" class="form-input" style="flex:1;" required>
-        
-        <!-- NEW BUTTON -->
-        <button type="button" class="btn btn-danger" onclick="triggerManualAutoEntry()" style="font-size:12px; white-space:nowrap;">
-            ⚡ Force Run Now
-        </button>
-    </div>
-    <small style="color: var(--primary-color);">
-        System will snapshot meals at this time. Use "Force Run" to apply plans to tracker immediately.
-    </small>
-
-   
 </div>
 
-</div>
-<div style="text-align: center;">
-  <button type="submit" class="btn btn-primary">Save Settings</button>
-</div>
             </div>
         </main>
 
@@ -1042,23 +1072,68 @@
 
 <!-- Edit Member Modal -->
 <div id="editMemberModal" class="modal">
-    <div class="modal-content">
+    <div class="modal-content" style="max-width: 480px;">
         <div class="modal-header">
-            <h3 class="modal-title">Edit Member</h3>
+            <h3 class="modal-title">Edit Member Details</h3>
             <span class="close-modal" onclick="document.getElementById('editMemberModal').classList.remove('active')">×</span>
         </div>
+
+        <!-- Mismatch Warning Banner -->
+        <div id="emailMismatchBanner" style="display:none; margin: 0 0 14px 0; padding: 10px 14px; background: #fff7ed; border: 1px solid #fb923c; border-radius: 10px; font-size: 12px; color: #9a3412;">
+            ⚠️ <strong>Email Mismatch Detected!</strong><br>
+            The username login email in the Member record doesn't match the actual Supabase Auth login email. This causes username-based login to fail.<br>
+            <span id="emailMismatchDetail" style="display:block; margin-top:6px; font-size:11px; color:#c2410c;"></span>
+        </div>
+
         <form id="editMemberForm">
             <input type="hidden" id="editMemberId">
             <input type="hidden" id="editUserId">
+
             <div class="form-group">
-                <label class="form-label">Name</label>
-                <input type="text" id="editMemberName" class="form-input" required>
+                <label class="form-label">Full Name</label>
+                <input type="text" id="editMemberName" class="form-input" placeholder="Display name" required>
             </div>
+
+            <!-- Auth Login Email (actual Supabase login) -->
             <div class="form-group">
-                <label class="form-label">New Password (leave blank to keep current)</label>
+                <label class="form-label" style="display:flex; justify-content:space-between; align-items:center;">
+                    <span>Login Email <span style="font-size:9px; background:#3b82f6; color:white; padding:1px 6px; border-radius:4px; margin-left:4px;">AUTH</span></span>
+                    <span style="font-size:10px; color:var(--text-muted);">Used to sign in</span>
+                </label>
+                <input type="email" id="editAuthEmail" class="form-input" placeholder="Actual login email" style="border-color: #3b82f6;">
+                <small style="font-size: 10px; color: #3b82f6;">⚡ This updates the real Supabase Auth account email.</small>
+            </div>
+
+            <!-- Profile/Lookup Email (stored in members table) -->
+            <div class="form-group">
+                <label class="form-label" style="display:flex; justify-content:space-between; align-items:center;">
+                    <span>Profile Email <span style="font-size:9px; background:#6366f1; color:white; padding:1px 6px; border-radius:4px; margin-left:4px;">MEMBERS TABLE</span></span>
+                    <button type="button" onclick="syncEmailFromAuth()" style="font-size:10px; background:transparent; border:1px solid #6366f1; color:#6366f1; padding:2px 8px; border-radius:4px; cursor:pointer;">↺ Copy from Auth</button>
+                </label>
+                <input type="email" id="editMemberEmail" class="form-input" placeholder="user@example.com" style="border-color: #6366f1;">
+                <small style="font-size: 10px; color: #6366f1;">Used for username-based login lookup. Must match Login Email.</small>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Profile Picture URL</label>
+                <input type="url" id="editMemberAvatar" class="form-input" placeholder="https://image-url.com/photo.jpg">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">System Role</label>
+                <select id="editMemberRole" class="form-select">
+                    <option value="user">Member (Regular)</option>
+                    <option value="manager">Manager (Can edit everything)</option>
+                    <option value="admin">Admin (Full Control)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">New Password <span style="font-size:10px; color:var(--text-muted);">(leave blank to keep current)</span></label>
                 <input type="password" id="editMemberPassword" class="form-input" placeholder="New password...">
             </div>
-            <button type="submit" class="btn btn-primary">Save Changes</button>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%;">💾 Save All Changes</button>
         </form>
     </div>
 </div>
