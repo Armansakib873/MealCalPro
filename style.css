@@ -5444,3 +5444,798 @@ background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(245, 158, 
     .mascot-wrapper { transform: translateX(50%) scale(1.1); bottom: -5px; right: 200px; }
     .mascot-wrapper:active { transform: translateX(50%) scale(1.14); }
 }
+
+/* ============================================================
+   👥 MEMBERS' 7-DAY MEAL SCHEDULE DASHBOARD MODULE — V2 PREMIUM
+   ============================================================ */
+.member-schedules-dashboard {
+    background: linear-gradient(135deg, #f8faff 0%, #f0f4ff 50%, #faf8ff 100%);
+    border: 1px solid rgba(99, 102, 241, 0.08);
+    border-radius: 20px;
+    padding: 24px;
+    margin-top: 28px;
+    box-shadow:
+        0 4px 24px rgba(99, 102, 241, 0.06),
+        0 1px 3px rgba(0, 0, 0, 0.04);
+    position: relative;
+    overflow: hidden;
+}
+
+.member-schedules-dashboard::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #f59e0b, #6366f1, #3b82f6);
+    border-radius: 20px 20px 0 0;
+}
+
+.dash-schedules-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-bottom: 20px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid rgba(99, 102, 241, 0.08);
+}
+
+.dash-schedules-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.dash-schedules-title {
+    font-size: 16px;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0;
+    letter-spacing: -0.3px;
+}
+
+.dash-schedules-badge {
+    background: linear-gradient(135deg, #e0f2fe, #dbeafe);
+    color: #1d4ed8;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 4px 12px;
+    border-radius: 20px;
+    border: 1px solid rgba(59, 130, 246, 0.15);
+    letter-spacing: 0.3px;
+}
+
+.dash-schedules-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.dash-search-input {
+    padding: 8px 16px;
+    border-radius: 24px;
+    border: 1.5px solid #e2e8f0;
+    font-size: 12px;
+    font-weight: 500;
+    outline: none;
+    transition: all 0.25s ease;
+    width: 170px;
+    background: #ffffff;
+}
+
+.dash-search-input:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.dash-refresh-btn {
+    border-radius: 24px !important;
+    font-weight: 700 !important;
+    font-size: 11px !important;
+    padding: 7px 14px !important;
+    border: 1.5px solid #e2e8f0 !important;
+    background: #ffffff !important;
+    transition: all 0.2s ease !important;
+}
+
+.dash-refresh-btn:hover {
+    border-color: #6366f1 !important;
+    background: #eef2ff !important;
+}
+
+.dash-schedules-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+/* ── Individual Member Schedule Card ── */
+.member-schedule-card {
+    background: #ffffff;
+    border: 1px solid rgba(226, 232, 240, 0.7);
+    border-radius: 16px;
+    padding: 18px 20px;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+.member-schedule-card:hover {
+    border-color: rgba(99, 102, 241, 0.15);
+    box-shadow: 0 8px 28px rgba(99, 102, 241, 0.07);
+    transform: translateY(-1px);
+}
+
+.member-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.member-info-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.member-avatar-circle {
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 15px;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    letter-spacing: -0.5px;
+    flex-shrink: 0;
+}
+
+.member-name-role {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.member-card-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    letter-spacing: -0.2px;
+}
+
+.role-pill {
+    font-size: 9px;
+    font-weight: 800;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 6px;
+    letter-spacing: 0.5px;
+}
+
+.role-pill.admin { background: linear-gradient(135deg, #fef3c7, #fde68a); color: #b45309; border: 1px solid rgba(180, 83, 9, 0.1); }
+.role-pill.manager { background: linear-gradient(135deg, #e0e7ff, #c7d2fe); color: #3730a3; border: 1px solid rgba(55, 48, 163, 0.1); }
+.role-pill.user { background: #f1f5f9; color: #64748b; border: 1px solid rgba(100, 116, 139, 0.1); }
+
+/* Weekly summary line under name */
+.member-week-summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.week-count-pill {
+    font-size: 11px;
+    font-weight: 700;
+    color: #334155;
+}
+
+.week-count-detail {
+    font-size: 10px;
+    font-weight: 600;
+    color: #94a3b8;
+}
+
+/* ── Default Preference Buttons ── */
+.default-prefs-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.def-pref-btn {
+    padding: 5px 14px;
+    border-radius: 24px;
+    font-size: 11px;
+    font-weight: 700;
+    border: 1.5px solid #e2e8f0;
+    background: #ffffff;
+    color: #94a3b8;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+.def-pref-btn:not(.readonly):hover {
+    transform: scale(1.04);
+}
+
+.def-pref-btn:not(.readonly):active {
+    transform: scale(0.96);
+}
+
+.def-pref-btn.active.day {
+    background: linear-gradient(135deg, #fffbeb, #fef3c7);
+    color: #b45309;
+    border-color: #f59e0b;
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.18);
+}
+
+.def-pref-btn.active.night {
+    background: linear-gradient(135deg, #eef2ff, #e0e7ff);
+    color: #4338ca;
+    border-color: #818cf8;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.18);
+}
+
+.def-pref-btn.readonly {
+    cursor: default;
+}
+
+/* ── 7-Day Timeline Strip ── */
+.schedule-timeline-strip {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 4px 2px 8px;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+
+.schedule-timeline-strip::-webkit-scrollbar {
+    display: none;
+}
+
+/* ── Timeline Day Card ── */
+.timeline-day-card {
+    flex: 1 0 72px;
+    min-width: 72px;
+    background: #f8fafc;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 10px 6px 10px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    scroll-snap-align: start;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.timeline-day-card:hover {
+    border-color: #cbd5e1;
+    background: #f1f5f9;
+}
+
+/* Today's card highlight */
+.timeline-day-card.today-card {
+    border-color: #6366f1;
+    background: linear-gradient(180deg, #eef2ff 0%, #e0e7ff 100%);
+    box-shadow: 0 3px 12px rgba(99, 102, 241, 0.12);
+}
+
+.today-pulse-dot {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 7px;
+    height: 7px;
+    background: #22c55e;
+    border-radius: 50%;
+    animation: todayPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes todayPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.5); }
+    50% { box-shadow: 0 0 0 4px rgba(34, 197, 94, 0); }
+}
+
+.timeline-weekday {
+    font-size: 9px;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: #94a3b8;
+    letter-spacing: 0.8px;
+}
+
+.today-card .timeline-weekday {
+    color: #4338ca;
+}
+
+.timeline-date-num {
+    font-size: 16px;
+    font-weight: 800;
+    color: #334155;
+    line-height: 1;
+}
+
+.today-card .timeline-date-num {
+    color: #4338ca;
+}
+
+/* ── Micro-Toggle Buttons ── */
+.timeline-toggles-row {
+    display: flex;
+    gap: 5px;
+    justify-content: center;
+    margin-top: 2px;
+}
+
+.micro-toggle {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 800;
+    border: 1.5px solid #e2e8f0;
+    background: #f8fafc;
+    color: #94a3b8;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.micro-toggle:not(.readonly):hover {
+    transform: scale(1.1);
+}
+
+.micro-toggle:not(.readonly):active {
+    transform: scale(0.92);
+}
+
+/* Day ON */
+.micro-toggle.day.active {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    color: #ffffff;
+    border-color: #d97706;
+    box-shadow:
+        0 3px 10px rgba(245, 158, 11, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+/* Night ON */
+.micro-toggle.night.active {
+    background: linear-gradient(135deg, #818cf8, #6366f1);
+    color: #ffffff;
+    border-color: #4f46e5;
+    box-shadow:
+        0 3px 10px rgba(99, 102, 241, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+/* Day OFF */
+.micro-toggle.day.off {
+    background: #fff8f0;
+    border-color: #fed7aa;
+    color: #fdba74;
+}
+
+/* Night OFF */
+.micro-toggle.night.off {
+    background: #f5f3ff;
+    border-color: #c4b5fd;
+    color: #a78bfa;
+}
+
+.micro-toggle.readonly {
+    cursor: default;
+}
+
+.micro-toggle.updating {
+    opacity: 0.4;
+    pointer-events: none;
+    animation: togglePulse 0.6s ease infinite;
+}
+
+@keyframes togglePulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(0.92); }
+}
+
+/* ═══════════════════════════════════════════
+   📱 RESPONSIVE: TABLET & MOBILE
+   ═══════════════════════════════════════════ */
+
+/* Tablet */
+@media (max-width: 768px) {
+    .member-schedules-dashboard {
+        padding: 18px;
+        border-radius: 16px;
+        margin-top: 20px;
+    }
+    
+    .dash-schedules-title {
+        font-size: 14px;
+    }
+    
+    .member-schedule-card {
+        padding: 14px;
+    }
+    
+    .member-avatar-circle {
+        width: 38px;
+        height: 38px;
+        font-size: 14px;
+        border-radius: 12px;
+    }
+    
+    .timeline-day-card {
+        flex: 0 0 68px;
+        min-width: 68px;
+    }
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+    .member-schedules-dashboard {
+        padding: 14px;
+        border-radius: 14px;
+        margin-top: 16px;
+    }
+
+    .dash-schedules-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        margin-bottom: 14px;
+        padding-bottom: 12px;
+    }
+    
+    .dash-schedules-title-wrap {
+        justify-content: space-between;
+    }
+
+    .dash-schedules-controls {
+        width: 100%;
+        gap: 8px;
+    }
+    
+    .dash-search-input {
+        flex: 1;
+        width: auto;
+        font-size: 13px;
+        padding: 10px 16px;
+    }
+
+    .dash-refresh-btn {
+        padding: 10px 14px !important;
+    }
+    
+    .member-schedule-card {
+        padding: 14px;
+        border-radius: 14px;
+    }
+
+    .member-card-top {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .member-info-left {
+        width: 100%;
+    }
+
+    .default-prefs-wrap {
+        width: 100%;
+        justify-content: flex-start;
+        padding-left: 54px;
+        gap: 8px;
+    }
+    
+    .def-pref-btn {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+    
+    .timeline-day-card {
+        flex: 0 0 66px;
+        min-width: 66px;
+        padding: 8px 4px;
+        border-radius: 12px;
+    }
+    
+    .timeline-date-num {
+        font-size: 15px;
+    }
+    
+    .micro-toggle {
+        width: 30px;
+        height: 30px;
+        font-size: 13px;
+        border-radius: 8px;
+    }
+
+    .member-card-name {
+        font-size: 14px;
+    }
+}
+
+/* Small phones */
+@media (max-width: 380px) {
+    .member-schedules-dashboard {
+        padding: 10px;
+    }
+
+    .default-prefs-wrap {
+        padding-left: 0;
+    }
+    
+    .timeline-day-card {
+        flex: 0 0 60px;
+        min-width: 60px;
+    }
+    
+    .micro-toggle {
+        width: 28px;
+        height: 28px;
+        font-size: 12px;
+    }
+}
+
+/* ============================================
+   INDIVIDUAL GUEST MEAL SERVICE - BADGE & POPOVER STYLES
+   ============================================ */
+
+/* ── Profile Scheduler Card Compact Badge & Expand Panel ── */
+.guest-card-wrapper {
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px dashed rgba(0, 0, 0, 0.08);
+}
+
+.guest-compact-badge {
+    width: 100%;
+    padding: 6px 10px;
+    border-radius: 10px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+}
+
+.guest-compact-badge.active {
+    background: #dcfce7;
+    border-color: #86efac;
+    color: #15803d;
+}
+
+.guest-compact-badge:hover {
+    border-color: #059669;
+    color: #059669;
+    background: #f0fdf4;
+}
+
+.guest-compact-badge .chevron-icon {
+    font-size: 9px;
+    color: inherit;
+    transition: transform 0.2s ease;
+}
+
+/* ── Floating Guest Modal Stepper Boxes ── */
+.guest-modal-box {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 10px 14px;
+    transition: all 0.2s ease;
+}
+
+.guest-modal-box:hover {
+    background: #f0fdf4;
+    border-color: #86efac;
+}
+
+.guest-modal-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.guest-stepper-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.guest-stepper-box {
+    background: #ffffff;
+    border: 1px solid rgba(5, 150, 105, 0.15);
+    border-radius: 8px;
+    padding: 5px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+}
+
+.guest-slot-tag {
+    font-size: 9px;
+    font-weight: 700;
+    color: #047857;
+    text-transform: uppercase;
+    letter-spacing: 0.2px;
+    white-space: nowrap;
+}
+
+.guest-stepper-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.guest-btn {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    border: 1px solid #059669;
+    background: #ffffff;
+    color: #059669;
+    font-weight: 800;
+    font-size: 13px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    padding: 0;
+}
+
+.guest-btn:active {
+    transform: scale(0.9);
+}
+
+.guest-btn:hover:not(:disabled) {
+    background: #059669;
+    color: #ffffff;
+}
+
+.guest-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    border-color: #cbd5e1;
+    color: #94a3b8;
+    background: #f1f5f9;
+}
+
+.guest-count-val {
+    font-size: 12px;
+    font-weight: 800;
+    color: #065f46;
+    min-width: 14px;
+    text-align: center;
+}
+
+/* ── Dashboard Timeline Day Card Guest Badge & Popover ── */
+.dash-guest-badge {
+    margin-top: 4px;
+    padding: 2px 7px;
+    border-radius: 8px;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 800;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.dash-guest-badge.active {
+    background: #dcfce7;
+    border-color: #86efac;
+    color: #15803d;
+}
+
+.dash-guest-badge:hover {
+    border-color: #10b981;
+    color: #047857;
+    transform: translateY(-1px);
+}
+
+.dash-guest-popover {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    width: 145px;
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    box-shadow: 0 12px 28px -6px rgba(0, 0, 0, 0.18), 0 4px 10px rgba(0, 0, 0, 0.05);
+    padding: 10px;
+    animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.dash-guest-popover::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 6px;
+    border-style: solid;
+    border-color: #ffffff transparent transparent transparent;
+}
+
+.dash-pop-title {
+    font-size: 9px;
+    font-weight: 800;
+    color: #047857;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 8px;
+    text-align: center;
+    border-bottom: 1px solid #f1f5f9;
+    padding-bottom: 5px;
+}
+
+.dash-pop-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.dash-pop-row:last-child {
+    margin-bottom: 0;
+}
+
+.dash-pop-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #334155;
+}
+
+@keyframes popIn {
+    from { opacity: 0; transform: translateX(-50%) scale(0.88); }
+    to { opacity: 1; transform: translateX(-50%) scale(1); }
+}

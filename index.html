@@ -503,14 +503,22 @@
 
     </div>
 
-    <!-- 4. Recent Activity Feed -->
-    <div class="activity-feed-premium">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <h3 style="font-size: 13px; font-weight: 800; color: #1e293b; margin: 0;">Recent Activity</h3>
-            <button class="btn btn-sm" onclick="loadRecentActivity()" style="font-size: 9px; background: #f1f5f9; padding: 4px 10px;">Refresh</button>
+    <!-- 4. Members' Schedules & Default Status Matrix -->
+    <div class="member-schedules-dashboard">
+        <div class="dash-schedules-header">
+            <div class="dash-schedules-title-wrap">
+                <h3 class="dash-schedules-title">👥 Members' 7-Day Meal Schedules</h3>
+                <span class="dash-schedules-badge" id="dashSchedulesCount">0 Members</span>
+            </div>
+            <div class="dash-schedules-controls">
+                <input type="text" id="dashMemberSearch" class="dash-search-input" placeholder="Search member..." oninput="filterDashboardMemberSchedules()">
+                <button class="btn btn-sm dash-refresh-btn" onclick="loadDashboardMemberSchedules()" title="Refresh Schedules">
+                    🔄 Refresh
+                </button>
+            </div>
         </div>
-        <div id="recentActivity">
-            <div class="loading">Fetching feed...</div>
+        <div id="dashMemberSchedulesContainer" class="dash-schedules-list">
+            <div class="loading">Syncing members' 7-day schedules...</div>
         </div>
     </div>
 </div>
@@ -1126,13 +1134,73 @@
                 <input type="number" id="mealDayCount" class="form-input" step="1" min="0" 
                        oninput="this.value = !!this.value && Math.abs(this.value) >= 0 ? Math.abs(Math.round(this.value)) : null">
             </div>
+
+            <div class="form-group">
+                <label class="form-label" id="mealGuestNightLabel">👥 Guest Night Meals</label>
+                <input type="number" id="mealGuestNightCount" class="form-input" step="1" min="0" value="0"
+                       oninput="this.value = !!this.value && Math.abs(this.value) >= 0 ? Math.abs(Math.round(this.value)) : null">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" id="mealGuestDayLabel">👥 Guest Day Meals</label>
+                <input type="number" id="mealGuestDayCount" class="form-input" step="1" min="0" value="0"
+                       oninput="this.value = !!this.value && Math.abs(this.value) >= 0 ? Math.abs(Math.round(this.value)) : null">
+            </div>
             
             <div style="font-size:11px; color:var(--text-secondary); margin-bottom:15px; background:var(--bg-color); padding:8px; border-radius:6px;">
-                ℹ️ This updates the <strong>Night</strong> meal of the Bazar Date and the <strong>Day</strong> meal of the following morning.
+                ℹ️ This updates the <strong>Night</strong> meal (personal & guest) of the Bazar Date and the <strong>Day</strong> meal of the following morning.
             </div>
 
             <button type="submit" class="btn btn-primary" style="width:100%;">Save Session</button>
         </form>
+    </div>
+</div>
+
+<!-- Floating Guest Meal Controller Modal -->
+<div id="guestMealModal" class="modal">
+    <div class="modal-content" style="max-width: 360px; border-radius: 20px; text-align: center; padding: 20px;">
+        <div class="modal-header" style="border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+            <h3 class="modal-title" id="guestModalTitle" style="color: #047857; font-size: 16px; font-weight: 800; margin: 0;">👥 Guest Meals</h3>
+            <span class="close-modal" onclick="closeGuestModal()" style="font-size: 20px; cursor: pointer; color: #64748b;">×</span>
+        </div>
+        
+        <div style="font-size: 12px; font-weight: 600; color: #64748b; margin-bottom: 16px;" id="guestModalSub">Bazar Session</div>
+
+        <div class="guest-modal-body" style="display: flex; flex-direction: column; gap: 12px;">
+            <!-- Night Stepper Row -->
+            <div class="guest-modal-box">
+                <div class="guest-modal-info">
+                    <span style="font-size: 18px;">🌙</span>
+                    <div style="text-align: left;">
+                        <div style="font-size: 12px; font-weight: 700; color: #1e293b;">Night Meal</div>
+                        <div style="font-size: 10px; color: #64748b;" id="guestModalNightLabel">Night</div>
+                    </div>
+                </div>
+                <div class="guest-stepper-controls">
+                    <button type="button" class="guest-btn" id="guestModalNightMinus" onclick="stepGuestModal('night', -1)">−</button>
+                    <span class="guest-count-val" id="guestModalNightVal">0</span>
+                    <button type="button" class="guest-btn" id="guestModalNightPlus" onclick="stepGuestModal('night', 1)">+</button>
+                </div>
+            </div>
+
+            <!-- Day Stepper Row -->
+            <div class="guest-modal-box">
+                <div class="guest-modal-info">
+                    <span style="font-size: 18px;">☀️</span>
+                    <div style="text-align: left;">
+                        <div style="font-size: 12px; font-weight: 700; color: #1e293b;">Day Meal</div>
+                        <div style="font-size: 10px; color: #64748b;" id="guestModalDayLabel">Day</div>
+                    </div>
+                </div>
+                <div class="guest-stepper-controls">
+                    <button type="button" class="guest-btn" id="guestModalDayMinus" onclick="stepGuestModal('day', -1)">−</button>
+                    <span class="guest-count-val" id="guestModalDayVal">0</span>
+                    <button type="button" class="guest-btn" id="guestModalDayPlus" onclick="stepGuestModal('day', 1)">+</button>
+                </div>
+            </div>
+        </div>
+
+        <button type="button" class="btn btn-primary" style="width: 100%; margin-top: 18px; border-radius: 12px; background: #059669; border: none; font-weight: 700; height: 42px;" onclick="closeGuestModal()">Done</button>
     </div>
 </div>
 

@@ -229,13 +229,14 @@ function adjustMealTotal(cycleMeals, boundaryMeals, cycleStartDate, memberId) {
     bm = bm.filter(m => m.member_id === memberId);
   }
   const raw = cm.reduce(
-    (s, m) => s + parseFloat(m.day_count || 0) + parseFloat(m.night_count || 0), 0
+    (s, m) => s + parseFloat(m.day_count || 0) + parseFloat(m.night_count || 0)
+                + parseFloat(m.guest_day_count || 0) + parseFloat(m.guest_night_count || 0), 0
   );
   const firstDayExcess = cm
     .filter(m => m.meal_date === cycleStartDate)
-    .reduce((s, m) => s + parseFloat(m.day_count || 0), 0);
+    .reduce((s, m) => s + parseFloat(m.day_count || 0) + parseFloat(m.guest_day_count || 0), 0);
   const boundaryAdd = bm
-    .reduce((s, m) => s + parseFloat(m.day_count || 0), 0);
+    .reduce((s, m) => s + parseFloat(m.day_count || 0) + parseFloat(m.guest_day_count || 0), 0);
   return raw - firstDayExcess + boundaryAdd;
 }
 
@@ -792,6 +793,9 @@ function handleMealPlanUpdate(activePage, payload) {
 
   // Update Dashboard immediately regardless of current page
   updateDashboardMealPlan();
+  if (activePage === "dashboard" || !activePage) {
+    debounceRefresh(() => loadDashboardMemberSchedules(), "dash_schedules", 500);
+  }
 
   // Specific UI updates based on where the user is looking
   const isMe =
@@ -2053,6 +2057,8 @@ async function loadScheduler() {
 
       const nightActive = nPlan ? nPlan.night_count > 0 : false;
       const dayActive = dPlan ? dPlan.day_count > 0 : false;
+      const nGuestCount = nPlan ? (parseFloat(nPlan.guest_night_count) || 0) : 0;
+      const dGuestCount = dPlan ? (parseFloat(dPlan.guest_day_count) || 0) : 0;
 
       // Lock Logic (Visual Only - Security is in toggle function)
       const userRole = currentUser?.role;
@@ -2070,6 +2076,8 @@ async function loadScheduler() {
 
       const cardOpacityStyle = isPastCard ? 'style="opacity: 0.6; pointer-events: none; filter: grayscale(1); border-left: 3px solid #6b7280;"' : '';
       const subLabelText = isPastCard ? "LAST SESSION" : (isFirstCard ? "ACTIVE SESSION" : "UPCOMING");
+
+      const totalGuestCount = nGuestCount + dGuestCount;
 
       newHTML += `
             <div class="scheduler-card ${isFirstCard ? "is-today" : ""}" ${cardOpacityStyle}>
@@ -2090,6 +2098,13 @@ async function loadScheduler() {
                         <span class="status-text">${dayActive ? "ON" : "OFF"}</span>
                         <span class="btn-label"> Day <span class="btn-date-micro">${nextDayLabel}</span> ${isDayLocked ? lockIcon : ""}</span>
                     </button>
+                </div>
+
+                <div class="guest-card-wrapper">
+                  <button class="guest-compact-badge ${totalGuestCount > 0 ? 'active' : ''}" onclick="openGuestModalForProfile('${dateSession}', '${dateNextDay}', '${sessionLabel}', '${nextDayLabel}', ${nGuestCount}, ${dGuestCount}, ${isPastCard || isNightLocked}, ${isPastCard || isDayLocked})">
+                    <span>👥 Guest Meals: <strong id="guest-total-val-${dateSession}">${totalGuestCount}</strong></span>
+                    <span style="font-size: 11px;">✏️</span>
+                  </button>
                 </div>
             </div>`;
     }
@@ -2216,6 +2231,124 @@ async function toggleSchedulerPlan(date, type, btnElement) {
   }
 }
 
+function toggleGuestPanel(dateStr) {
+  const panel = document.getElementById(`guest-panel-${dateStr}`);
+  const chevron = document.getElementById(`guest-chevron-${dateStr}`);
+  if (panel) {
+    const isHidden = panel.classList.contains("hidden");
+    panel.classList.toggle("hidden");
+    if (chevron) {
+      chevron.textContent = isHidden ? "▲" : "▼";
+    }
+  }
+}
+
+// Function to update Guest Meal schedule counts with steppers
+async function updateGuestPlan(date, type, delta, btnElement, sessionDateKey) {
+  const userRole = currentUser?.role;
+  const isAdmin = userRole === "admin" || userRole === "manager";
+
+  if (!isAdmin && isMealLocked(date, type)) {
+    if (btnElement) {
+      btnElement.style.animation = "shake 0.4s ease";
+      setTimeout(() => (btnElement.style.animation = ""), 400);
+    }
+    showNotification(
+      `⛔ Locked until ${convertTo12Hour(appConfig.lock_time_end)}`,
+      "error"
+    );
+    return;
+  }
+
+  if (btnElement && btnElement.dataset.locking === "true") return;
+  if (btnElement) btnElement.dataset.locking = "true";
+
+  try {
+    const { data: existing } = await supabase
+      .from("meal_plans")
+      .select("*")
+      .eq("member_id", currentUser.member_id)
+      .eq("plan_date", date)
+      .maybeSingle();
+
+    const currentVal = type === "day"
+      ? parseFloat(existing?.guest_day_count || 0)
+      : parseFloat(existing?.guest_night_count || 0);
+
+    const newCount = Math.max(0, currentVal + delta);
+    if (newCount === currentVal) {
+      if (btnElement) btnElement.dataset.locking = "false";
+      return;
+    }
+
+    // Optimistic UI update
+    const countEl = document.getElementById(`guest-count-${date}-${type}`);
+    if (countEl) countEl.textContent = newCount;
+
+    // Update Card Total Badge live
+    if (sessionDateKey) {
+      const sDateObj = parseLocalDate(sessionDateKey);
+      const nextDObj = new Date(sDateObj);
+      nextDObj.setDate(sDateObj.getDate() + 1);
+      const nextDKey = toLocalISO(nextDObj);
+
+      const nVal = parseFloat(document.getElementById(`guest-count-${sessionDateKey}-night`)?.textContent || 0);
+      const dVal = parseFloat(document.getElementById(`guest-count-${nextDKey}-day`)?.textContent || 0);
+      const tot = nVal + dVal;
+      const totalBadge = document.getElementById(`guest-total-val-${sessionDateKey}`);
+      const badgeBtn = totalBadge?.closest('.guest-compact-badge');
+      if (totalBadge) totalBadge.textContent = tot;
+      if (badgeBtn) {
+        if (tot > 0) badgeBtn.classList.add('active');
+        else badgeBtn.classList.remove('active');
+      }
+    }
+
+    const upsertData = {
+      member_id: currentUser.member_id,
+      plan_date: date,
+      day_count: existing ? existing.day_count : 0,
+      night_count: existing ? existing.night_count : 0,
+      guest_day_count: existing ? (existing.guest_day_count || 0) : 0,
+      guest_night_count: existing ? (existing.guest_night_count || 0) : 0,
+    };
+
+    if (type === "day") upsertData.guest_day_count = newCount;
+    else upsertData.guest_night_count = newCount;
+
+    const { error } = await supabase
+      .from("meal_plans")
+      .upsert(upsertData, { onConflict: "member_id, plan_date" });
+
+    if (error) throw error;
+
+    // Detailed & Specific Notification Logging
+    const actorName = currentUser.name || "User";
+    const typeLabel = type.charAt(0).toUpperCase() + type.slice(1);
+    const dateObj = parseLocalDate(date);
+    const niceDate = dateObj.toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "short",
+    });
+
+    const notifMsg = `${actorName} updated guest ${typeLabel} meals to ${newCount} for ${niceDate}`;
+    showNotification(`👥 ${newCount} Guest ${typeLabel} meal(s) set for ${niceDate}`, "success");
+    logActivity(notifMsg, "meal");
+
+    pageLoaded.dashboard = false;
+    if (!document.getElementById("dashboardPage").classList.contains("hidden")) {
+      loadDashboard();
+    }
+  } catch (err) {
+    console.error("Guest Plan Error:", err);
+    showNotification(err.message || "Failed to update guest meals", "error");
+    pageLoaded.profile = false;
+    loadScheduler();
+  } finally {
+    if (btnElement) btnElement.dataset.locking = "false";
+  }
+}
+
 // --- Update loadMasterTracker ---
 async function loadMasterTracker() {
   if (!currentCycleId) return;
@@ -2236,6 +2369,8 @@ async function loadMasterTracker() {
       matrixData[m.meal_date][m.member_id] = {
         d: m.day_count,
         n: m.night_count,
+        gd: m.guest_day_count || 0,
+        gn: m.guest_night_count || 0,
       };
     });
 
@@ -2246,6 +2381,8 @@ async function loadMasterTracker() {
       matrixData[m.meal_date][m.member_id] = {
         d: m.day_count,
         n: matrixData[m.meal_date]?.[m.member_id]?.n || 0,
+        gd: m.guest_day_count || 0,
+        gn: matrixData[m.meal_date]?.[m.member_id]?.gn || 0,
       };
     });
 
@@ -2302,14 +2439,16 @@ async function loadMasterTracker() {
                   .map((m) => {
                     const nVal = matrixData[dateSessionStr]?.[m.id]?.n || 0;
                     const dVal = matrixData[dateNextStr]?.[m.id]?.d || 0;
+                    const gnVal = matrixData[dateSessionStr]?.[m.id]?.gn || 0;
+                    const gdVal = matrixData[dateNextStr]?.[m.id]?.gd || 0;
                     
                     // Both share the exact same logic based on isPendingSession. No split logic.
-                    const nDisplay = nVal > 0 ? nVal : (isPendingSession ? "-" : "0");
-                    const dDisplay = dVal > 0 ? dVal : (isPendingSession ? "-" : "0");
+                    const nDisplay = nVal > 0 ? (gnVal > 0 ? `${nVal}+${gnVal}G` : nVal) : (isPendingSession ? "-" : "0");
+                    const dDisplay = dVal > 0 ? (gdVal > 0 ? `${dVal}+${gdVal}G` : dVal) : (isPendingSession ? "-" : "0");
                     
                     return `
                         <td>
-                            <div class="cell-split-premium" onclick="openMealModal('${m.id}', '${dateSessionStr}', ${nVal}, ${dVal})">
+                            <div class="cell-split-premium" onclick="openMealModal('${m.id}', '${dateSessionStr}', ${nVal}, ${dVal}, ${gnVal}, ${gdVal})">
                                 <div class="cell-val-half night ${nVal > 0 ? "active" : "zero"}">${nDisplay}</div>
                                 <div class="cell-val-half day ${dVal > 0 ? "active" : "zero"}">${dDisplay}</div>
                             </div>
@@ -2955,14 +3094,14 @@ async function loadDashboard() {
         .eq("cycle_id", currentCycleId)
         .neq("status", "pending"),
 
-      // Critical Fix: Summing actual DB rows for the Pulse Card
+      // Critical Fix: Summing actual DB rows for the Pulse Card (Personal + Guests)
       supabase
         .from("meal_plans")
-        .select("night_count")
+        .select("night_count, guest_night_count")
         .eq("plan_date", sessionDateStr),
       supabase
         .from("meal_plans")
-        .select("day_count")
+        .select("day_count, guest_day_count")
         .eq("plan_date", nextDateStr),
 
       supabase
@@ -2986,12 +3125,11 @@ async function loadDashboard() {
     const rate = totalMealsHistory > 0 ? totalExp / totalMealsHistory : 0;
     const liquidity = totalDep - totalExp;
 
-    // 4. CALCULATE PULSE CARD COUNTS (Live Schedule)
-    // This is the fix: We sum the rows directly. No guessing.
+    // 4. CALCULATE PULSE CARD COUNTS (Live Schedule: Personal + Guest)
     const liveNightCount =
-      plansNightRes.data?.reduce((sum, row) => sum + row.night_count, 0) || 0;
+      plansNightRes.data?.reduce((sum, row) => sum + (parseFloat(row.night_count) || 0) + (parseFloat(row.guest_night_count) || 0), 0) || 0;
     const liveDayCount =
-      plansDayRes.data?.reduce((sum, row) => sum + row.day_count, 0) || 0;
+      plansDayRes.data?.reduce((sum, row) => sum + (parseFloat(row.day_count) || 0) + (parseFloat(row.guest_day_count) || 0), 0) || 0;
 
     // ===================================
     // UI UPDATES
@@ -3038,7 +3176,7 @@ async function loadDashboard() {
 
     // D. Trigger Background Updates
     loadSystemStatus();
-    loadRecentActivity();
+    loadDashboardMemberSchedules();
     updateDashboardBadges();
     updatePendingCounts();
   } catch (err) {
@@ -3737,47 +3875,511 @@ function updateNavBadge(pageName, count) {
   dot.style.display = count > 0 ? "block" : "none";
 }
 
-// --- Update loadRecentActivity for the new feed style ---
-async function loadRecentActivity() {
-  const container = document.getElementById("recentActivity");
+// ============================================
+// 👥 MEMBERS' 7-DAY MEAL SCHEDULE DASHBOARD ENGINE
+// ============================================
+
+let cachedDashboardSchedules = {
+  dates: [],
+  membersList: [],
+  planMap: {},
+  sessionDateObj: null
+};
+
+async function loadDashboardMemberSchedules() {
+  const container = document.getElementById("dashMemberSchedulesContainer");
   if (!container) return;
 
   try {
-    const { data, error } = await supabase
-      .from("notifications")
-      .select("*")
-      .eq("cycle_id", currentCycleId)
-      .order("created_at", { ascending: false })
-      .limit(8);
+    // 1. Get current active session date & construct 7 active session dates (D0 to D6)
+    const sessionDateObj = await getActiveSessionDate();
+    const dates = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(sessionDateObj);
+      d.setDate(sessionDateObj.getDate() + i);
+      dates.push(toLocalISO(d)); // 'YYYY-MM-DD'
+    }
 
-    if (error) throw error;
+    // 2. Fetch Members if allMembers is empty
+    let membersList = allMembers || [];
+    if (!membersList || membersList.length === 0) {
+      const { data: fetchedMembers } = await supabase
+        .from("members")
+        .select("*")
+        .order("name", { ascending: true });
+      if (fetchedMembers) {
+        membersList = fetchedMembers;
+        allMembers = fetchedMembers;
+      }
+    }
 
-    if (!data || data.length === 0) {
-      container.innerHTML =
-        '<div style="font-size:11px; color:gray; text-align:center; padding:20px;">No recent activity found.</div>';
+    if (!membersList || membersList.length === 0) {
+      container.innerHTML = '<div style="font-size:12px; color:#64748b; text-align:center; padding:20px;">No members found.</div>';
       return;
     }
 
-    container.innerHTML = data
-      .map((notif) => {
-        let icon = "🔔";
-        if (notif.type === "meal") icon = "🍽️";
-        if (notif.type === "deposit") icon = "💰";
-        if (notif.type === "expense") icon = "🛒";
+    // 3. Fetch 7-day meal plans for all members in parallel
+    const { data: plansData, error: plansErr } = await supabase
+      .from("meal_plans")
+      .select("*")
+      .in("plan_date", dates);
 
-        return `
-            <div class="feed-item">
-                <div class="feed-icon">${icon}</div>
-                <div class="feed-content">
-                    <div class="msg">${notif.message}</div>
-                    <div class="time">${formatDate(notif.created_at)}</div>
-                </div>
-            </div>`;
-      })
-      .join("");
+    if (plansErr) throw plansErr;
+
+    const planMap = {};
+    (plansData || []).forEach((p) => {
+      planMap[`${p.member_id}_${p.plan_date}`] = p;
+    });
+
+    cachedDashboardSchedules = {
+      dates,
+      membersList,
+      planMap,
+      sessionDateObj,
+    };
+
+    renderDashboardMemberSchedules();
   } catch (err) {
-    console.error("Activity Feed Error:", err);
+    console.error("Error loading dashboard member schedules:", err);
+    container.innerHTML = `<div style="font-size:12px; color:#ef4444; text-align:center; padding:15px;">Failed to load schedules: ${err.message || err}</div>`;
   }
+}
+
+function renderDashboardMemberSchedules() {
+  const container = document.getElementById("dashMemberSchedulesContainer");
+  if (!container || !cachedDashboardSchedules.dates) return;
+
+  const { dates, membersList, planMap, sessionDateObj } = cachedDashboardSchedules;
+  const searchInput = document.getElementById("dashMemberSearch");
+  const searchQuery = (searchInput?.value || "").toLowerCase().trim();
+
+  const countBadge = document.getElementById("dashSchedulesCount");
+  if (countBadge) countBadge.textContent = `${membersList.length} Members`;
+
+  const canManage = currentUser && (currentUser.role === "admin" || currentUser.role === "manager");
+  const activeSessionStr = toLocalISO(sessionDateObj);
+  const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  const filteredMembers = membersList.filter((m) => {
+    if (!searchQuery) return true;
+    return (m.name || "").toLowerCase().includes(searchQuery) || (m.role || "").toLowerCase().includes(searchQuery);
+  });
+
+  if (filteredMembers.length === 0) {
+    container.innerHTML = '<div style="font-size:12px; color:#64748b; text-align:center; padding:20px;">No matching members found.</div>';
+    return;
+  }
+
+  container.innerHTML = filteredMembers
+    .map((member) => {
+      const initial = (member.name || "?").charAt(0).toUpperCase();
+      const roleClass = (member.role || "user").toLowerCase();
+      const defDayActive = !!member.default_day_on;
+      const defNightActive = !!member.default_night_on;
+
+      // Count total ON meals this week for summary
+      let weekDayCount = 0;
+      let weekNightCount = 0;
+
+      // 7-day timeline HTML
+      const timelineHTML = dates
+        .map((dStr, idx) => {
+          const dateObj = parseLocalDate(dStr);
+          const dateNum = dateObj.getDate();
+          const dayName = weekDays[dateObj.getDay()];
+          const isToday = dStr === activeSessionStr;
+
+          const planKey = `${member.id}_${dStr}`;
+          const p = planMap[planKey];
+
+          const dayActive = p ? Number(p.day_count) > 0 : defDayActive;
+          const nightActive = p ? Number(p.night_count) > 0 : defNightActive;
+          const gNight = p ? Number(p.guest_night_count || 0) : 0;
+          const gDay = p ? Number(p.guest_day_count || 0) : 0;
+          const gTotal = gNight + gDay;
+
+          if (dayActive) weekDayCount++;
+          if (nightActive) weekNightCount++;
+
+          const dayBtnClass = `micro-toggle day ${dayActive ? "active" : "off"} ${canManage ? "" : "readonly"}`;
+          const nightBtnClass = `micro-toggle night ${nightActive ? "active" : "off"} ${canManage ? "" : "readonly"}`;
+
+          const dayOnClick = canManage
+            ? `onclick="toggleDashboardMemberPlan(${member.id}, '${dStr}', 'day', ${dayActive ? 0 : 1})"`
+            : "";
+          const nightOnClick = canManage
+            ? `onclick="toggleDashboardMemberPlan(${member.id}, '${dStr}', 'night', ${nightActive ? 0 : 1})"`
+            : "";
+
+          return `
+            <div class="timeline-day-card ${isToday ? "today-card" : ""}">
+              ${isToday ? '<div class="today-pulse-dot"></div>' : ''}
+              <div class="timeline-weekday">${dayName}</div>
+              <div class="timeline-date-num">${dateNum}</div>
+              <div class="timeline-toggles-row">
+                <button class="${dayBtnClass}" ${dayOnClick} title="Day Meal (${dStr})">☀️</button>
+                <button class="${nightBtnClass}" ${nightOnClick} title="Night Meal (${dStr})">🌙</button>
+              </div>
+              <button class="dash-guest-badge ${gTotal > 0 ? "active" : ""}" onclick="openGuestModalForDashboard(${member.id}, '${(member.name || '').replace(/'/g, "\\'")}', '${dStr}', '${dayName} ${dateNum}', ${gNight}, ${gDay}, ${canManage})" title="Guest Meals (${dayName} ${dateNum})">
+                👥 <span id="dash-guest-total-${member.id}-${dStr}">${gTotal}</span>
+              </button>
+            </div>`;
+        })
+        .join("");
+
+      const totalMeals = weekDayCount + weekNightCount;
+      const defDayOnClick = canManage ? `onclick="toggleDashboardMemberDefault(${member.id}, 'day')"` : "";
+      const defNightOnClick = canManage ? `onclick="toggleDashboardMemberDefault(${member.id}, 'night')"` : "";
+
+      return `
+        <div class="member-schedule-card">
+          <div class="member-card-top">
+            <div class="member-info-left">
+              <div class="member-avatar-circle">${initial}</div>
+              <div class="member-name-role">
+                <div class="member-card-name">
+                  ${member.name}
+                  <span class="role-pill ${roleClass}">${member.role || "Member"}</span>
+                </div>
+                <div class="member-week-summary">
+                  <span class="week-count-pill">🍽️ ${totalMeals} meals</span>
+                  <span class="week-count-detail">☀️ ${weekDayCount} · 🌙 ${weekNightCount}</span>
+                </div>
+              </div>
+            </div>
+            <div class="default-prefs-wrap">
+              <button class="def-pref-btn day ${defDayActive ? "active" : ""} ${canManage ? "" : "readonly"}" ${defDayOnClick}>
+                ☀️ ${defDayActive ? "ON" : "OFF"}
+              </button>
+              <button class="def-pref-btn night ${defNightActive ? "active" : ""} ${canManage ? "" : "readonly"}" ${defNightOnClick}>
+                🌙 ${defNightActive ? "ON" : "OFF"}
+              </button>
+            </div>
+          </div>
+          <div class="schedule-timeline-strip">
+            ${timelineHTML}
+          </div>
+        </div>`;
+    })
+    .join("");
+}
+
+function filterDashboardMemberSchedules() {
+  renderDashboardMemberSchedules();
+}
+
+async function toggleDashboardMemberPlan(targetMemberId, planDate, mealType, newValue) {
+  if (!currentUser || (currentUser.role !== "admin" && currentUser.role !== "manager")) {
+    showNotification("Only Admins and Managers can edit member schedules", "error");
+    return;
+  }
+
+  const targetMember = (allMembers || []).find((m) => m.id === targetMemberId);
+  const targetName = targetMember ? targetMember.name : "Member";
+
+  try {
+    const planKey = `${targetMemberId}_${planDate}`;
+    let existingPlan = cachedDashboardSchedules.planMap ? cachedDashboardSchedules.planMap[planKey] : null;
+
+    const upsertData = {
+      member_id: targetMemberId,
+      plan_date: planDate,
+      day_count: existingPlan ? Number(existingPlan.day_count) : (targetMember?.default_day_on ? 1 : 0),
+      night_count: existingPlan ? Number(existingPlan.night_count) : (targetMember?.default_night_on ? 1 : 0),
+    };
+
+    if (mealType === "day") upsertData.day_count = newValue;
+    else upsertData.night_count = newValue;
+
+    // Optimistic local update
+    if (cachedDashboardSchedules.planMap) {
+      cachedDashboardSchedules.planMap[planKey] = upsertData;
+      renderDashboardMemberSchedules();
+    }
+
+    const { error } = await supabase
+      .from("meal_plans")
+      .upsert(upsertData, { onConflict: "member_id, plan_date" });
+
+    if (error) throw error;
+
+    const actionText = newValue > 0 ? "turned ON" : "turned OFF";
+    const mealLabel = mealType === "day" ? "☀️ Day" : "🌙 Night";
+    const niceDate = parseLocalDate(planDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+
+    showNotification(`Updated ${targetName}'s ${mealLabel} for ${niceDate}`, "success");
+
+    // DISPATCH TARGETED NOTIFICATION if changed on behalf of another member by Admin/Manager
+    if (currentUser.member_id !== targetMemberId && currentCycleId) {
+      const actorName = currentUser.name || "Admin/Manager";
+      await supabase.from("notifications").insert({
+        cycle_id: parseInt(currentCycleId),
+        type: "meal",
+        message: `${actorName} ${actionText} ${targetName}'s ${mealLabel} meal for ${niceDate}`,
+        member_id: targetMemberId,
+      });
+    }
+  } catch (err) {
+    console.error("Failed to toggle dashboard meal plan:", err);
+    showNotification("Failed to update meal plan", "error");
+    loadDashboardMemberSchedules(); // revert on error
+  }
+}
+
+async function toggleDashboardMemberDefault(targetMemberId, mealType) {
+  if (!currentUser || (currentUser.role !== "admin" && currentUser.role !== "manager")) {
+    showNotification("Only Admins and Managers can edit member defaults", "error");
+    return;
+  }
+
+  const targetMember = (allMembers || []).find((m) => m.id === targetMemberId);
+  if (!targetMember) return;
+
+  let updates = {};
+  let newState = false;
+  if (mealType === "day") {
+    newState = !targetMember.default_day_on;
+    updates = { default_day_on: newState };
+    targetMember.default_day_on = newState;
+  } else {
+    newState = !targetMember.default_night_on;
+    updates = { default_night_on: newState };
+    targetMember.default_night_on = newState;
+  }
+
+  try {
+    // Optimistic UI update
+    renderDashboardMemberSchedules();
+
+    const { error } = await supabase
+      .from("members")
+      .update(updates)
+      .eq("id", targetMemberId);
+
+    if (error) throw error;
+
+    const mealLabel = mealType === "day" ? "☀️ Day" : "🌙 Night";
+    const statusText = newState ? "ON" : "OFF";
+    showNotification(`Updated ${targetMember.name}'s default ${mealLabel} to ${statusText}`, "success");
+
+    // DISPATCH TARGETED NOTIFICATION if changed on behalf of another member by Admin/Manager
+    if (currentUser.member_id !== targetMemberId && currentCycleId) {
+      const actorName = currentUser.name || "Admin/Manager";
+      await supabase.from("notifications").insert({
+        cycle_id: parseInt(currentCycleId),
+        type: "meal",
+        message: `${actorName} set ${targetMember.name}'s default ${mealLabel} meal preference to ${statusText}`,
+        member_id: targetMemberId,
+      });
+    }
+  } catch (err) {
+    console.error("Failed to update default preference:", err);
+    showNotification("Failed to update default preference", "error");
+    loadDashboardMemberSchedules();
+  }
+}
+
+// ============================================
+// FLOATING GUEST MEAL CONTROLLER MODAL HANDLERS
+// ============================================
+let currentGuestModalContext = null;
+
+function openGuestModalForProfile(dateSession, dateNextDay, sessionLabel, nextDayLabel, nGuest, dGuest, isNightLocked, isDayLocked) {
+  currentGuestModalContext = {
+    source: 'profile',
+    memberId: currentUser.member_id,
+    dateNight: dateSession,
+    dateDay: dateNextDay,
+    nightVal: nGuest || 0,
+    dayVal: dGuest || 0,
+    isNightLocked,
+    isDayLocked,
+    sessionLabel,
+    nextDayLabel,
+  };
+
+  document.getElementById("guestModalTitle").textContent = "👥 Guest Meals";
+  document.getElementById("guestModalSub").textContent = `${sessionLabel} Bazar Session`;
+  document.getElementById("guestModalNightLabel").textContent = `Night (${sessionLabel})`;
+  document.getElementById("guestModalDayLabel").textContent = `Day (${nextDayLabel})`;
+
+  document.getElementById("guestModalNightVal").textContent = currentGuestModalContext.nightVal;
+  document.getElementById("guestModalDayVal").textContent = currentGuestModalContext.dayVal;
+
+  document.getElementById("guestModalNightMinus").disabled = isNightLocked;
+  document.getElementById("guestModalNightPlus").disabled = isNightLocked;
+  document.getElementById("guestModalDayMinus").disabled = isDayLocked;
+  document.getElementById("guestModalDayPlus").disabled = isDayLocked;
+
+  document.getElementById("guestMealModal").classList.add("active");
+}
+
+function openGuestModalForDashboard(memberId, memberName, dateStr, dateLabel, nGuest, dGuest, canManage) {
+  const dateObj = parseLocalDate(dateStr);
+  const nextDObj = new Date(dateObj);
+  nextDObj.setDate(dateObj.getDate() + 1);
+  const dateNextStr = toLocalISO(nextDObj);
+
+  const fmt = (d) => d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  const nightLabelStr = fmt(dateObj);
+  const dayLabelStr = fmt(nextDObj);
+
+  currentGuestModalContext = {
+    source: 'dashboard',
+    memberId,
+    memberName,
+    dateNight: dateStr,
+    dateDay: dateNextStr,
+    nightVal: nGuest || 0,
+    dayVal: dGuest || 0,
+    canManage,
+    dateLabel,
+  };
+
+  document.getElementById("guestModalTitle").textContent = `👥 ${memberName}'s Guest Meals`;
+  document.getElementById("guestModalSub").textContent = `${dateLabel} Bazar Session`;
+  document.getElementById("guestModalNightLabel").textContent = `Night (${nightLabelStr})`;
+  document.getElementById("guestModalDayLabel").textContent = `Day (${dayLabelStr})`;
+
+  document.getElementById("guestModalNightVal").textContent = currentGuestModalContext.nightVal;
+  document.getElementById("guestModalDayVal").textContent = currentGuestModalContext.dayVal;
+
+  const isReadonly = !canManage;
+  document.getElementById("guestModalNightMinus").disabled = isReadonly;
+  document.getElementById("guestModalNightPlus").disabled = isReadonly;
+  document.getElementById("guestModalDayMinus").disabled = isReadonly;
+  document.getElementById("guestModalDayPlus").disabled = isReadonly;
+
+  document.getElementById("guestMealModal").classList.add("active");
+}
+
+function closeGuestModal() {
+  const modal = document.getElementById("guestMealModal");
+  if (modal) modal.classList.remove("active");
+  currentGuestModalContext = null;
+}
+
+async function stepGuestModal(slotType, delta) {
+  if (!currentGuestModalContext) return;
+  const ctx = currentGuestModalContext;
+
+  if (ctx.source === 'profile') {
+    const targetDate = slotType === 'night' ? ctx.dateNight : ctx.dateDay;
+    const btn = document.getElementById(slotType === 'night' ? "guestModalNightPlus" : "guestModalDayPlus");
+
+    await updateGuestPlan(targetDate, slotType, delta, btn, ctx.dateNight);
+
+    if (slotType === 'night') {
+      ctx.nightVal = Math.max(0, ctx.nightVal + delta);
+      document.getElementById("guestModalNightVal").textContent = ctx.nightVal;
+    } else {
+      ctx.dayVal = Math.max(0, ctx.dayVal + delta);
+      document.getElementById("guestModalDayVal").textContent = ctx.dayVal;
+    }
+  } else if (ctx.source === 'dashboard') {
+    if (!ctx.canManage) {
+      showNotification("Only Admins and Managers can edit member guest meals", "error");
+      return;
+    }
+
+    await updateDashGuestPlanDetailed(ctx.memberId, ctx.dateNight, slotType, delta);
+
+    if (slotType === 'night') {
+      ctx.nightVal = Math.max(0, ctx.nightVal + delta);
+      document.getElementById("guestModalNightVal").textContent = ctx.nightVal;
+    } else {
+      ctx.dayVal = Math.max(0, ctx.dayVal + delta);
+      document.getElementById("guestModalDayVal").textContent = ctx.dayVal;
+    }
+  }
+}
+
+async function updateDashGuestPlanDetailed(targetMemberId, planDate, slotType, delta) {
+  if (!currentUser || (currentUser.role !== "admin" && currentUser.role !== "manager")) {
+    showNotification("Only Admins and Managers can edit member guest meals", "error");
+    return;
+  }
+
+  const targetMember = (allMembers || []).find((m) => m.id === targetMemberId);
+  const targetName = targetMember ? targetMember.name : "Member";
+
+  try {
+    const planKey = `${targetMemberId}_${planDate}`;
+    let existingPlan = cachedDashboardSchedules.planMap ? cachedDashboardSchedules.planMap[planKey] : null;
+
+    let currentNight = existingPlan ? Number(existingPlan.guest_night_count || 0) : 0;
+    let currentDay = existingPlan ? Number(existingPlan.guest_day_count || 0) : 0;
+
+    if (slotType === "night") {
+      currentNight = Math.max(0, currentNight + delta);
+    } else {
+      currentDay = Math.max(0, currentDay + delta);
+    }
+
+    const upsertData = {
+      member_id: targetMemberId,
+      plan_date: planDate,
+      day_count: existingPlan ? Number(existingPlan.day_count) : (targetMember?.default_day_on ? 1 : 0),
+      night_count: existingPlan ? Number(existingPlan.night_count) : (targetMember?.default_night_on ? 1 : 0),
+      guest_night_count: currentNight,
+      guest_day_count: currentDay,
+    };
+
+    // Optimistic local cache update
+    if (cachedDashboardSchedules.planMap) {
+      cachedDashboardSchedules.planMap[planKey] = upsertData;
+    }
+
+    // Optimistic DOM update
+    const total = currentNight + currentDay;
+    const nightEl = document.getElementById(`dash-gnight-${targetMemberId}-${planDate}`);
+    const dayEl = document.getElementById(`dash-gday-${targetMemberId}-${planDate}`);
+    const totalEl = document.getElementById(`dash-guest-total-${targetMemberId}-${planDate}`);
+    const badgeBtn = totalEl?.closest(".dash-guest-badge");
+
+    if (nightEl) nightEl.textContent = currentNight;
+    if (dayEl) dayEl.textContent = currentDay;
+    if (totalEl) totalEl.textContent = total;
+    if (badgeBtn) {
+      if (total > 0) badgeBtn.classList.add("active");
+      else badgeBtn.classList.remove("active");
+    }
+
+    const { error } = await supabase
+      .from("meal_plans")
+      .upsert(upsertData, { onConflict: "member_id, plan_date" });
+
+    if (error) throw error;
+
+    const niceDate = parseLocalDate(planDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+    const slotLabel = slotType === "night" ? "Night" : "Day";
+    const newCount = slotType === "night" ? currentNight : currentDay;
+    showNotification(`👥 Set ${targetName}'s guest ${slotLabel} meals to ${newCount} for ${niceDate}`, "success");
+
+    // Specific notification activity log
+    if (currentCycleId) {
+      const actorName = currentUser.name || "Admin/Manager";
+      await logActivity(
+        `${actorName} updated ${targetName}'s guest ${slotLabel} meals to ${newCount} (Total: ${total}) for ${niceDate}`,
+        "meal"
+      );
+    }
+
+    // Refresh dashboard pulse counts
+    pageLoaded.dashboard = false;
+    if (!document.getElementById("dashboardPage").classList.contains("hidden")) {
+      loadDashboard();
+    }
+  } catch (err) {
+    console.error("Failed to update dashboard guest plan:", err);
+    showNotification("Failed to update guest meals", "error");
+    loadDashboardMemberSchedules();
+  }
+}
+
+// Fallback compatibility alias for loadRecentActivity
+async function loadRecentActivity() {
+  loadDashboardMemberSchedules();
 }
 
 // ============================================
@@ -4229,7 +4831,7 @@ async function loadMemberCalendar(memberId) {
   }
 }
 
-function openMealModal(memberId, sessionDate, currentNightVal, nextDayVal) {
+function openMealModal(memberId, sessionDate, currentNightVal, nextDayVal, guestNightVal = 0, guestDayVal = 0) {
   const dSession = new Date(sessionDate);
   const dNext = new Date(dSession);
   dNext.setDate(dSession.getDate() + 1);
@@ -4245,8 +4847,12 @@ function openMealModal(memberId, sessionDate, currentNightVal, nextDayVal) {
   document.getElementById("mealDateNext").value = nextDateStr;
 
   // Set Values
-  document.getElementById("mealNightCount").value = currentNightVal;
-  document.getElementById("mealDayCount").value = nextDayVal;
+  document.getElementById("mealNightCount").value = currentNightVal || 0;
+  document.getElementById("mealDayCount").value = nextDayVal || 0;
+  const guestNightInput = document.getElementById("mealGuestNightCount");
+  const guestDayInput = document.getElementById("mealGuestDayCount");
+  if (guestNightInput) guestNightInput.value = guestNightVal || 0;
+  if (guestDayInput) guestDayInput.value = guestDayVal || 0;
 
   // PERMISSION CHECK
   const isAdminOrManager =
@@ -4258,18 +4864,20 @@ function openMealModal(memberId, sessionDate, currentNightVal, nextDayVal) {
 
   if (!isAdminOrManager) {
     // Mode: View Only
-    saveBtn.classList.add("hidden"); // Ensure .hidden is in your CSS or use .style.display='none'
-    saveBtn.style.display = "none";
-    nightInput.disabled = true;
-    dayInput.disabled = true;
+    if (saveBtn) { saveBtn.classList.add("hidden"); saveBtn.style.display = "none"; }
+    if (nightInput) nightInput.disabled = true;
+    if (dayInput) dayInput.disabled = true;
+    if (guestNightInput) guestNightInput.disabled = true;
+    if (guestDayInput) guestDayInput.disabled = true;
     modalTitle.innerHTML = `<div style="color:var(--text-secondary); font-size:14px;">View Session: ${member?.name}</div>
                                <div style="font-size:11px; color:var(--danger-color); font-weight:700;">READ ONLY MODE</div>`;
   } else {
     // Mode: Edit
-    saveBtn.classList.remove("hidden");
-    saveBtn.style.display = "block";
-    nightInput.disabled = false;
-    dayInput.disabled = false;
+    if (saveBtn) { saveBtn.classList.remove("hidden"); saveBtn.style.display = "block"; }
+    if (nightInput) nightInput.disabled = false;
+    if (dayInput) dayInput.disabled = false;
+    if (guestNightInput) guestNightInput.disabled = false;
+    if (guestDayInput) guestDayInput.disabled = false;
     modalTitle.innerHTML = `<div style="color:var(--primary-color); font-size:16px;">Edit Session: ${member?.name}</div>
                                <div style="font-size:11px;">Bazar Date: ${fmt(dSession)}</div>`;
   }
@@ -4286,10 +4894,7 @@ function closeMealModal() {
 }
 
 // ==========================================
-// UPDATED MEAL FORM HANDLER
-// ==========================================
-// ==========================================
-// UPDATED MEAL FORM HANDLER (FIXED NOTIFICATION)
+// UPDATED MEAL FORM HANDLER (FIXED NOTIFICATION & GUEST MEALS)
 // ==========================================
 document.getElementById("mealForm").addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -4304,6 +4909,10 @@ document.getElementById("mealForm").addEventListener("submit", async (e) => {
     0;
   const dayVal =
     Math.round(parseFloat(document.getElementById("mealDayCount").value)) || 0;
+  const guestNightVal =
+    Math.round(parseFloat(document.getElementById("mealGuestNightCount")?.value || 0)) || 0;
+  const guestDayVal =
+    Math.round(parseFloat(document.getElementById("mealGuestDayCount")?.value || 0)) || 0;
 
   btn.textContent = "Saving...";
   btn.disabled = true;
@@ -4330,14 +4939,18 @@ document.getElementById("mealForm").addEventListener("submit", async (e) => {
         member_id: memberId,
         meal_date: sessionDate,
         night_count: nightVal,
-        day_count: rowSession ? rowSession.day_count : 0,
+        guest_night_count: guestNightVal,
+        day_count: rowSession ? (rowSession.day_count || 0) : 0,
+        guest_day_count: rowSession ? (rowSession.guest_day_count || 0) : 0,
       },
       {
         cycle_id: nextDayCycleId,
         member_id: memberId,
         meal_date: nextDate,
         day_count: dayVal,
-        night_count: rowNext ? rowNext.night_count : 0,
+        guest_day_count: guestDayVal,
+        night_count: rowNext ? (rowNext.night_count || 0) : 0,
+        guest_night_count: rowNext ? (rowNext.guest_night_count || 0) : 0,
       },
     ];
 
@@ -4349,7 +4962,7 @@ document.getElementById("mealForm").addEventListener("submit", async (e) => {
     const actor = currentUser.members ? currentUser.members.name : "Admin";
     const targetMember = allMembers.find((m) => m.id === memberId);
     await logActivity(
-      `Tracker Override: ${targetMember?.name}'s session (${sessionDate}) set to N:${nightVal} D:${dayVal} by ${actor}`,
+      `Tracker Override: ${targetMember?.name}'s session (${sessionDate}) set (Night: ${nightVal}, Day: ${dayVal}, Guest Night: ${guestNightVal}, Guest Day: ${guestDayVal}) by ${actor}`,
       "meal",
     );
 
