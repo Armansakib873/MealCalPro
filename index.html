@@ -1204,6 +1204,69 @@
     </div>
 </div>
 
+<!-- Floating Day Schedule & Guest Controller Modal (Dashboard Touch Target) -->
+<div id="dayScheduleModal" class="modal">
+    <div class="modal-content" style="max-width: 380px; border-radius: 20px; text-align: center; padding: 20px;">
+        <div class="modal-header" style="border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+            <h3 class="modal-title" id="dayModalTitle" style="color: #047857; font-size: 16px; font-weight: 800; margin: 0;">📅 Schedule & Guests</h3>
+            <span class="close-modal" onclick="closeDayScheduleModal()" style="font-size: 20px; cursor: pointer; color: #64748b;">×</span>
+        </div>
+        
+        <div style="font-size: 12px; font-weight: 700; color: #64748b; margin-bottom: 16px;" id="dayModalSub">Member Session</div>
+
+        <div style="display: flex; flex-direction: column; gap: 14px;">
+            <!-- Personal Meals Section (Night first, then Day) -->
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 12px;">
+                <div style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px;">Personal Meal Status</div>
+                <div style="display: flex; gap: 10px; justify-content: center;">
+                    <button type="button" id="dayModalNightBtn" class="def-pref-btn night" style="flex: 1; height: 38px; border-radius: 10px;" onclick="toggleDayModalPersonal('night')">🌙 Night: OFF</button>
+                    <button type="button" id="dayModalDayBtn" class="def-pref-btn day" style="flex: 1; height: 38px; border-radius: 10px;" onclick="toggleDayModalPersonal('day')">☀️ Day: OFF</button>
+                </div>
+            </div>
+
+            <!-- Guest Meals Section (Night first, then Day) -->
+            <div style="background: rgba(5, 150, 105, 0.04); border: 1px solid rgba(5, 150, 105, 0.18); border-radius: 14px; padding: 12px;">
+                <div style="font-size: 10px; font-weight: 800; color: #047857; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px;">Guest Meals</div>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <!-- Night Guest First -->
+                    <div class="guest-modal-box">
+                        <div class="guest-modal-info">
+                            <span style="font-size: 18px;">🌙</span>
+                            <div style="text-align: left;">
+                                <div style="font-size: 12px; font-weight: 700; color: #1e293b;">Night Guests</div>
+                                <div style="font-size: 10px; color: #64748b;" id="dayModalNightGuestLabel">Night</div>
+                            </div>
+                        </div>
+                        <div class="guest-stepper-controls">
+                            <button type="button" class="guest-btn" id="dayModalNightGuestMinus" onclick="stepDayModalGuest('night', -1)">−</button>
+                            <span class="guest-count-val" id="dayModalNightGuestVal">0</span>
+                            <button type="button" class="guest-btn" id="dayModalNightGuestPlus" onclick="stepDayModalGuest('night', 1)">+</button>
+                        </div>
+                    </div>
+
+                    <!-- Day Guest Second -->
+                    <div class="guest-modal-box">
+                        <div class="guest-modal-info">
+                            <span style="font-size: 18px;">☀️</span>
+                            <div style="text-align: left;">
+                                <div style="font-size: 12px; font-weight: 700; color: #1e293b;">Day Guests</div>
+                                <div style="font-size: 10px; color: #64748b;" id="dayModalDayGuestLabel">Day</div>
+                            </div>
+                        </div>
+                        <div class="guest-stepper-controls">
+                            <button type="button" class="guest-btn" id="dayModalDayGuestMinus" onclick="stepDayModalGuest('day', -1)">−</button>
+                            <span class="guest-count-val" id="dayModalDayGuestVal">0</span>
+                            <button type="button" class="guest-btn" id="dayModalDayGuestPlus" onclick="stepDayModalGuest('day', 1)">+</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <button type="button" class="btn btn-primary" style="width: 100%; margin-top: 18px; border-radius: 12px; background: #059669; border: none; font-weight: 700; height: 42px;" onclick="closeDayScheduleModal()">Done</button>
+    </div>
+</div>
+
 <!-- Edit Member Modal -->
 <div id="editMemberModal" class="modal">
     <div class="modal-content" style="max-width: 480px;">

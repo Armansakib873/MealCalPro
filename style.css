@@ -5461,14 +5461,6 @@ background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(245, 158, 
     overflow: hidden;
 }
 
-.member-schedules-dashboard::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, #f59e0b, #6366f1, #3b82f6);
-    border-radius: 20px 20px 0 0;
-}
 
 .dash-schedules-header {
     display: flex;
@@ -5815,7 +5807,7 @@ background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(245, 158, 
 
 /* Day ON */
 .micro-toggle.day.active {
-    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    background: linear-gradient(135deg, #fbbf24, #ffe50b);
     color: #ffffff;
     border-color: #d97706;
     box-shadow:
@@ -5825,7 +5817,7 @@ background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(245, 158, 
 
 /* Night ON */
 .micro-toggle.night.active {
-    background: linear-gradient(135deg, #818cf8, #6366f1);
+    background: linear-gradient(135deg, #818cf8, #020312);
     color: #ffffff;
     border-color: #4f46e5;
     box-shadow:
@@ -5837,14 +5829,14 @@ background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(245, 158, 
 .micro-toggle.day.off {
     background: #fff8f0;
     border-color: #fed7aa;
-    color: #fdba74;
+    color: #ffffff42;
 }
 
 /* Night OFF */
 .micro-toggle.night.off {
     background: #f5f3ff;
     border-color: #c4b5fd;
-    color: #a78bfa;
+    color: #ffffff42;
 }
 
 .micro-toggle.readonly {
@@ -5891,7 +5883,7 @@ background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(245, 158, 
     
     .timeline-day-card {
         flex: 0 0 68px;
-        min-width: 68px;
+        min-width: 100px;
     }
 }
 
@@ -5937,7 +5929,7 @@ background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(245, 158, 
     }
 
     .member-card-top {
-        flex-direction: column;
+        flex-direction: row-reverse;
         align-items: flex-start;
         gap: 10px;
     }
@@ -5959,8 +5951,8 @@ background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(245, 158, 
     }
     
     .timeline-day-card {
-        flex: 0 0 66px;
-        min-width: 66px;
+        flex: 0 0 100px;
+        min-width: 100px;
         padding: 8px 4px;
         border-radius: 12px;
     }
@@ -6150,34 +6142,30 @@ background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(245, 158, 
     text-align: center;
 }
 
-/* ── Dashboard Timeline Day Card Guest Badge & Popover ── */
-.dash-guest-badge {
-    margin-top: 4px;
-    padding: 2px 7px;
-    border-radius: 8px;
+/* ── Dashboard Timeline Day Card Slot Columns & Guest Boxes ── */
+.timeline-day-card {
+    cursor: pointer;
+}
+
+.dash-guest-box {
+    width: 100%;
+    padding: 3px 2px;
+    border-radius: 6px;
     background: #f1f5f9;
     border: 1px solid #cbd5e1;
     color: #64748b;
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 800;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
+    text-align: center;
     transition: all 0.2s ease;
     user-select: none;
+    white-space: nowrap;
 }
 
-.dash-guest-badge.active {
+.dash-guest-box.active {
     background: #dcfce7;
     border-color: #86efac;
     color: #15803d;
-}
-
-.dash-guest-badge:hover {
-    border-color: #10b981;
-    color: #047857;
-    transform: translateY(-1px);
 }
 
 .dash-guest-popover {

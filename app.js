@@ -3891,10 +3891,10 @@ async function loadDashboardMemberSchedules() {
   if (!container) return;
 
   try {
-    // 1. Get current active session date & construct 7 active session dates (D0 to D6)
+    // 1. Get current active session date & construct 8 session dates (D0 to D7 for 7 sessions)
     const sessionDateObj = await getActiveSessionDate();
     const dates = [];
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < 8; i++) {
       const d = new Date(sessionDateObj);
       d.setDate(sessionDateObj.getDate() + i);
       dates.push(toLocalISO(d)); // 'YYYY-MM-DD'
@@ -3918,7 +3918,7 @@ async function loadDashboardMemberSchedules() {
       return;
     }
 
-    // 3. Fetch 7-day meal plans for all members in parallel
+    // 3. Fetch 8-day meal plans for all members in parallel
     const { data: plansData, error: plansErr } = await supabase
       .from("meal_plans")
       .select("*")
@@ -3953,107 +3953,114 @@ function renderDashboardMemberSchedules() {
   const searchInput = document.getElementById("dashMemberSearch");
   const searchQuery = (searchInput?.value || "").toLowerCase().trim();
 
+  // Exclude archived members
+  const activeMembers = (membersList || []).filter((m) => {
+    if (m.archived) return false;
+    if (m.archived_from_cycle_id && currentCycleId && parseInt(currentCycleId) >= m.archived_from_cycle_id) {
+      return false;
+    }
+    if (!searchQuery) return true;
+    return (m.name || "").toLowerCase().includes(searchQuery) || (m.role || "").toLowerCase().includes(searchQuery);
+  });
+
   const countBadge = document.getElementById("dashSchedulesCount");
-  if (countBadge) countBadge.textContent = `${membersList.length} Members`;
+  if (countBadge) countBadge.textContent = `${activeMembers.length} Members`;
 
   const canManage = currentUser && (currentUser.role === "admin" || currentUser.role === "manager");
   const activeSessionStr = toLocalISO(sessionDateObj);
   const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-  const filteredMembers = membersList.filter((m) => {
-    if (!searchQuery) return true;
-    return (m.name || "").toLowerCase().includes(searchQuery) || (m.role || "").toLowerCase().includes(searchQuery);
-  });
-
-  if (filteredMembers.length === 0) {
+  if (activeMembers.length === 0) {
     container.innerHTML = '<div style="font-size:12px; color:#64748b; text-align:center; padding:20px;">No matching members found.</div>';
     return;
   }
 
-  container.innerHTML = filteredMembers
+  // Generate 7 session cards (i = 0 to 6) matching profile card system
+  const sessionDates = dates.slice(0, 7);
+
+  container.innerHTML = activeMembers
     .map((member) => {
-      const initial = (member.name || "?").charAt(0).toUpperCase();
       const roleClass = (member.role || "user").toLowerCase();
       const defDayActive = !!member.default_day_on;
       const defNightActive = !!member.default_night_on;
 
-      // Count total ON meals this week for summary
-      let weekDayCount = 0;
-      let weekNightCount = 0;
+      // 7 session cards timeline HTML
+      const timelineHTML = sessionDates
+        .map((dateSessionStr, idx) => {
+          const dateNextStr = dates[idx + 1];
 
-      // 7-day timeline HTML
-      const timelineHTML = dates
-        .map((dStr, idx) => {
-          const dateObj = parseLocalDate(dStr);
+          const dateObj = parseLocalDate(dateSessionStr);
+          const dateNextObj = parseLocalDate(dateNextStr);
+
           const dateNum = dateObj.getDate();
           const dayName = weekDays[dateObj.getDay()];
-          const isToday = dStr === activeSessionStr;
+          const nextDayNum = dateNextObj.getDate();
+          const nextDayName = weekDays[dateNextObj.getDay()];
 
-          const planKey = `${member.id}_${dStr}`;
-          const p = planMap[planKey];
+          const sessionLabel = `${dayName} ${dateNum}`;
+          const nextDayLabel = `${nextDayName} ${nextDayNum}`;
 
-          const dayActive = p ? Number(p.day_count) > 0 : defDayActive;
-          const nightActive = p ? Number(p.night_count) > 0 : defNightActive;
-          const gNight = p ? Number(p.guest_night_count || 0) : 0;
-          const gDay = p ? Number(p.guest_day_count || 0) : 0;
-          const gTotal = gNight + gDay;
+          const isToday = dateSessionStr === activeSessionStr;
 
-          if (dayActive) weekDayCount++;
-          if (nightActive) weekNightCount++;
+          const pNight = planMap[`${member.id}_${dateSessionStr}`];
+          const pDay = planMap[`${member.id}_${dateNextStr}`];
 
-          const dayBtnClass = `micro-toggle day ${dayActive ? "active" : "off"} ${canManage ? "" : "readonly"}`;
+          const nightActive = pNight ? Number(pNight.night_count) > 0 : defNightActive;
+          const dayActive = pDay ? Number(pDay.day_count) > 0 : defDayActive;
+
+          const gNight = pNight ? Number(pNight.guest_night_count || 0) : 0;
+          const gDay = pDay ? Number(pDay.guest_day_count || 0) : 0;
+
           const nightBtnClass = `micro-toggle night ${nightActive ? "active" : "off"} ${canManage ? "" : "readonly"}`;
-
-          const dayOnClick = canManage
-            ? `onclick="toggleDashboardMemberPlan(${member.id}, '${dStr}', 'day', ${dayActive ? 0 : 1})"`
-            : "";
-          const nightOnClick = canManage
-            ? `onclick="toggleDashboardMemberPlan(${member.id}, '${dStr}', 'night', ${nightActive ? 0 : 1})"`
-            : "";
+          const dayBtnClass = `micro-toggle day ${dayActive ? "active" : "off"} ${canManage ? "" : "readonly"}`;
 
           return `
-            <div class="timeline-day-card ${isToday ? "today-card" : ""}">
+            <div class="timeline-day-card ${isToday ? "today-card" : ""}" style="cursor: pointer;" onclick="openDayScheduleModal(${member.id}, '${(member.name || '').replace(/'/g, "\\'")}', '${dateSessionStr}', '${dateNextStr}', '${sessionLabel}', '${nextDayLabel}', ${nightActive ? 1 : 0}, ${dayActive ? 1 : 0}, ${gNight}, ${gDay}, ${canManage})">
               ${isToday ? '<div class="today-pulse-dot"></div>' : ''}
               <div class="timeline-weekday">${dayName}</div>
               <div class="timeline-date-num">${dateNum}</div>
-              <div class="timeline-toggles-row">
-                <button class="${dayBtnClass}" ${dayOnClick} title="Day Meal (${dStr})">☀️</button>
-                <button class="${nightBtnClass}" ${nightOnClick} title="Night Meal (${dStr})">🌙</button>
+              
+              <div class="day-slot-columns" style="display: flex; gap: 4px; justify-content: center; width: 100%; margin-top: 4px;">
+                <!-- Night Column First (Date Session) -->
+                <div class="slot-col" style="display: flex; flex-direction: column; align-items: center; gap: 3px; flex: 1;">
+                  <div class="${nightBtnClass}" title="Night Meal (${sessionLabel})">🌙</div>
+                  <div class="dash-guest-box ${gNight > 0 ? "active" : ""}" id="dash-gnight-box-${member.id}-${dateSessionStr}" title="Night Guests">🌙 ${gNight}</div>
+                </div>
+
+                <!-- Day Column Second (Date Next Day) -->
+                <div class="slot-col" style="display: flex; flex-direction: column; align-items: center; gap: 3px; flex: 1;">
+                  <div class="${dayBtnClass}" title="Day Meal (${nextDayLabel})">☀️</div>
+                  <div class="dash-guest-box ${gDay > 0 ? "active" : ""}" id="dash-gday-box-${member.id}-${dateNextStr}" title="Day Guests">☀️ ${gDay}</div>
+                </div>
               </div>
-              <button class="dash-guest-badge ${gTotal > 0 ? "active" : ""}" onclick="openGuestModalForDashboard(${member.id}, '${(member.name || '').replace(/'/g, "\\'")}', '${dStr}', '${dayName} ${dateNum}', ${gNight}, ${gDay}, ${canManage})" title="Guest Meals (${dayName} ${dateNum})">
-                👥 <span id="dash-guest-total-${member.id}-${dStr}">${gTotal}</span>
-              </button>
             </div>`;
         })
         .join("");
 
-      const totalMeals = weekDayCount + weekNightCount;
       const defDayOnClick = canManage ? `onclick="toggleDashboardMemberDefault(${member.id}, 'day')"` : "";
       const defNightOnClick = canManage ? `onclick="toggleDashboardMemberDefault(${member.id}, 'night')"` : "";
 
       return `
         <div class="member-schedule-card">
-          <div class="member-card-top">
+          <div class="member-card-top" style="align-items: center;">
             <div class="member-info-left">
-              <div class="member-avatar-circle">${initial}</div>
               <div class="member-name-role">
-                <div class="member-card-name">
+                <div class="member-card-name" style="font-size: 16px; font-weight: 800; color: #0f172a;">
                   ${member.name}
                   <span class="role-pill ${roleClass}">${member.role || "Member"}</span>
                 </div>
-                <div class="member-week-summary">
-                  <span class="week-count-pill">🍽️ ${totalMeals} meals</span>
-                  <span class="week-count-detail">☀️ ${weekDayCount} · 🌙 ${weekNightCount}</span>
-                </div>
               </div>
             </div>
-            <div class="default-prefs-wrap">
-              <button class="def-pref-btn day ${defDayActive ? "active" : ""} ${canManage ? "" : "readonly"}" ${defDayOnClick}>
-                ☀️ ${defDayActive ? "ON" : "OFF"}
-              </button>
-              <button class="def-pref-btn night ${defNightActive ? "active" : ""} ${canManage ? "" : "readonly"}" ${defNightOnClick}>
-                🌙 ${defNightActive ? "ON" : "OFF"}
-              </button>
+            <div class="default-prefs-container" style="display: flex; flex-direction: column; align-items: flex-end; gap: 3px;">
+              <div style="font-size: 9px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Default Meals</div>
+              <div class="default-prefs-wrap">
+                <button class="def-pref-btn day ${defDayActive ? "active" : ""} ${canManage ? "" : "readonly"}" ${defDayOnClick}>
+                  ☀️ ${defDayActive ? "ON" : "OFF"}
+                </button>
+                <button class="def-pref-btn night ${defNightActive ? "active" : ""} ${canManage ? "" : "readonly"}" ${defNightOnClick}>
+                  🌙 ${defNightActive ? "ON" : "OFF"}
+                </button>
+              </div>
             </div>
           </div>
           <div class="schedule-timeline-strip">
@@ -4294,6 +4301,122 @@ async function stepGuestModal(slotType, delta) {
   }
 }
 
+// ============================================
+// DAY SCHEDULE & GUEST MODAL (Dashboard Protection)
+// ============================================
+let currentDayModalContext = null;
+
+function openDayScheduleModal(memberId, memberName, dateNight, dateDay, sessionLabel, nextDayLabel, nightActive, dayActive, gNight, gDay, canManage) {
+  currentDayModalContext = {
+    memberId,
+    memberName,
+    dateNight,
+    dateDay,
+    sessionLabel,
+    nextDayLabel,
+    nightActive: !!nightActive,
+    dayActive: !!dayActive,
+    gNight: gNight || 0,
+    gDay: gDay || 0,
+    canManage: !!canManage,
+  };
+
+  document.getElementById("dayModalTitle").textContent = `📅 ${memberName}'s Schedule`;
+  document.getElementById("dayModalSub").textContent = `${sessionLabel} Bazar Session`;
+  document.getElementById("dayModalNightGuestLabel").textContent = `Night (${sessionLabel})`;
+  document.getElementById("dayModalDayGuestLabel").textContent = `Day (${nextDayLabel})`;
+
+  updateDayModalUI();
+
+  document.getElementById("dayScheduleModal").classList.add("active");
+}
+
+function updateDayModalUI() {
+  if (!currentDayModalContext) return;
+  const ctx = currentDayModalContext;
+
+  const dayBtn = document.getElementById("dayModalDayBtn");
+  const nightBtn = document.getElementById("dayModalNightBtn");
+
+  if (dayBtn) {
+    dayBtn.textContent = `☀️ Day: ${ctx.dayActive ? "ON" : "OFF"}`;
+    if (ctx.dayActive) {
+      dayBtn.classList.add("active");
+    } else {
+      dayBtn.classList.remove("active");
+    }
+    dayBtn.disabled = !ctx.canManage;
+  }
+
+  if (nightBtn) {
+    nightBtn.textContent = `🌙 Night: ${ctx.nightActive ? "ON" : "OFF"}`;
+    if (ctx.nightActive) {
+      nightBtn.classList.add("active");
+    } else {
+      nightBtn.classList.remove("active");
+    }
+    nightBtn.disabled = !ctx.canManage;
+  }
+
+  document.getElementById("dayModalDayGuestVal").textContent = ctx.gDay;
+  document.getElementById("dayModalNightGuestVal").textContent = ctx.gNight;
+
+  const isReadonly = !ctx.canManage;
+  document.getElementById("dayModalDayGuestMinus").disabled = isReadonly;
+  document.getElementById("dayModalDayGuestPlus").disabled = isReadonly;
+  document.getElementById("dayModalNightGuestMinus").disabled = isReadonly;
+  document.getElementById("dayModalNightGuestPlus").disabled = isReadonly;
+}
+
+function closeDayScheduleModal() {
+  const modal = document.getElementById("dayScheduleModal");
+  if (modal) modal.classList.remove("active");
+  currentDayModalContext = null;
+}
+
+async function toggleDayModalPersonal(mealType) {
+  if (!currentDayModalContext) return;
+  const ctx = currentDayModalContext;
+
+  if (!ctx.canManage) {
+    showNotification("Only Admins and Managers can edit member schedules", "error");
+    return;
+  }
+
+  const isDay = mealType === "day";
+  const newValue = isDay ? (ctx.dayActive ? 0 : 1) : (ctx.nightActive ? 0 : 1);
+  const planDate = isDay ? ctx.dateDay : ctx.dateNight;
+
+  if (isDay) ctx.dayActive = !ctx.dayActive;
+  else ctx.nightActive = !ctx.nightActive;
+
+  updateDayModalUI();
+
+  await toggleDashboardMemberPlan(ctx.memberId, planDate, mealType, newValue);
+}
+
+async function stepDayModalGuest(slotType, delta) {
+  if (!currentDayModalContext) return;
+  const ctx = currentDayModalContext;
+
+  if (!ctx.canManage) {
+    showNotification("Only Admins and Managers can edit member guest meals", "error");
+    return;
+  }
+
+  const targetDate = slotType === "day" ? ctx.dateDay : ctx.dateNight;
+
+  if (slotType === "day") {
+    ctx.gDay = Math.max(0, ctx.gDay + delta);
+  } else {
+    ctx.gNight = Math.max(0, ctx.gNight + delta);
+  }
+
+  updateDayModalUI();
+
+  await updateDashGuestPlanDetailed(ctx.memberId, targetDate, slotType, delta);
+}
+
 async function updateDashGuestPlanDetailed(targetMemberId, planDate, slotType, delta) {
   if (!currentUser || (currentUser.role !== "admin" && currentUser.role !== "manager")) {
     showNotification("Only Admins and Managers can edit member guest meals", "error");
@@ -4328,6 +4451,21 @@ async function updateDashGuestPlanDetailed(targetMemberId, planDate, slotType, d
     // Optimistic local cache update
     if (cachedDashboardSchedules.planMap) {
       cachedDashboardSchedules.planMap[planKey] = upsertData;
+    }
+
+    // Optimistic DOM update for Day and Night boxes
+    const dayBox = document.getElementById(`dash-gday-box-${targetMemberId}-${planDate}`);
+    const nightBox = document.getElementById(`dash-gnight-box-${targetMemberId}-${planDate}`);
+
+    if (dayBox) {
+      dayBox.textContent = `☀️ ${currentDay}`;
+      if (currentDay > 0) dayBox.classList.add("active");
+      else dayBox.classList.remove("active");
+    }
+    if (nightBox) {
+      nightBox.textContent = `🌙 ${currentNight}`;
+      if (currentNight > 0) nightBox.classList.add("active");
+      else nightBox.classList.remove("active");
     }
 
     // Optimistic DOM update
