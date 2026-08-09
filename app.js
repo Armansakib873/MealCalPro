@@ -1427,8 +1427,8 @@ window.handleDepositAction = async function (depositId, action) {
         .eq("id", depositId);
       if (delError) throw delError;
 
-      // Process Settlement
-      const settleResult = await processDepositWithClientSideSettlement(
+      // Process Settlement (handles insertion + single clean deposit notification)
+      await processDepositWithClientSideSettlement(
         dep.member_id,
         dep.cycle_id,
         dep.amount,
@@ -1436,17 +1436,6 @@ window.handleDepositAction = async function (depositId, action) {
         dep.notes,
       );
 
-      let logMsg = `Deposit Approved: ${memberName}'s request for ৳${amountBn} was approved by ${actorName}`;
-      if (settleResult && settleResult.settled && settleResult.settled_amount > 0) {
-        logMsg += ` (৳${toBn(settleResult.settled_amount)} auto-settled past cycle dues)`;
-      }
-
-      // LOG: Approval
-      await logActivity(
-        logMsg,
-        "deposit",
-        dep.member_id
-      );
       showNotification("Request Approved", "success");
       triggerMascotReaction('approval-deposit');
     } else if (action === "reject") {
@@ -7391,13 +7380,14 @@ async function processDepositWithClientSideSettlement(
 
     const memberObj = allMembers.find((m) => m.id == memberId);
 
-    // GLOBAL LOG
-    await logActivity(
-      `Cash Deposit: ৳${toBn(amount)} added for ${memberObj?.name}`,
-      "deposit",
-    );
-
-    if (amount <= 0) return { settled: false, deposit_id: mainDeposit.id };
+    if (amount <= 0) {
+      await logActivity(
+        `Cash Deposit: ৳${toBn(amount)} added for ${memberObj?.name || "Member"}`,
+        "deposit",
+        memberId
+      );
+      return { settled: false, deposit_id: mainDeposit.id };
+    }
 
     // 2. Find Debtor Due
     const { data: debtorDue } = await supabase
@@ -7409,7 +7399,14 @@ async function processDepositWithClientSideSettlement(
       .lt("due_amount", 0)
       .maybeSingle();
 
-    if (!debtorDue) return { settled: false, deposit_id: mainDeposit.id };
+    if (!debtorDue) {
+      await logActivity(
+        `Cash Deposit: ৳${toBn(amount)} added for ${memberObj?.name || "Member"}`,
+        "deposit",
+        memberId
+      );
+      return { settled: false, deposit_id: mainDeposit.id };
+    }
 
     // 3. Find Creditors
     const { data: creditors } = await supabase
@@ -7420,8 +7417,14 @@ async function processDepositWithClientSideSettlement(
       .gt("due_amount", 0)
       .order("created_at", { ascending: true });
 
-    if (!creditors || creditors.length === 0)
+    if (!creditors || creditors.length === 0) {
+      await logActivity(
+        `Cash Deposit: ৳${toBn(amount)} added for ${memberObj?.name || "Member"}`,
+        "deposit",
+        memberId
+      );
       return { settled: false, deposit_id: mainDeposit.id };
+    }
 
     // INITIALIZE POOL (Fixed placement)
     let poolAvailable = Math.min(
@@ -7498,6 +7501,13 @@ async function processDepositWithClientSideSettlement(
         })
         .eq("id", debtorDue.id);
     }
+
+    // SINGLE COMPREHENSIVE DEPOSIT LOG
+    let logMsg = `Cash Deposit: ৳${toBn(amount)} added for ${memberObj?.name || "Member"}`;
+    if (totalActuallySettled > 0) {
+      logMsg += ` (৳${toBn(totalActuallySettled)} auto-settled past cycle dues)`;
+    }
+    await logActivity(logMsg, "deposit", memberId);
 
     return {
       settled: totalActuallySettled > 0,
