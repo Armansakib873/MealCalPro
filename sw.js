@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mealcal-v20'; // Incremented for PWA mobile fix
+const CACHE_NAME = 'mealcal-v21'; // Incremented for PWA mobile fix
 
 const ASSETS = [
     './',
@@ -98,3 +98,57 @@ self.addEventListener('fetch', (evt) => {
         })
     );
 });
+
+// ============================================
+// BROWSER PUSH NOTIFICATION HANDLERS
+// ============================================
+
+// Listen for incoming Push Events
+self.addEventListener('push', (evt) => {
+    let data = { title: 'MealCal Pro Alert', body: 'You have a new update in MealCal Pro', url: './' };
+    if (evt.data) {
+        try {
+            data = evt.data.json();
+        } catch (e) {
+            data.body = evt.data.text();
+        }
+    }
+
+    const options = {
+        body: data.body || 'You have a new notification.',
+        icon: data.icon || './192.png',
+        badge: './192.png',
+        vibrate: [100, 50, 100],
+        data: {
+            url: data.url || './',
+            timestamp: Date.now()
+        }
+    };
+
+    evt.waitUntil(
+        self.registration.showNotification(data.title || 'MealCal Pro', options)
+    );
+});
+
+// Notification Click Event Listener: Focus app or open URL
+self.addEventListener('notificationclick', (evt) => {
+    evt.notification.close();
+    const targetUrl = evt.notification.data?.url || './';
+
+    evt.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+            for (const client of clientList) {
+                if (client.url.includes(self.location.origin) && 'focus' in client) {
+                    if (targetUrl && client.navigate) {
+                        client.navigate(targetUrl);
+                    }
+                    return client.focus();
+                }
+            }
+            if (clients.openWindow) {
+                return clients.openWindow(targetUrl);
+            }
+        })
+    );
+});
+

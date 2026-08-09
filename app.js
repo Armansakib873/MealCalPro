@@ -932,6 +932,13 @@ function handleNotificationUpdate(payload, newData) {
   if (getActivePage() === "dashboard") {
     debounceRefresh(() => loadRecentActivity(), "activity", 800);
   }
+
+  // Trigger Browser Push Notification for Real-Time Updates
+  if (newData && newData.message) {
+    if (newData.member_id !== currentUser?.member_id || newData.target_member_id === currentUser?.member_id) {
+      dispatchPushFromMessage(newData.message, newData.type, newData.target_member_id);
+    }
+  }
 }
 
 function handleMemberUpdate(activePage) {
@@ -1184,6 +1191,9 @@ function showApp() {
   }
 
   initializeApp();
+  if (typeof updatePushNotificationButtonState === "function") {
+    updatePushNotificationButtonState();
+  }
 }
 
 function hideApp() {
@@ -1273,6 +1283,7 @@ window.handleExpenseApproval = async function (expenseId, newStatus) {
       await logActivity(
         `Expense request by ${shopperName} of ৳${amountBn} (${dateStr}) REJECTED by ${actorName}`,
         "expense",
+        exp.member_id
       );
 
       showNotification("Expense Request Rejected", "warning");
@@ -1288,6 +1299,7 @@ window.handleExpenseApproval = async function (expenseId, newStatus) {
       await logActivity(
         `Expense request by ${shopperName} of ৳${amountBn} APPROVED by ${actorName}`,
         "expense",
+        exp.member_id
       );
 
       showNotification("Expense Approved", "success");
@@ -1416,7 +1428,7 @@ window.handleDepositAction = async function (depositId, action) {
       if (delError) throw delError;
 
       // Process Settlement
-      await processDepositWithClientSideSettlement(
+      const settleResult = await processDepositWithClientSideSettlement(
         dep.member_id,
         dep.cycle_id,
         dep.amount,
@@ -1424,10 +1436,16 @@ window.handleDepositAction = async function (depositId, action) {
         dep.notes,
       );
 
+      let logMsg = `Deposit Approved: ${memberName}'s request for ৳${amountBn} was approved by ${actorName}`;
+      if (settleResult && settleResult.settled && settleResult.settled_amount > 0) {
+        logMsg += ` (৳${toBn(settleResult.settled_amount)} auto-settled past cycle dues)`;
+      }
+
       // LOG: Approval
       await logActivity(
-        `Deposit Approved: ${memberName}'s request for ৳${amountBn} was approved by ${actorName}`,
+        logMsg,
         "deposit",
+        dep.member_id
       );
       showNotification("Request Approved", "success");
       triggerMascotReaction('approval-deposit');
@@ -1444,6 +1462,7 @@ window.handleDepositAction = async function (depositId, action) {
       await logActivity(
         `Deposit request by ${memberName} of ৳${amountBn} (${dateStr}) REJECTED by ${actorName}`,
         "deposit",
+        dep.member_id
       );
 
       showNotification("Request Rejected", "warning");
@@ -1530,13 +1549,11 @@ window.revertApprovedDeposit = async function (depositId) {
             .maybeSingle();
 
         if (debtorDue) {
-            // debtorDue returns settled_amount as negative (e.g. -500), sib.amount is -500
-            const newSettledAmount = debtorDue.settled_amount - sib.amount; // -500 - (-500) = 0
-            const isFullySettled = newSettledAmount <= debtorDue.due_amount; 
+            const newSettledAmount = Math.abs(debtorDue.settled_amount) - Math.abs(sib.amount);
             await supabase.from("cycle_dues").update({
-                settled_amount: newSettledAmount,
-                status: isFullySettled ? "settled" : (newSettledAmount < 0 ? "settling" : "pending"),
-                settled_at: isFullySettled ? debtorDue.settled_at : null
+                settled_amount: -newSettledAmount,
+                status: newSettledAmount >= Math.abs(debtorDue.due_amount) ? "settled" : (newSettledAmount > 0 ? "settling" : "pending"),
+                settled_at: newSettledAmount >= Math.abs(debtorDue.due_amount) ? debtorDue.settled_at : null
             }).eq("id", debtorDue.id);
         }
       }
@@ -1557,8 +1574,9 @@ window.revertApprovedDeposit = async function (depositId) {
     const actorName = currentUser.name || "Admin";
     const memName = origDep.members?.name || "Member";
     await logActivity(
-      `Reversal: ${actorName} reversed an approved deposit of ৳${origDep.amount} originally made to ${memName}.`,
-      "deposit"
+      `⚠️ Deposit Reverted: ${actorName} reversed an approved deposit of ৳${toBn(origDep.amount)} originally made to ${memName}. Auto-settlements un-settled.`,
+      "deposit",
+      origDep.member_id
     );
 
     showNotification("Deposit Fully Reverted!", "success");
@@ -2602,6 +2620,9 @@ function initNotifications() {
 
     // 2. TOGGLE UI
     document.getElementById("notifPanel").classList.toggle("active");
+    if (typeof updatePushNotificationButtonState === "function") {
+      updatePushNotificationButtonState();
+    }
 
     // 3. CLEAR BADGE
     document.getElementById("notifBadge").classList.add("hidden");
@@ -2761,31 +2782,211 @@ function renderNotifications() {
     .join("");
 }
 
-// Updated Log Activity (Uses member_id)
-async function logActivity(message, type = "info") {
+// ============================================
+// BROWSER PUSH NOTIFICATION SYSTEM HELPERS
+// ============================================
+
+// Helper: Strip HTML tags from strings for clean plain-text push notifications
+function stripHtml(html) {
+  if (!html) return "";
+  return html.replace(/<[^>]*>?/gm, "").replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Updates the Enable Push button state in the Notification Panel header
+ */
+function updatePushNotificationButtonState() {
+  const btn = document.getElementById("enablePushNotifBtn");
+  const iconEl = document.getElementById("pushNotifIcon");
+  const textEl = document.getElementById("pushNotifText");
+  if (!btn) return;
+
+  if (!("Notification" in window)) {
+    btn.style.background = "#f1f5f9";
+    btn.style.color = "#94a3b8";
+    btn.style.borderColor = "#e2e8f0";
+    if (iconEl) iconEl.textContent = "⚠️";
+    if (textEl) textEl.textContent = "Unsupported";
+    return;
+  }
+
+  if (Notification.permission === "granted") {
+    btn.style.background = "#dcfce7";
+    btn.style.color = "#15803d";
+    btn.style.borderColor = "#86efac";
+    if (iconEl) iconEl.textContent = "🔔";
+    if (textEl) textEl.textContent = "Push Active";
+  } else if (Notification.permission === "denied") {
+    btn.style.background = "#fee2e2";
+    btn.style.color = "#b91c1c";
+    btn.style.borderColor = "#fca5a5";
+    if (iconEl) iconEl.textContent = "🔕";
+    if (textEl) textEl.textContent = "Blocked";
+  } else {
+    btn.style.background = "#f8fafc";
+    btn.style.color = "#475569";
+    btn.style.borderColor = "#cbd5e1";
+    if (iconEl) iconEl.textContent = "🔔";
+    if (textEl) textEl.textContent = "Enable Push";
+  }
+}
+
+function openPushGuideModal() {
+  const modal = document.getElementById("pushGuideModal");
+  if (modal) modal.classList.add("active");
+}
+
+function closePushGuideModal() {
+  const modal = document.getElementById("pushGuideModal");
+  if (modal) modal.classList.remove("active");
+}
+
+/**
+ * Triggered when user taps "Enable Push" button in Notification header
+ */
+async function handleNotificationPermissionClick() {
+  if (!("Notification" in window)) {
+    showNotification("Push notifications are not supported on this browser.", "warning");
+    updatePushNotificationButtonState();
+    return;
+  }
+
+  if (Notification.permission === "granted") {
+    showNotification("Push notifications are active!", "info");
+    updatePushNotificationButtonState();
+    return;
+  }
+
+  if (Notification.permission === "denied") {
+    updatePushNotificationButtonState();
+    openPushGuideModal();
+    return;
+  }
+
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission === "granted") {
+      showNotification("Push notifications enabled!", "success");
+      updatePushNotificationButtonState();
+      triggerBrowserPushNotification({
+        title: "🔔 Notifications Activated!",
+        body: "You will now receive instant push updates on this device.",
+        url: "#dashboard"
+      });
+    } else {
+      updatePushNotificationButtonState();
+      openPushGuideModal();
+    }
+  } catch (err) {
+    console.error("Permission click error:", err);
+  }
+}
+
+async function requestNotificationPermission() {
+  updatePushNotificationButtonState();
+  if (!("Notification" in window)) return false;
+  if (Notification.permission === "granted") return true;
+  return false;
+}
+
+async function triggerBrowserPushNotification({ title, body, icon = "./192.png", url = "./", targetMemberId = null }) {
+  if (!("Notification" in window) || Notification.permission !== "granted") return;
+  if (targetMemberId !== null && targetMemberId !== undefined) {
+    if (currentUser?.member_id != targetMemberId) return;
+  }
+
+  const cleanTitle = stripHtml(title);
+  const cleanBody = stripHtml(body);
+
+  try {
+    if ("serviceWorker" in navigator) {
+      const reg = await navigator.serviceWorker.ready;
+      if (reg && reg.showNotification) {
+        reg.showNotification(cleanTitle, {
+          body: cleanBody,
+          icon: icon,
+          badge: icon,
+          vibrate: [100, 50, 100],
+          data: { url: url }
+        });
+        return;
+      }
+    }
+    new Notification(cleanTitle, { body: cleanBody, icon: icon, data: { url: url } });
+  } catch (err) {
+    console.error("Push Notification Error:", err);
+  }
+}
+
+function dispatchPushFromMessage(message, type = "info", targetMemberId = null) {
+  const cleanMsg = stripHtml(message);
+  let title = "MealCal Pro Alert";
+  let url = "#dashboard";
+  const msgLower = cleanMsg.toLowerCase();
+
+  if (type === "deposit" || msgLower.includes("deposit") || msgLower.includes("cash")) {
+    title = "💰 Deposit Log Update";
+    url = "#deposits";
+  } else if (type === "expense" || msgLower.includes("expense") || msgLower.includes("bazar")) {
+    title = "🛒 Bazar Expense Update";
+    url = "#expenses";
+  } else if (type === "meal" || msgLower.includes("tracker override") || msgLower.includes("meal")) {
+    title = "🍽️ Meal Schedule Alert";
+    url = "#profile";
+  } else if (msgLower.includes("balance") || msgLower.includes("warning")) {
+    title = "⚠️ Negative Balance Alert";
+    url = "#deposits";
+  } else if (msgLower.includes("role") || msgLower.includes("manager") || msgLower.includes("access control")) {
+    title = "📢 Role & Permissions Update";
+    targetMemberId = null; // Broadcast to everyone
+    url = "#dashboard";
+  } else if (msgLower.includes("cycle") || msgLower.includes("finalized") || msgLower.includes("settled")) {
+    title = "📊 Monthly Cycle Settlement";
+    targetMemberId = null; // Broadcast to everyone
+    url = "#summary";
+  }
+
+  triggerBrowserPushNotification({
+    title: title,
+    body: cleanMsg,
+    url: url,
+    targetMemberId: targetMemberId
+  });
+}
+
+// Updated Log Activity (Supports targetMemberId for targeted notifications)
+async function logActivity(message, type = "info", targetMemberId = null) {
   if (!currentCycleId) return;
 
   try {
-    // Use the member_id from our currentUser object
     const actorMemberId = currentUser?.member_id;
-
-    const { error } = await supabase.from("notifications").insert({
+    let insertObj = {
       cycle_id: parseInt(currentCycleId),
       message: message,
       type: type,
-      member_id: actorMemberId, // This links the name/role to the log
-    });
+      member_id: actorMemberId,
+    };
+    if (targetMemberId !== null && targetMemberId !== undefined) {
+      insertObj.target_member_id = targetMemberId;
+    }
 
-    if (error) throw error;
+    const { error } = await supabase.from("notifications").insert(insertObj);
 
-    // Refresh local view
-    if (document.getElementById("notifPanel").classList.contains("active")) {
+    if (error && targetMemberId !== null) {
+      delete insertObj.target_member_id;
+      await supabase.from("notifications").insert(insertObj);
+    }
+
+    if (document.getElementById("notifPanel")?.classList.contains("active")) {
       loadNotifications();
     }
+
+    dispatchPushFromMessage(message, type, targetMemberId);
   } catch (err) {
     console.error("Logging Error:", err.message);
   }
 }
+
 
 // --- Deep Linking Action ---
 function handleNotifClick(type) {
@@ -5102,6 +5303,7 @@ document.getElementById("mealForm").addEventListener("submit", async (e) => {
     await logActivity(
       `Tracker Override: ${targetMember?.name}'s session (${sessionDate}) set (Night: ${nightVal}, Day: ${dayVal}, Guest Night: ${guestNightVal}, Guest Day: ${guestDayVal}) by ${actor}`,
       "meal",
+      memberId
     );
 
     closeMealModal();
@@ -6438,8 +6640,9 @@ window.handleDepositAction = async function (depositId, action) {
 
       // LOG THE APPROVAL ACT
       await logActivity(
-        `Deposit Approved: ${dep.members.name}'s request for ${formatCurrency(dep.amount)} was approved by ${actor}`,
+        `Deposit Approved: ${dep.members.name}'s request for ৳${toBn(dep.amount)} was approved by ${actor}`,
         "deposit",
+        dep.member_id
       );
       showNotification("Request Approved", "success");
     } else if (action === "reject") {
@@ -6451,8 +6654,9 @@ window.handleDepositAction = async function (depositId, action) {
 
       // LOG THE REJECTION ACT
       await logActivity(
-        `Deposit Rejected: ${dep.members.name}'s request for ${formatCurrency(dep.amount)} was rejected by ${actor}`,
+        `Deposit Rejected: ${dep.members.name}'s request for ৳${toBn(dep.amount)} was rejected by ${actor}`,
         "deposit",
+        dep.member_id
       );
       showNotification("Request Rejected", "warning");
     }
@@ -7189,7 +7393,7 @@ async function processDepositWithClientSideSettlement(
 
     // GLOBAL LOG
     await logActivity(
-      `Cash Deposit: ${formatCurrency(amount)} added for ${memberObj?.name}`,
+      `Cash Deposit: ৳${toBn(amount)} added for ${memberObj?.name}`,
       "deposit",
     );
 
@@ -7346,7 +7550,7 @@ document.getElementById("depositForm").addEventListener("submit", async (e) => {
       if (error) throw error;
 
       await logActivity(
-        `Deposit Request: ${targetMember?.name} requested ${formatCurrency(finalAmount)} by ${actor}`,
+        `Deposit Request: ${targetMember?.name} requested ৳${toBn(finalAmount)} by ${actor}`,
         "deposit",
       );
       showNotification("Request submitted for approval", "info");
@@ -7603,10 +7807,11 @@ async function toggleManagerRole(memberId, currentRole) {
     const targetMember = allMembers.find((m) => m.id == memberId);
     const actor = currentUser.members ? currentUser.members.name : "Admin";
 
-    // LOG ROLE CHANGE
+    // LOG ROLE CHANGE (Broadcast to everyone's browser)
     await logActivity(
-      `Access Control: ${targetMember.name} was ${isManager ? "demoted to User" : "promoted to Manager"} by ${actor}`,
+      `📢 Role Update: ${targetMember.name} was ${isManager ? "demoted to User" : "appointed as Manager"} by ${actor}`,
       "other",
+      null
     );
 
     showNotification("Role updated successfully", "success");
@@ -8519,9 +8724,11 @@ document
       }
 
       // Success Cleanup
+      const actor = currentUser.members ? currentUser.members.name : "Admin";
       await logActivity(
-        `Admin finalized cycle and started "${name}" (${start} to ${end})`,
-        "other",
+        `📊 Monthly Cycle Settled: Cycle "${name}" (${start} to ${end}) finalized by ${actor}! All balances & carried dues calculated.`,
+        "cycle",
+        null
       );
       showNotification("Cycle finalized successfully!", "success");
       location.reload(); // Hard refresh to reset all state
@@ -8768,6 +8975,19 @@ async function checkGlobalBalanceWarning() {
       // Optional: Add a small warning icon next to the name
       if (!nameDisplay.innerHTML.includes("⚠️")) {
         nameDisplay.innerHTML = "⚠️ " + nameDisplay.innerHTML;
+      }
+
+      // Send daily negative balance push notification once per session
+      const todaySession = typeof getStrictSessionDate === "function" ? getStrictSessionDate() : new Date().toISOString().split("T")[0];
+      const alertKey = `neg_bal_push_${currentUser.member_id}_${todaySession}`;
+      if (!localStorage.getItem(alertKey)) {
+        localStorage.setItem(alertKey, "true");
+        triggerBrowserPushNotification({
+          title: "⚠️ Negative Balance Alert",
+          body: `Your balance is negative (-৳${Math.abs(Math.round(currentBalance))}). Please submit a deposit request.`,
+          url: "#deposits",
+          targetMemberId: currentUser.member_id
+        });
       }
     } else {
       header.classList.remove("balance-warning");
