@@ -935,8 +935,20 @@ function handleNotificationUpdate(payload, newData) {
 
   // Trigger Browser Push Notification for Real-Time Updates
   if (newData && newData.message) {
-    if (newData.member_id !== currentUser?.member_id || newData.target_member_id === currentUser?.member_id) {
-      dispatchPushFromMessage(newData.message, newData.type, newData.target_member_id);
+    const isTargeted = newData.target_member_id !== null && newData.target_member_id !== undefined && newData.target_member_id !== "";
+    const isForMe = isTargeted && String(newData.target_member_id) === String(currentUser?.member_id);
+    const isFromOther = String(newData.member_id) !== String(currentUser?.member_id);
+
+    if (isTargeted) {
+      // Targeted notification: ONLY trigger push for the intended target member
+      if (isForMe) {
+        dispatchPushFromMessage(newData.message, newData.type, newData.target_member_id);
+      }
+    } else {
+      // Broadcast notification: trigger push for everyone EXCEPT the actor who performed the action
+      if (isFromOther) {
+        dispatchPushFromMessage(newData.message, newData.type, null);
+      }
     }
   }
 }
@@ -1358,8 +1370,9 @@ window.handleDepositApproval = async function (depositId) {
     // OR just call it. For simplicity, we manually run the settlement part:
 
     await logActivity(
-      `Deposit Approved: ${formatCurrency(dep.amount)} for member ID ${dep.member_id}`,
+      `Deposit Approved: ${formatCurrency(dep.amount)} for ${dep.members ? dep.members.name : "member"}`,
       "deposit",
+      dep.member_id,
     );
 
     // Refresh page - the settlement logic should ideally be a separate function
@@ -2668,6 +2681,7 @@ async function loadNotifications() {
                 type, 
                 created_at, 
                 member_id,
+                target_member_id,
                 members (
                     name, 
                     role
@@ -2694,8 +2708,15 @@ function renderNotifications() {
   const container = document.getElementById("notifListContainer");
   if (!container) return;
 
-  // Filter logic
+  // Filter logic: Only show targeted notifications to the target member or actor
   const filtered = allNotifications.filter((n) => {
+    if (n.target_member_id !== null && n.target_member_id !== undefined && n.target_member_id !== "") {
+      const isTarget = String(n.target_member_id) === String(currentUser?.member_id);
+      const isActor = String(n.member_id) === String(currentUser?.member_id);
+      const isAdmin = currentUser?.role === "admin" || currentUser?.role === "manager";
+      if (!isTarget && !isActor && !isAdmin) return false;
+    }
+
     if (currentNotifFilter === "all") return true;
     if (currentNotifFilter === "meal") return n.type && n.type.includes("meal");
     return n.type === currentNotifFilter;
@@ -2969,8 +2990,6 @@ async function logActivity(message, type = "info", targetMemberId = null) {
     if (document.getElementById("notifPanel")?.classList.contains("active")) {
       loadNotifications();
     }
-
-    dispatchPushFromMessage(message, type, targetMemberId);
   } catch (err) {
     console.error("Logging Error:", err.message);
   }
