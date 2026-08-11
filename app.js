@@ -933,24 +933,43 @@ function handleNotificationUpdate(payload, newData) {
     debounceRefresh(() => loadRecentActivity(), "activity", 800);
   }
 
-  // Trigger Browser Push Notification for Real-Time Updates
+  // Trigger Browser Push Notification for Real-Time Updates (Person-Specific & Filtered)
   if (newData && newData.message) {
-    const isTargeted = newData.target_member_id !== null && newData.target_member_id !== undefined && newData.target_member_id !== "";
-    const isForMe = isTargeted && String(newData.target_member_id) === String(currentUser?.member_id);
-    const isFromOther = String(newData.member_id) !== String(currentUser?.member_id);
-
-    if (isTargeted) {
-      // Targeted notification: ONLY trigger push for the intended target member
-      if (isForMe) {
-        dispatchPushFromMessage(newData.message, newData.type, newData.target_member_id);
-      }
-    } else {
-      // Broadcast notification: trigger push for everyone EXCEPT the actor who performed the action
-      if (isFromOther) {
-        dispatchPushFromMessage(newData.message, newData.type, null);
-      }
+    if (shouldSendPushToUser(newData)) {
+      dispatchPushFromMessage(newData.message, newData.type);
     }
   }
+}
+
+function shouldSendPushToUser(newData) {
+  if (!newData || !newData.message) return false;
+
+  // 1. Don't notify the actor who performed the action
+  const actorId = newData.member_id;
+  if (actorId && String(actorId) === String(currentUser?.member_id)) {
+    return false;
+  }
+
+  const msg = newData.message;
+  const myName = (currentUser?.name || currentUser?.members?.name || "").trim().toLowerCase();
+
+  // 2. Check if the message is explicitly targeted to a specific member
+  const isDepositTargeted = msg.includes("Deposit Approved:") || msg.includes("REJECTED by") || msg.includes("Deposit request by");
+  const isTrackerTargeted = msg.includes("Tracker Override:");
+  const isProfileTargeted = msg.includes("Profile Update:");
+
+  if (isDepositTargeted || isTrackerTargeted || isProfileTargeted) {
+    if (!myName) return false;
+    const msgLower = msg.toLowerCase();
+    const firstName = myName.split(" ")[0];
+    if (msgLower.includes(myName) || (firstName.length >= 3 && msgLower.includes(firstName))) {
+      return true;
+    }
+    return false; // Targeted to someone else -> suppress push popup for this user
+  }
+
+  // 3. General broadcast notification (e.g. new expense, auto-entry completed, cycle finalized)
+  return true;
 }
 
 function handleMemberUpdate(activePage) {
@@ -2681,7 +2700,6 @@ async function loadNotifications() {
                 type, 
                 created_at, 
                 member_id,
-                target_member_id,
                 members (
                     name, 
                     role
@@ -2708,15 +2726,8 @@ function renderNotifications() {
   const container = document.getElementById("notifListContainer");
   if (!container) return;
 
-  // Filter logic: Only show targeted notifications to the target member or actor
+  // Filter logic
   const filtered = allNotifications.filter((n) => {
-    if (n.target_member_id !== null && n.target_member_id !== undefined && n.target_member_id !== "") {
-      const isTarget = String(n.target_member_id) === String(currentUser?.member_id);
-      const isActor = String(n.member_id) === String(currentUser?.member_id);
-      const isAdmin = currentUser?.role === "admin" || currentUser?.role === "manager";
-      if (!isTarget && !isActor && !isAdmin) return false;
-    }
-
     if (currentNotifFilter === "all") return true;
     if (currentNotifFilter === "meal") return n.type && n.type.includes("meal");
     return n.type === currentNotifFilter;
