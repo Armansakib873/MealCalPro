@@ -2450,14 +2450,14 @@ async function loadMasterTracker() {
                     const gdVal = matrixData[dateNextStr]?.[m.id]?.gd || 0;
                     
                     // Both share the exact same logic based on isPendingSession. No split logic.
-                    const nDisplay = nVal > 0 ? (gnVal > 0 ? `${nVal}+${gnVal}G` : nVal) : (isPendingSession ? "-" : "0");
-                    const dDisplay = dVal > 0 ? (gdVal > 0 ? `${dVal}+${gdVal}G` : dVal) : (isPendingSession ? "-" : "0");
+                    const nDisplay = (nVal > 0 || gnVal > 0) ? (gnVal > 0 ? `${nVal}+${gnVal}` : nVal) : (isPendingSession ? "-" : "0");
+                    const dDisplay = (dVal > 0 || gdVal > 0) ? (gdVal > 0 ? `${dVal}+${gdVal}` : dVal) : (isPendingSession ? "-" : "0");
                     
                     return `
                         <td>
                             <div class="cell-split-premium" onclick="openMealModal('${m.id}', '${dateSessionStr}', ${nVal}, ${dVal}, ${gnVal}, ${gdVal})">
-                                <div class="cell-val-half night ${nVal > 0 ? "active" : "zero"}">${nDisplay}</div>
-                                <div class="cell-val-half day ${dVal > 0 ? "active" : "zero"}">${dDisplay}</div>
+                                <div class="cell-val-half night ${nVal > 0 || gnVal > 0 ? "active" : "zero"}">${nDisplay}</div>
+                                <div class="cell-val-half day ${dVal > 0 || gdVal > 0 ? "active" : "zero"}">${dDisplay}</div>
                             </div>
                         </td>`;
                   })
