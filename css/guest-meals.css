@@ -1,0 +1,233 @@
+/* MealCal Pro — Guest meal badges & popovers. Load order matters: see index.html */
+/* ============================================
+   INDIVIDUAL GUEST MEAL SERVICE - BADGE & POPOVER STYLES
+   ============================================ */
+
+/* ── Profile Scheduler Card Compact Badge & Expand Panel ── */
+.guest-card-wrapper {
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px dashed rgba(0, 0, 0, 0.08);
+}
+
+.guest-compact-badge {
+    width: 100%;
+    padding: 6px 10px;
+    border-radius: 10px;
+    background: var(--surface-soft);
+    border: 1px solid var(--line);
+    color: var(--ink-500);
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+}
+
+.guest-compact-badge.active {
+    background: #dcfce7;
+    border-color: #86efac;
+    color: #15803d;
+}
+
+.guest-compact-badge:hover {
+    border-color: #059669;
+    color: #059669;
+    background: #f0fdf4;
+}
+
+.guest-compact-badge .chevron-icon {
+    font-size: 9px;
+    color: inherit;
+    transition: transform 0.2s ease;
+}
+
+/* ── Floating Guest Modal Stepper Boxes ── */
+.guest-modal-box {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface-soft);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 10px 14px;
+    transition: all 0.2s ease;
+}
+
+.guest-modal-box:hover {
+    background: #f0fdf4;
+    border-color: #86efac;
+}
+
+.guest-modal-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.guest-stepper-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.guest-stepper-box {
+    background: var(--surface);
+    border: 1px solid rgba(5, 150, 105, 0.15);
+    border-radius: 8px;
+    padding: 5px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+}
+
+.guest-slot-tag {
+    font-size: 9px;
+    font-weight: 700;
+    color: #047857;
+    text-transform: uppercase;
+    letter-spacing: 0.2px;
+    white-space: nowrap;
+}
+
+.guest-stepper-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.guest-btn {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    border: 1px solid #059669;
+    background: var(--surface);
+    color: #059669;
+    font-weight: 800;
+    font-size: 13px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    padding: 0;
+}
+
+.guest-btn:active {
+    transform: scale(0.9);
+}
+
+.guest-btn:hover:not(:disabled) {
+    background: #059669;
+    color: #ffffff;
+}
+
+.guest-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    border-color: var(--line-strong);
+    color: var(--ink-400);
+    background: var(--surface-muted);
+}
+
+.guest-count-val {
+    font-size: 12px;
+    font-weight: 800;
+    color: #065f46;
+    min-width: 14px;
+    text-align: center;
+}
+
+/* ── Dashboard Timeline Day Card Slot Columns & Guest Boxes ── */
+.timeline-day-card {
+    cursor: pointer;
+}
+
+.dash-guest-box {
+    width: 100%;
+    padding: 3px 2px;
+    border-radius: 6px;
+    background: var(--surface-muted);
+    border: 1px solid var(--line-strong);
+    color: var(--ink-500);
+    font-size: 9px;
+    font-weight: 800;
+    text-align: center;
+    transition: all 0.2s ease;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.dash-guest-box.active {
+    background: #dcfce7;
+    border-color: #86efac;
+    color: #15803d;
+}
+
+.dash-guest-popover {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    width: 145px;
+    background: var(--surface);
+    border: 1.5px solid var(--line);
+    border-radius: 12px;
+    box-shadow: 0 12px 28px -6px rgba(0, 0, 0, 0.18), 0 4px 10px rgba(0, 0, 0, 0.05);
+    padding: 10px;
+    animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.dash-guest-popover::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 6px;
+    border-style: solid;
+    border-color: #ffffff transparent transparent transparent;
+}
+
+.dash-pop-title {
+    font-size: 9px;
+    font-weight: 800;
+    color: #047857;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 8px;
+    text-align: center;
+    border-bottom: 1px solid var(--line-soft);
+    padding-bottom: 5px;
+}
+
+.dash-pop-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.dash-pop-row:last-child {
+    margin-bottom: 0;
+}
+
+.dash-pop-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--ink-700);
+}
+
+@keyframes popIn {
+    from { opacity: 0; transform: translateX(-50%) scale(0.88); }
+    to { opacity: 1; transform: translateX(-50%) scale(1); }
+}

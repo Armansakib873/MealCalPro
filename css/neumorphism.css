@@ -1,0 +1,502 @@
+/* =====================================================================
+   MealCal Pro — Neumorphism ("soft UI") — loaded LAST
+   1. --nm-* tokens (light = soft grey clay, dark = deep slate clay)
+   2. Light theme: whole app gets raised / pressed surfaces + warm orange accent
+   3. Profile page: complete redesign (works in light and dark)
+   ===================================================================== */
+
+:root {
+  --nm-bg: #e7eaf0;
+  --nm-hi: #ffffff;            /* light source (top-left) */
+  --nm-lo: #c3c9d4;            /* shadow (bottom-right) */
+  --nm-text: #3b4352;
+  --nm-muted: #8a93a3;
+  --nm-line: rgba(255, 255, 255, 0.55);
+  --nm-accent: #f39c12;
+  --nm-accent-2: #f7b733;
+  --nm-accent-ink: #b86200;
+  --nm-accent-grad: linear-gradient(135deg, #f9c04d 0%, #f39c12 55%, #ea7f00 100%);
+  --nm-good: #0f9f6e;
+  --nm-bad: #e0453a;
+  --nm-raised: 7px 7px 16px var(--nm-lo), -7px -7px 16px var(--nm-hi);
+  --nm-raised-sm: 4px 4px 9px var(--nm-lo), -4px -4px 9px var(--nm-hi);
+  --nm-raised-xs: 2px 2px 5px var(--nm-lo), -2px -2px 5px var(--nm-hi);
+  --nm-inset: inset 4px 4px 9px var(--nm-lo), inset -4px -4px 9px var(--nm-hi);
+  --nm-inset-sm: inset 2px 2px 5px var(--nm-lo), inset -2px -2px 5px var(--nm-hi);
+  --nm-radius: 22px;
+}
+:root[data-theme="dark"] {
+  --nm-bg: #141b2b;
+  --nm-hi: rgba(255, 255, 255, 0.045);
+  --nm-lo: #070b13;
+  --nm-text: #e2e8f0;
+  --nm-muted: #8d9bb1;
+  --nm-line: rgba(255, 255, 255, 0.05);
+  --nm-accent-ink: #fbbf5a;
+  --nm-good: #34d399;
+  --nm-bad: #fb7185;
+  --nm-raised: 6px 6px 14px var(--nm-lo), -5px -5px 12px var(--nm-hi);
+  --nm-raised-sm: 3px 3px 8px var(--nm-lo), -3px -3px 7px var(--nm-hi);
+  --nm-raised-xs: 2px 2px 4px var(--nm-lo), -2px -2px 4px var(--nm-hi);
+  --nm-inset: inset 4px 4px 9px var(--nm-lo), inset -3px -3px 8px var(--nm-hi);
+  --nm-inset-sm: inset 2px 2px 5px var(--nm-lo), inset -2px -2px 4px var(--nm-hi);
+}
+
+/* =====================================================================
+   2. LIGHT THEME — soft UI everywhere
+   ===================================================================== */
+:root[data-theme="light"] {
+  --bg-color: var(--nm-bg); --card-bg: var(--nm-bg); --bg-card: var(--nm-bg);
+  --surface: var(--nm-bg); --surface-soft: #eceef3; --surface-muted: #e1e5ec;
+  --line: #d6dbe4; --line-soft: #dde1e8; --line-strong: #c8ced9;
+  --nav-bg: var(--nm-bg); --glass: rgba(231, 234, 240, 0.86);
+  --text-primary: #2f3644; --text-secondary: #6b7485; --text-muted: #8a93a3;
+  --ink-900: #2f3644; --ink-800: #3b4352; --ink-700: #4a5263; --ink-600: #5d6677; --ink-500: #7a8394;
+  --shadow-1: var(--nm-raised-sm); --shadow-2: var(--nm-raised); --shadow-3: 14px 14px 30px var(--nm-lo), -10px -10px 26px var(--nm-hi);
+  --focus: 0 0 0 3px rgba(243, 156, 18, 0.35);
+}
+:root[data-theme="light"] body,
+:root[data-theme="light"] .app-container,
+:root[data-theme="light"] .main-content { background: var(--nm-bg) !important; color: var(--nm-text); }
+
+/* Surfaces: raised clay */
+:root[data-theme="light"] .card,
+:root[data-theme="light"] .mc-card,
+:root[data-theme="light"] .qa-card,
+:root[data-theme="light"] .stat-pill-card,
+:root[data-theme="light"] .meal-pulse-card,
+:root[data-theme="light"] .member-schedules-dashboard,
+:root[data-theme="light"] .menu-editor-card,
+:root[data-theme="light"] .matrix-premium-wrapper,
+:root[data-theme="light"] .liquid-card-container,
+:root[data-theme="light"] .pending-box-premium,
+:root[data-theme="light"] .stmt,
+:root[data-theme="light"] .ui-dialog,
+:root[data-theme="light"] .ui-panel,
+:root[data-theme="light"] .pending-approval-card {
+  background: var(--nm-bg) !important;
+  border: 1px solid var(--nm-line) !important;
+  box-shadow: var(--nm-raised) !important;
+  border-radius: var(--nm-radius) !important;
+}
+:root[data-theme="light"] .qa-expense,
+:root[data-theme="light"] .qa-deposit,
+:root[data-theme="light"] .mc-card-alert { background: var(--nm-bg) !important; }
+
+/* Rows / list items: smaller raised tiles */
+:root[data-theme="light"] .expense-card-modern,
+:root[data-theme="light"] .log-item,
+:root[data-theme="light"] .pending-card-inner,
+:root[data-theme="light"] .pending-row,
+:root[data-theme="light"] .mc-row,
+:root[data-theme="light"] .mc-report,
+:root[data-theme="light"] .audit-row,
+:root[data-theme="light"] .notif-item,
+:root[data-theme="light"] .ins-tip,
+:root[data-theme="light"] .history-item-premium {
+  background: var(--nm-bg) !important;
+  border-color: var(--nm-line) !important;
+  box-shadow: var(--nm-raised-sm) !important;
+  border-radius: 16px !important;
+}
+:root[data-theme="light"] .notif-item { border-left-width: 4px !important; }
+
+/* Read-only "wells": pressed in */
+:root[data-theme="light"] .ins-stat,
+:root[data-theme="light"] .stmt-grid > div,
+:root[data-theme="light"] .mc-table-wrap,
+:root[data-theme="light"] .hbar-track,
+:root[data-theme="light"] .seg,
+:root[data-theme="light"] .qe-tabs,
+:root[data-theme="light"] .meal-power {
+  background: var(--nm-bg) !important;
+  border-color: transparent !important;
+  box-shadow: var(--nm-inset) !important;
+}
+:root[data-theme="light"] .mc-table th,
+:root[data-theme="light"] .mc-table tfoot td { background: transparent !important; }
+
+/* Inputs: pressed fields */
+:root[data-theme="light"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not(.qe-date-input),
+:root[data-theme="light"] select,
+:root[data-theme="light"] textarea,
+:root[data-theme="light"] .sheet-field,
+:root[data-theme="light"] .list-search,
+:root[data-theme="light"] .list-select {
+  background: var(--nm-bg) !important;
+  border: 1px solid transparent !important;
+  box-shadow: var(--nm-inset-sm) !important;
+  border-radius: 14px !important;
+  color: var(--nm-text) !important;
+}
+:root[data-theme="light"] .big-amount-input { box-shadow: none !important; background: transparent !important; }
+:root[data-theme="light"] .big-input-wrapper { background: var(--nm-bg) !important; box-shadow: var(--nm-inset) !important; border-radius: 20px !important; border: 0 !important; }
+
+/* Buttons: raised pills; pressed = inset */
+:root[data-theme="light"] .ui-btn-ghost,
+:root[data-theme="light"] .btn-secondary,
+:root[data-theme="light"] .filter-chip,
+:root[data-theme="light"] .seg-btn,
+:root[data-theme="light"] .sheet-chip,
+:root[data-theme="light"] .qe-tabs .sheet-tab,
+:root[data-theme="light"] .def-btn,
+:root[data-theme="light"] .btn-icon-edit {
+  background: var(--nm-bg) !important;
+  border: 1px solid var(--nm-line) !important;
+  box-shadow: var(--nm-raised-xs) !important;
+  color: var(--nm-text) !important;
+}
+:root[data-theme="light"] .ui-btn-ghost:active,
+:root[data-theme="light"] .btn-secondary:active,
+:root[data-theme="light"] .filter-chip.active,
+:root[data-theme="light"] .seg-btn.active,
+:root[data-theme="light"] .sheet-chip.selected,
+:root[data-theme="light"] .qe-tabs .sheet-tab.active {
+  box-shadow: var(--nm-inset-sm) !important;
+  color: var(--nm-accent-ink) !important;
+  background: var(--nm-bg) !important;
+  border-color: transparent !important;
+}
+:root[data-theme="light"] .ui-btn-primary,
+:root[data-theme="light"] .btn-primary,
+:root[data-theme="light"] .sheet-save-btn,
+:root[data-theme="light"] .auth-submit-btn,
+:root[data-theme="light"] .mobile-fab {
+  background: var(--nm-accent-grad) !important;
+  color: #fff !important;
+  border: 0 !important;
+  box-shadow: 5px 5px 12px var(--nm-lo), -5px -5px 12px var(--nm-hi), inset 0 1px 0 rgba(255, 255, 255, 0.35) !important;
+  text-shadow: 0 1px 1px rgba(150, 80, 0, 0.25);
+}
+:root[data-theme="light"] .ui-btn-primary:active,
+:root[data-theme="light"] .btn-primary:active,
+:root[data-theme="light"] .sheet-save-btn:active,
+:root[data-theme="light"] .mobile-fab:active { box-shadow: inset 3px 3px 8px rgba(150, 80, 0, 0.35), inset -2px -2px 6px rgba(255, 255, 255, 0.3) !important; }
+:root[data-theme="light"] .ui-btn-ghost-danger { background: var(--nm-bg) !important; box-shadow: var(--nm-raised-xs) !important; border: 0 !important; color: var(--nm-bad) !important; }
+
+/* Quick-entry member avatars */
+:root[data-theme="light"] .qe-member-avatar { background: var(--nm-bg) !important; box-shadow: var(--nm-raised-sm) !important; border: 0 !important; }
+:root[data-theme="light"] .qe-member.selected .qe-member-avatar { box-shadow: var(--nm-inset) !important; color: var(--nm-accent-ink) !important; outline: 2px solid var(--nm-accent); outline-offset: 2px; }
+
+/* Header, sidebar, bottom nav */
+:root[data-theme="light"] .app-header {
+  background: color-mix(in srgb, var(--nm-bg) 88%, transparent) !important;
+  border-bottom: 0 !important;
+  box-shadow: 0 6px 16px -8px var(--nm-lo) !important;
+}
+:root[data-theme="light"] .sidebar { background: var(--nm-bg) !important; border: 0 !important; box-shadow: 8px 0 20px -10px var(--nm-lo) !important; }
+:root[data-theme="light"] .nav-link { border-radius: 14px !important; }
+:root[data-theme="light"] .nav-link.active:not(.theme-switch) {
+  background: var(--nm-bg) !important; box-shadow: var(--nm-inset-sm) !important; color: var(--nm-accent-ink) !important;
+}
+:root[data-theme="light"] .bottom-nav { background: color-mix(in srgb, var(--nm-bg) 92%, transparent) !important; border-top: 0 !important; box-shadow: 0 -6px 16px -8px var(--nm-lo) !important; }
+:root[data-theme="light"] .bottom-nav-link.active {
+  background: var(--nm-bg) !important; box-shadow: var(--nm-inset-sm) !important; color: var(--nm-accent-ink) !important; border: 0 !important;
+}
+:root[data-theme="light"] .notif-panel { background: var(--nm-bg) !important; border: 0 !important; box-shadow: -10px 0 30px -12px var(--nm-lo) !important; }
+:root[data-theme="light"] .notif-day { background: var(--nm-bg); }
+:root[data-theme="light"] .notif-btn {
+  background: var(--nm-bg) !important; border-radius: 14px !important; box-shadow: var(--nm-raised-xs) !important; border: 0 !important;
+}
+:root[data-theme="light"] .cycle-badge,
+:root[data-theme="light"] .entry-status-badge { box-shadow: var(--nm-inset-sm); border: 0 !important; }
+
+/* Switches (sidebar dark mode + any .ts-track) */
+:root[data-theme="light"] .ts-track { background: var(--nm-bg) !important; box-shadow: var(--nm-inset-sm); }
+:root[data-theme="light"] .ts-track::after { background: var(--nm-bg); box-shadow: var(--nm-raised-xs); }
+:root[data-theme="light"] .theme-switch[aria-checked="true"] .ts-track { background: var(--nm-accent-grad) !important; }
+
+/* Toasts & Live badge */
+:root[data-theme="light"] #toast-container .toast { background: var(--nm-bg) !important; box-shadow: var(--nm-raised) !important; border-top: 0 !important; border-right: 0 !important; border-bottom: 0 !important; }
+:root[data-theme="light"] #toast-container .toast.db-confirmed { background: var(--nm-bg) !important; }
+:root[data-theme="light"] .realtime-status { background: var(--nm-bg) !important; box-shadow: var(--nm-raised-xs) !important; border: 0 !important; }
+:root[data-theme="light"] .realtime-status.disconnected { box-shadow: var(--nm-inset-sm) !important; }
+
+/* Bottom sheet */
+:root[data-theme="light"] .qe-sheet { background: var(--nm-bg) !important; box-shadow: 0 -12px 30px -10px var(--nm-lo) !important; }
+
+/* =====================================================================
+   3. PROFILE PAGE — redesign (both themes)
+   Selectors start with #profilePage.pf-page so they beat the old profile.css rules.
+   ===================================================================== */
+#profilePage.pf-page {
+  --pf-gap: 18px;
+  color: var(--nm-text);
+  padding-bottom: 24px;
+}
+#profilePage.pf-page > section { margin: 0 0 var(--pf-gap); }
+:root[data-theme="dark"] #profilePage.pf-page { background: transparent; }
+
+/* ---- Hero / identity ---- */
+#profilePage.pf-page .pf-hero {
+  background: var(--nm-bg); border-radius: 28px; padding: 20px 18px 18px;
+  box-shadow: var(--nm-raised); border: 1px solid var(--nm-line);
+}
+#profilePage.pf-page .pf-hero-row { display: flex; align-items: center; gap: 16px; }
+#profilePage.pf-page #profileAvatar.pf-avatar {
+  position: relative !important; flex: 0 0 auto;
+  width: 84px !important; height: 84px !important; margin: 0 !important; padding: 0 !important;
+  border-radius: 50% !important; border: 6px solid var(--nm-bg) !important;
+  background: var(--nm-bg) !important; box-shadow: var(--nm-raised), var(--nm-inset-sm) !important;
+  display: grid !important; place-items: center; overflow: visible !important; cursor: pointer;
+  font: 800 26px/1 var(--font-ui) !important; color: var(--nm-accent-ink) !important; top: auto !important; left: auto !important; transform: none !important;
+}
+#profilePage.pf-page #profileAvatar.pf-avatar {
+  aspect-ratio: 1 / 1; min-width: 84px; min-height: 84px; max-width: 84px; max-height: 84px; flex: 0 0 84px !important; align-self: center;
+}
+/* The photo fills the circle exactly (pinned, so the online dot can't push it into an oval) */
+#profilePage.pf-page #profileAvatar.pf-avatar img {
+  position: absolute !important; inset: 0 !important; top: 0 !important; left: 0 !important;
+  width: 100% !important; height: 100% !important; max-width: none !important; margin: 0 !important;
+  border-radius: 50% !important; object-fit: cover !important; object-position: center 25%; display: block;
+}
+#profilePage.pf-page #profileAvatar.has-image { color: transparent !important; }
+#profilePage.pf-page #profileAvatar .profile-status-online {
+  position: absolute !important; right: -2px !important; bottom: 2px !important; top: auto !important; left: auto !important;
+  width: 18px !important; height: 18px !important; border-radius: 50% !important;
+  background: #22c55e !important; border: 3px solid var(--nm-bg) !important; box-shadow: var(--nm-raised-xs) !important;
+}
+#profilePage.pf-page #profileAvatar::after {
+  content: "📷"; position: absolute; left: -4px; bottom: -2px; width: 26px; height: 26px; border-radius: 50%;
+  display: grid; place-items: center; font-size: 12px; background: var(--nm-bg); box-shadow: var(--nm-raised-xs); color: initial;
+}
+#profilePage.pf-page .pf-identity { min-width: 0; flex: 1; }
+#profilePage.pf-page .pf-name {
+  margin: 0 0 8px; font: 800 24px/1.15 var(--font-ui); color: var(--nm-text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; letter-spacing: -0.01em;
+}
+#profilePage.pf-page .pf-meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+#profilePage.pf-page .pf-role-chip {
+  font: 800 10.5px/1 var(--font-ui); letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 7px 11px; border-radius: 999px; background: var(--nm-bg); box-shadow: var(--nm-inset-sm); color: var(--nm-accent-ink);
+}
+#profilePage.pf-page .pf-cycle { font: 700 12px/1 var(--font-ui); color: var(--nm-muted); }
+#profilePage.pf-page .pf-cycle span { color: inherit !important; font: inherit !important; }
+
+#profilePage.pf-page .pf-actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
+#profilePage.pf-page .nm-tile {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  min-height: 72px; padding: 10px 4px; border: 1px solid var(--nm-line); border-radius: 18px; cursor: pointer;
+  background: var(--nm-bg); box-shadow: var(--nm-raised-sm); color: var(--nm-text);
+  font: 700 11.5px/1.1 var(--font-ui); transition: box-shadow 0.18s var(--ease), transform 0.1s; -webkit-tap-highlight-color: transparent;
+}
+#profilePage.pf-page .nm-tile:hover { color: var(--nm-accent-ink); }
+#profilePage.pf-page .nm-tile:active { box-shadow: var(--nm-inset-sm); transform: scale(0.98); }
+#profilePage.pf-page .nm-tile-icon {
+  width: 34px; height: 34px; border-radius: 12px; display: grid; place-items: center; font-size: 17px;
+  background: var(--nm-bg); box-shadow: var(--nm-inset-sm);
+}
+
+/* ---- Wallet: dial (like the 25% control in the reference) + stats ---- */
+#profilePage.pf-page #profileBalanceCard.pf-wallet {
+  display: grid !important; grid-template-columns: auto 1fr; gap: 20px; align-items: center;
+  margin: 0 0 var(--pf-gap) !important; padding: 20px !important; min-height: 0 !important;
+  background: var(--nm-bg) !important; border: 1px solid var(--nm-line) !important; border-radius: 28px !important;
+  box-shadow: var(--nm-raised) !important; color: var(--nm-text) !important;
+}
+#profilePage.pf-page .pf-dial { position: relative; width: 170px; height: 170px; flex: 0 0 auto; }
+#profilePage.pf-page .pf-dial-ring {
+  position: absolute; inset: 0; border-radius: 50%; background: var(--nm-bg); box-shadow: var(--nm-raised);
+}
+#profilePage.pf-page .pf-dial-ring::before { /* accent arc */
+  content: ""; position: absolute; inset: 10px; border-radius: 50%;
+  background: conic-gradient(var(--pf-arc, var(--nm-accent)) 0 var(--pf-arc-deg, 270deg), transparent 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 12px), #000 calc(100% - 11px));
+          mask: radial-gradient(farthest-side, transparent calc(100% - 12px), #000 calc(100% - 11px));
+  opacity: 0.95;
+}
+#profilePage.pf-page .pf-dial-ring::after { /* groove under the arc */
+  content: ""; position: absolute; inset: 10px; border-radius: 50%; box-shadow: var(--nm-inset-sm); pointer-events: none;
+}
+#profilePage.pf-page .pf-dial-face {
+  position: absolute; inset: 28px; border-radius: 50%; background: var(--nm-bg); box-shadow: var(--nm-raised-sm);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 6px;
+}
+#profilePage.pf-page .pf-dial-label { font: 800 9.5px/1 var(--font-ui); letter-spacing: 0.1em; text-transform: uppercase; color: var(--nm-muted); }
+#profilePage.pf-page #profileBalanceCard .pf-dial-value {
+  margin: 6px 0 4px !important; font: 800 22px/1.1 var(--font-ui) !important; color: var(--nm-text) !important;
+  white-space: nowrap; letter-spacing: -0.01em;
+}
+#profilePage.pf-page #profileBalanceCard .pf-dial-value .amt-decimal { font-size: 0.6em; opacity: 0.6; }
+#profilePage.pf-page .pf-dial-state { font: 800 10px/1 var(--font-ui); padding: 5px 9px; border-radius: 999px; box-shadow: var(--nm-inset-sm); color: var(--nm-muted); }
+#profilePage.pf-page .pf-dial-state::before { content: "Balance"; }
+#profilePage.pf-page #profileBalanceCard.status-pos { --pf-arc: var(--nm-good); --pf-arc-deg: 300deg; }
+#profilePage.pf-page #profileBalanceCard.status-pos .pf-dial-value { color: var(--nm-good) !important; }
+#profilePage.pf-page #profileBalanceCard.status-pos .pf-dial-state { color: var(--nm-good); }
+#profilePage.pf-page #profileBalanceCard.status-pos .pf-dial-state::before { content: "In credit ✓"; }
+#profilePage.pf-page #profileBalanceCard.status-neg { --pf-arc: var(--nm-bad); --pf-arc-deg: 110deg; }
+#profilePage.pf-page #profileBalanceCard.status-neg .pf-dial-value { color: var(--nm-bad) !important; }
+#profilePage.pf-page #profileBalanceCard.status-neg .pf-dial-state { color: var(--nm-bad); }
+#profilePage.pf-page #profileBalanceCard.status-neg .pf-dial-state::before { content: "Please deposit"; }
+
+#profilePage.pf-page .pf-stats { display: grid; gap: 12px; min-width: 0; }
+#profilePage.pf-page .pf-stat {
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px;
+  padding: 12px 14px; border-radius: 18px; background: var(--nm-bg); box-shadow: var(--nm-inset);
+}
+#profilePage.pf-page .pf-stat-icon { font-size: 18px; }
+#profilePage.pf-page .pf-stat-label { font: 700 12px/1.2 var(--font-ui); color: var(--nm-muted); }
+#profilePage.pf-page .pf-stat-value { font: 800 17px/1 var(--font-ui) !important; color: var(--nm-text) !important; font-variant-numeric: tabular-nums; white-space: nowrap; }
+#profilePage.pf-page #profileTotalDeposit { color: var(--nm-good) !important; }
+#profilePage.pf-page .pf-addcash { width: 100%; min-height: 46px; }
+
+/* Soft buttons used here */
+.nm-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 0; cursor: pointer;
+  border-radius: 16px; padding: 0 18px; min-height: 42px; font: 800 13.5px/1 var(--font-ui);
+  background: var(--nm-bg); color: var(--nm-text); box-shadow: var(--nm-raised-sm); transition: box-shadow 0.15s, transform 0.1s;
+}
+.nm-btn:active { box-shadow: var(--nm-inset-sm); transform: scale(0.99); }
+.nm-btn-accent { background: var(--nm-accent-grad); color: #fff; text-shadow: 0 1px 1px rgba(150, 80, 0, 0.25); }
+.nm-link { border: 0; background: none; cursor: pointer; font: 800 12.5px/1 var(--font-ui); color: var(--nm-accent-ink); padding: 8px 4px; }
+
+/* ---- Section cards ---- */
+#profilePage.pf-page .pf-card {
+  background: var(--nm-bg); border: 1px solid var(--nm-line); border-radius: 28px;
+  box-shadow: var(--nm-raised); padding: 18px;
+}
+#profilePage.pf-page .pf-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+#profilePage.pf-page .pf-card-head h3 { margin: 0; font: 800 17px/1.2 var(--font-ui); color: var(--nm-text); }
+#profilePage.pf-page .lock-badge {
+  margin: 0 !important; padding: 8px 12px !important; border-radius: 999px !important; border: 0 !important;
+  background: var(--nm-bg) !important; box-shadow: var(--nm-inset-sm) !important; color: var(--nm-muted) !important;
+  font: 700 11px/1 var(--font-ui) !important; display: inline-flex !important; align-items: center; gap: 6px; white-space: nowrap;
+}
+#profilePage.pf-page .lock-badge.is-restricted { color: var(--nm-bad) !important; }
+#profilePage.pf-page .lock-badge .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; display: inline-block; }
+
+/* System status strip */
+#profilePage.pf-page .pf-status-row { margin: 0 0 12px !important; padding: 0 !important; background: none !important; border: 0 !important; box-shadow: none !important; }
+#profilePage.pf-page .pf-status-row .status-box {
+  margin: 0 !important; border: 0 !important; border-radius: 16px !important; padding: 11px 14px !important;
+  background: var(--nm-bg) !important; box-shadow: var(--nm-inset-sm) !important; color: var(--nm-muted) !important;
+  font: 700 12px/1.3 var(--font-ui) !important; display: flex !important; align-items: center; gap: 8px;
+}
+#profilePage.pf-page .pf-status-row .status-box::before { content: ""; width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; background: var(--nm-accent); box-shadow: 0 0 0 4px rgba(243, 156, 18, 0.18); }
+#profilePage.pf-page .pf-status-row .status-box.success::before { background: var(--nm-good); box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.18); }
+#profilePage.pf-page .pf-status-row .status-box * { color: inherit !important; font: inherit !important; background: none !important; }
+
+/* Meal power inside the profile */
+#profilePage.pf-page .meal-power { margin: 0 0 14px; border: 0; border-radius: 20px; padding: 14px; background: var(--nm-bg); box-shadow: var(--nm-inset); }
+#profilePage.pf-page .meal-power-icon { width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center; background: var(--nm-bg); box-shadow: var(--nm-raised-sm); }
+#profilePage.pf-page .meal-power .ui-btn { border-radius: 14px; }
+
+/* Defaults → two soft ON/OFF switches */
+#profilePage.pf-page .pf-defaults {
+  display: flex !important; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  margin: 0 0 16px !important; padding: 14px !important; border-radius: 20px !important; border: 0 !important;
+  background: var(--nm-bg) !important; box-shadow: var(--nm-raised-sm) !important;
+}
+#profilePage.pf-page .defaults-label { display: flex; flex-direction: column; gap: 3px; }
+#profilePage.pf-page .pf-defaults-title { font: 800 14px/1.2 var(--font-ui); color: var(--nm-text); }
+#profilePage.pf-page .pf-defaults-sub { font: 600 11.5px/1.2 var(--font-ui); color: var(--nm-muted); }
+#profilePage.pf-page .defaults-toggles { display: flex !important; gap: 10px !important; background: none !important; padding: 0 !important; box-shadow: none !important; border: 0 !important; }
+#profilePage.pf-page .def-btn {
+  position: relative; display: inline-flex !important; align-items: center; gap: 10px;
+  min-height: 40px !important; padding: 0 12px 0 14px !important; border-radius: 999px !important; border: 0 !important;
+  background: var(--nm-bg) !important; box-shadow: var(--nm-raised-xs) !important; color: var(--nm-muted) !important;
+  font: 800 12.5px/1 var(--font-ui) !important; cursor: pointer; width: auto !important; flex: 0 0 auto !important;
+}
+#profilePage.pf-page .def-btn::after { /* switch track */
+  content: "OFF"; display: inline-grid; place-items: center end; width: 54px; height: 26px; padding: 0 8px; border-radius: 999px;
+  box-shadow: var(--nm-inset-sm); font: 900 9px/1 var(--font-ui); letter-spacing: 0.06em; color: var(--nm-muted);
+  background: radial-gradient(circle at 13px 50%, var(--nm-bg) 9px, transparent 10px) no-repeat, var(--nm-bg);
+  filter: drop-shadow(0 0 0 transparent);
+}
+#profilePage.pf-page .def-btn.active { color: var(--nm-text) !important; }
+#profilePage.pf-page .def-btn.active::after {
+  content: "ON"; place-items: center start; color: #fff;
+  background: radial-gradient(circle at calc(100% - 13px) 50%, #fff 9px, transparent 10px) no-repeat, var(--nm-accent-grad);
+  box-shadow: inset 1px 1px 3px rgba(150, 80, 0, 0.35);
+}
+
+/* Next 7 sessions */
+#profilePage.pf-page .pf-sub-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; margin: 4px 2px 10px; }
+#profilePage.pf-page .pf-sub-head > span:first-child { font: 800 13px/1 var(--font-ui); color: var(--nm-text); }
+#profilePage.pf-page .pf-hint { font: 600 11px/1.2 var(--font-ui); color: var(--nm-muted); }
+#profilePage.pf-page .scheduler-container { margin: 0 !important; padding: 0 !important; background: none !important; box-shadow: none !important; }
+#profilePage.pf-page .scheduler-scroll {
+  display: flex !important; gap: 14px !important; overflow-x: auto !important; padding: 8px 6px 18px !important;
+  scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+}
+#profilePage.pf-page .scheduler-scroll::-webkit-scrollbar { display: none; }
+#profilePage.pf-page .scheduler-card {
+  flex: 0 0 168px !important; min-width: 168px !important; scroll-snap-align: start;
+  background: var(--nm-bg) !important; border: 1px solid var(--nm-line) !important; border-radius: 22px !important;
+  box-shadow: var(--nm-raised-sm) !important; padding: 14px 12px !important; color: var(--nm-text) !important;
+}
+#profilePage.pf-page .scheduler-card.is-today { box-shadow: var(--nm-raised-sm), 0 0 0 2px var(--nm-accent) !important; }
+#profilePage.pf-page .sched-date-main { font: 800 15px/1.15 var(--font-ui) !important; color: var(--nm-text) !important; text-align: center; }
+#profilePage.pf-page .sched-sub-label {
+  margin: 6px auto 12px !important; width: max-content; padding: 4px 9px; border-radius: 999px; box-shadow: var(--nm-inset-sm);
+  font: 800 9.5px/1 var(--font-ui) !important; letter-spacing: 0.08em; color: var(--nm-muted) !important; background: none !important;
+}
+#profilePage.pf-page .scheduler-card.is-today .sched-sub-label { color: var(--nm-accent-ink) !important; }
+#profilePage.pf-page .sched-actions { display: grid !important; gap: 10px !important; }
+#profilePage.pf-page .sched-btn {
+  display: flex !important; align-items: center; justify-content: space-between; gap: 6px; width: 100% !important;
+  min-height: 44px !important; padding: 0 12px !important; border-radius: 16px !important; border: 0 !important;
+  background: var(--nm-bg) !important; box-shadow: var(--nm-raised-xs) !important; color: var(--nm-muted) !important;
+  font: 700 12px/1 var(--font-ui) !important; cursor: pointer; transition: box-shadow 0.15s;
+}
+#profilePage.pf-page .sched-btn .status-text {
+  order: 2; min-width: 38px; text-align: center; padding: 5px 7px; border-radius: 999px; box-shadow: var(--nm-inset-sm);
+  font: 900 10px/1 var(--font-ui) !important; letter-spacing: 0.05em; color: var(--nm-muted) !important; background: none !important;
+}
+#profilePage.pf-page .sched-btn .btn-label { order: 1; text-align: left; color: inherit !important; }
+#profilePage.pf-page .sched-btn .btn-date-micro { display: block; font: 600 10px/1.2 var(--font-ui); color: var(--nm-muted); margin-top: 2px; }
+#profilePage.pf-page .sched-btn.active { box-shadow: var(--nm-inset-sm) !important; color: var(--nm-text) !important; }
+#profilePage.pf-page .sched-btn.active .status-text { background: var(--nm-accent-grad) !important; color: #fff !important; box-shadow: 1px 1px 3px var(--nm-lo) !important; }
+#profilePage.pf-page .guest-card-wrapper { margin-top: 10px !important; }
+#profilePage.pf-page .guest-compact-badge {
+  width: 100%; display: flex !important; align-items: center; justify-content: space-between; gap: 6px;
+  min-height: 36px; padding: 0 12px !important; border-radius: 14px !important; border: 0 !important;
+  background: var(--nm-bg) !important; box-shadow: var(--nm-inset-sm) !important; color: var(--nm-muted) !important;
+  font: 700 11px/1 var(--font-ui) !important; cursor: pointer;
+}
+#profilePage.pf-page .guest-compact-badge.active { color: var(--nm-accent-ink) !important; }
+#profilePage.pf-page .guest-compact-badge strong { color: inherit !important; }
+
+/* Transactions */
+#profilePage.pf-page .pf-history { display: grid; gap: 10px; }
+#profilePage.pf-page .pf-tx {
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+  padding: 11px 12px; border-radius: 18px; background: var(--nm-bg); box-shadow: var(--nm-raised-xs);
+}
+#profilePage.pf-page .pf-tx-icon { width: 38px; height: 38px; border-radius: 13px; display: grid; place-items: center; box-shadow: var(--nm-inset-sm); font-size: 16px; }
+#profilePage.pf-page .pf-tx-main { min-width: 0; }
+#profilePage.pf-page .pf-tx-title { font: 800 13.5px/1.2 var(--font-ui); color: var(--nm-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#profilePage.pf-page .pf-tx-sub { font: 600 11px/1.2 var(--font-ui); color: var(--nm-muted); margin-top: 3px; }
+#profilePage.pf-page .pf-tx-amt { font: 800 14px/1 var(--font-ui); font-variant-numeric: tabular-nums; color: var(--nm-good); }
+#profilePage.pf-page .pf-tx.is-out .pf-tx-amt { color: var(--nm-bad); }
+#profilePage.pf-page .pf-empty, #profilePage.pf-page .loading { text-align: center; padding: 18px; border-radius: 18px; box-shadow: var(--nm-inset-sm); color: var(--nm-muted); font: 600 12.5px/1.4 var(--font-ui); }
+
+/* Hide legacy profile pieces that the redesign replaced (if any old markup is cached) */
+#profilePage.pf-page .profile-header-banner,
+#profilePage.pf-page .profile-info-section,
+#profilePage.pf-page .profile-header-actions { display: none !important; }
+
+/* ---- Layout: phones vs larger screens ---- */
+@media (max-width: 560px) {
+  #profilePage.pf-page #profileBalanceCard.pf-wallet { grid-template-columns: 1fr; justify-items: center; }
+  #profilePage.pf-page .pf-stats { width: 100%; }
+  #profilePage.pf-page .pf-dial { width: 180px; height: 180px; }
+  #profilePage.pf-page .pf-name { font-size: 21px; }
+  #profilePage.pf-page #profileAvatar.pf-avatar { width: 74px !important; height: 74px !important; min-width: 74px; min-height: 74px; max-width: 74px; max-height: 74px; flex: 0 0 74px !important; }
+  #profilePage.pf-page .pf-actions { gap: 10px; }
+  #profilePage.pf-page .nm-tile { min-height: 66px; font-size: 11px; }
+}
+@media (min-width: 900px) {
+  #profilePage.pf-page { display: grid; grid-template-columns: minmax(300px, 380px) 1fr; gap: 22px; align-items: start; }
+  #profilePage.pf-page > section { margin: 0; }
+  #profilePage.pf-page .pf-hero, #profilePage.pf-page #profileBalanceCard.pf-wallet { grid-column: 1; }
+  #profilePage.pf-page #profileBalanceCard.pf-wallet { grid-template-columns: 1fr; justify-items: center; }
+  #profilePage.pf-page .pf-stats { width: 100%; }
+  #profilePage.pf-page .pf-hero { grid-row: 1; }
+  #profilePage.pf-page #profileBalanceCard.pf-wallet { grid-row: 2; }
+  #profilePage.pf-page .pf-money { grid-column: 1; grid-row: 3; }
+  #profilePage.pf-page .pf-meals { grid-column: 2; grid-row: 1 / span 3; }
+  #profilePage.pf-page .scheduler-scroll { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); overflow: visible !important; }
+  #profilePage.pf-page .scheduler-card { min-width: 0 !important; }
+  #profilePage.pf-page.page-content.hidden { display: none !important; }
+}

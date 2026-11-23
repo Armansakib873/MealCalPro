@@ -1,0 +1,288 @@
+/* MealCal Pro — Wallet / deposits page. Load order matters: see index.html */
+/* --- Premium Wallet UI --- */
+.wallet-form-container {
+    background: #bcd4d1b5;
+    padding: 16px;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+    border: 1px solid var(--line-soft);
+}   
+
+.wallet-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+/* Row 3 Special handling for Notes + Button */
+.notes-btn-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    grid-column: span 2;
+}
+
+.btn-wallet-submit {
+    height: 38px;
+    padding: 0 15px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #207385, #144f5c);
+    color: white;
+    font-weight: 800;
+    font-size: 11px;
+    border: none;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(32, 115, 133, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    letter-spacing: 0.5px;
+}
+
+.btn-wallet-submit:hover { 
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(32, 115, 133, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.btn-wallet-submit:active { transform: scale(0.95) translateY(1px); box-shadow: 0 2px 6px rgba(32, 115, 133, 0.2); }
+
+/* Pending Requests Section */
+.pending-box-premium {
+    background: var(--soft-rose);
+    border: 1px solid #fecaca;
+    border-radius: 14px;
+    padding: 12px;
+    margin-bottom: 20px;
+}
+
+/* History Cards */
+.history-item-premium {
+    background: var(--surface);
+    padding: 12px;
+    border-radius: 14px;
+    border: 1px solid var(--line-soft);
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.hist-left { display: flex; gap: 10px; align-items: center; }
+.hist-icon {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+}
+
+.hist-icon.plus { background: var(--soft-emerald); color: #059669; }
+.hist-icon.minus { background: var(--soft-rose); color: #e11d48; }
+.hist-icon.settle { background: var(--surface-muted); color: var(--ink-500); }
+
+.hist-details .name { font-size: 13px; font-weight: 700; color: var(--ink-800); }
+.hist-details .meta { font-size: 10px; color: var(--text-muted); }
+
+.hist-amount { text-align: right; }
+.hist-amount .val { font-size: 14px; font-weight: 800; font-family: 'Courier New', monospace; }
+.hist-amount .label { font-size: 9px; font-weight: 700; text-transform: uppercase; }
+
+@media (max-width: 480px) {
+    .wallet-grid { gap: 8px; }
+    .btn-wallet-submit { padding: 0 10px; font-size: 10px; }
+}
+
+
+/* Edited Tag Badge */
+.edited-badge {
+    font-size: 8px;
+    background: var(--surface-muted);
+    color: var(--ink-500);
+    border: 1px solid var(--line-strong);
+    padding: 1px 4px;
+    border-radius: 4px;
+    margin-left: 6px;
+    text-transform: uppercase;
+    font-weight: 700;
+    vertical-align: middle;
+}
+
+/* Mobile Friendly Edit Button */
+.btn-icon-edit {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    cursor: pointer;
+    margin-left: 10px;
+    transition: all 0.2s;
+}
+.btn-icon-edit:hover {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+
+        /* Summary Table Styles */
+.summary-table-wrapper {
+    -webkit-overflow-scrolling: touch;
+}
+
+.summary-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    min-width: 700px; /* Ensures table has room to breathe */
+}
+
+.summary-table th, .summary-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.summary-table th {
+    background-color: var(--bg-color);
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
+/* Status Button Modern Look */
+.status-btn {
+    padding: 6px 0;
+    width: 55px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 800;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+}
+
+.status-btn.on {
+    background-color: #ECFDF5;
+    color: #059669;
+    border-color: #A7F3D0;
+}
+
+.status-btn.off {
+    background-color: var(--surface-muted);
+    color: var(--ink-500);
+    border-color: var(--line);
+}
+
+/* Mobile Responsiveness for Summary */
+@media (max-width: 768px) {
+    .summary-table {
+        font-size: 12px;
+    }
+
+    /* Sticky first column (Name) for mobile */
+    .summary-table th:first-child, 
+    .summary-table td:first-child {
+        position: sticky;
+        left: 0;
+        z-index: 10;
+        background-color: var(--card-bg);
+        border-right: 2px solid var(--border-color);
+        min-width: 100px;
+    }
+
+    .summary-table th:first-child {
+        background-color: var(--bg-color);
+    }
+    
+    .summary-table td {
+        padding: 10px 8px;
+    }
+}
+
+.balance-cell {
+    font-family: 'Courier New', monospace;
+    font-weight: 800;
+}
+
+
+        /* Due Settlement Styles */
+.due-item {
+    padding: 12px;
+    background: var(--bg-color);
+    border-radius: 8px;
+    margin-bottom: 10px;
+    border-left: 4px solid transparent;
+}
+
+.due-item.debtor {
+    background-color: rgb(255 230 230 / 44%);
+}
+
+.due-item.creditor {
+    background-color: rgba(199, 255, 199, 0.271);
+}
+.due-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.due-item-name {
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.due-item-amount {
+    font-weight: 700;
+    font-size: 16px;
+}
+
+.due-progress-bar {
+    width: 100%;
+    height: 6px;
+    background: var(--border-color);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 8px;
+}
+
+.due-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--success-color), var(--primary-color));
+    transition: width 0.3s ease;
+}
+
+.due-status-badge {
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 8px;
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
+.due-status-pending {
+    background: #FEE2E2;
+    color: #B91C1C;
+}
+
+.due-status-settling {
+    background: #FEF3C7;
+    color: #92400E;
+}
+
+.due-status-settled {
+    background: #D1FAE5;
+    color: #065F46;
+}
+
+ /*tracker Styles */

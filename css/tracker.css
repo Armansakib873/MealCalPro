@@ -1,0 +1,248 @@
+/* MealCal Pro — Master tracker grid. Load order matters: see index.html */
+/* --- Tracker Sticky Scroll Fixes --- */
+/* --- Tracker Sticky Scroll Fixes --- */
+
+/* 1. The Scroll Container */
+.matrix-premium-wrapper {
+    background: var(--surface);
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    overflow: auto; /* Required for sticky children */
+    max-height: 70vh; /* Limits height to trigger vertical scroll */
+    position: relative;
+    -webkit-overflow-scrolling: touch;
+}
+
+.matrix-table-premium {
+    width: 100%;
+    border-collapse: separate; /* Essential for sticky to work correctly with borders */
+    border-spacing: 0;
+}
+
+/* 2. Sticky Header (Top Row - Names) */
+.matrix-table-premium thead th {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: #f7fffbb5;
+    border-bottom: 2px solid var(--line-strong);
+    padding: 12px 8px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    border: 1px solid #53535333;
+}
+
+/* 3. Sticky Column (First Column - Dates) */
+.matrix-table-premium tbody td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 50;
+    border-right: 2px solid var(--line-strong);
+    font-size: 0.7rem;
+    font-weight: 500;
+    text-align: center;
+}
+
+/* 4. The Intersection (Top-Left BAZAR cell) */
+.matrix-table-premium thead th:first-child {
+    position: sticky;
+    top: 0;
+    left: 0;
+    z-index: 150; /* Highest priority: stays fixed regardless of scroll direction */
+    background: var(--surface-muted);
+    border-right: 2px solid var(--line-strong);
+    border-bottom: 2px solid var(--line-strong);
+}
+
+/* 5. Body Styling */
+.matrix-table-premium td {
+    border-bottom: 3px solid #f8fafc; /* Create vertical gaps between rows */
+    border-right: 6px solid #f8fafc;  /* Create horizontal gaps between blocks */
+    min-width: 80px;
+    height: 52px;
+    padding: 0;
+    background: transparent;
+}
+
+/* Make Dates column normal */
+.matrix-table-premium tbody td:first-child {
+    border: 1px solid var(--line);
+    background: var(--surface);
+}
+
+/* Interactive Split Cells - The actual "Blocks" */
+.cell-split-premium {
+    background: var(--surface);
+}
+
+/* Staggered Column Elevated Shadows */
+/* Apply directly to the cell contents to make them pop like individual thick cards */
+.matrix-table-premium td:nth-child(2) .cell-split-premium {
+    transform: translateY(-1px);
+    box-shadow: 2px 4px 8px rgba(0, 0, 0, 0.08);
+}
+
+.matrix-table-premium td:nth-child(3) .cell-split-premium {
+    transform: translateY(1px);
+    box-shadow: 1px 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+.matrix-table-premium td:nth-child(4) .cell-split-premium {
+    transform: translateY(-2px);
+    box-shadow: 3px 6px 12px rgba(0, 0, 0, 0.1);
+}
+
+.matrix-table-premium td:nth-child(5n+5) .cell-split-premium {
+    transform: translateY(0);
+    box-shadow: 1px 3px 6px rgba(0, 0, 0, 0.06);
+}
+
+.matrix-table-premium td:nth-child(5n+6) .cell-split-premium {
+    transform: translateY(-2px);
+    box-shadow: 2px 5px 10px rgba(0, 0, 0, 0.09);
+}
+
+.matrix-table-premium td:nth-child(5n+7) .cell-split-premium {
+    transform: translateY(1px);
+    box-shadow: 1px 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+.matrix-table-premium tbody tr:hover td .cell-split-premium {
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.4);
+}
+
+/* Interactive Split Cells */
+.cell-split-premium {
+    display: flex;
+    height: 100%;
+    width: 100%;
+    cursor: pointer;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    overflow: hidden;
+    transition: box-shadow 0.2s;
+}
+
+.cell-split-premium:hover {
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.3);
+}
+
+.cell-val-half {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    transition: background 0.2s;
+    position: relative;
+}
+
+/* Night half — dark indigo tint */
+.cell-val-half.night {
+    background: rgba(99, 102, 241, 0.06);
+    border-right: 1.5px solid var(--line);
+}
+
+.cell-val-half.night.active {
+    color: #ffffffdb;
+    background-color: #525252;
+    font-weight: 800;
+    font-size: 1rem;
+}
+
+.cell-val-half.night.zero {
+    color: #fffdfdd9;
+    font-weight: 800;
+    background-color: #525252;
+    font-size: 1rem;
+}
+
+
+
+/* Day half — warm amber tint */
+.cell-val-half.day {
+    background: rgba(251, 191, 36, 0.04);
+}
+
+.cell-val-half.day.active {
+background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(245, 158, 11, 0.1) 100%);
+    color: #120600;
+    font-weight: 800;
+    font-size: 1rem;
+}
+
+.cell-val-half.day.zero {
+     color: #120600;
+    font-weight: 800;
+    font-size: 1rem;
+    background: linear-gradient(135deg, rgb(255 222 136 / 15%) 0%, rgba(245, 158, 11, 0.1) 100%);
+}
+
+/* Fallback for cells without night/day class */
+.cell-val-half.active {
+    background: rgb(99 227 241 / 10%);
+    color: #4f46e5;
+}
+.cell-val-half.zero { color: #cbd5e1; font-weight: 400; }
+
+/* ---- Tracker Legend Row ---- */
+/* ---- Tracker Legend Row Removed ---- */
+
+.legend-night, .legend-day {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    width: 50%;
+    text-align: center;
+}
+
+.legend-night { opacity: 0.7; }
+.legend-day { opacity: 0.7; }
+
+/* Weekly Menu Editor Premium */
+.menu-editor-card {
+    background: var(--surface);
+    border-radius: 20px;
+    padding: 15px;
+    margin-top: 25px;
+    border: 1px solid var(--line-soft);
+}
+
+.menu-table-compact {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.menu-table-compact td { padding: 8px 0; border-bottom: 1px solid #f8fafc; }
+.menu-day-label { font-size: 11px; font-weight: 800; color: var(--ink-800); width: 80px; }
+
+.menu-input-pill {
+    width: 100%;
+    background: var(--surface-soft);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 11px;
+    color: var(--ink-600);
+    transition: all 0.2s;
+}
+
+.menu-input-pill:focus { border-color: var(--premium-indigo); background: var(--surface); outline: none; }
+
+/* Dashboard Grid Layout */
+.dashboard-header-grid {
+    display: grid;
+    grid-template-columns: 320px 1fr; /* Desktop: Plan card fixed, stats take rest */
+    gap: 15px;
+    margin-bottom: 20px;
+    align-items: stretch;
+}
+
+.stats-subgrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* 2x2 on Desktop */
+    gap: 15px;
+}

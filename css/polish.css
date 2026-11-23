@@ -1,0 +1,241 @@
+/* =====================================================================
+   MealCal Pro — Polish pass (loaded LAST). Uses --nm-* tokens.
+   Dashboard meal card · power buttons · member cards · profile defaults ·
+   tracker session picker · summary toolbar · quick entry · ledger ·
+   notifications · statement (+ flat image export)
+   ===================================================================== */
+
+/* ---------------------------------------------------------------- 1. Dashboard: Who's eating */
+.db-meal { gap: 6px !important; padding: 16px 12px 14px !important; }
+.db-meal-bn { font: 800 22px/1.1 "Hind Siliguri", var(--font-ui); letter-spacing: 0; }
+.db-meal-night .db-meal-bn { color: #4f63d2; }
+.db-meal-day .db-meal-bn { color: #d9822b; }
+:root[data-theme="dark"] .db-meal-night .db-meal-bn { color: #8ea2ff; }
+:root[data-theme="dark"] .db-meal-day .db-meal-bn { color: #fbbf5a; }
+.db-meal .db-meal-date { margin-top: -2px; }
+.db-meal .db-meal-count { font-size: 52px !important; line-height: 1 !important; margin-top: 6px; }
+.db-meal .db-meal-unit { margin-top: -2px; }
+.db-meal .db-meal-menu {
+  width: auto !important; padding: 0 !important; box-shadow: none !important; background: none !important;
+  font: 700 13.5px/1.35 "Hind Siliguri", var(--font-ui) !important; color: var(--nm-text) !important; margin: 4px 0 6px; min-height: 1.35em;
+  text-align: center; overflow-wrap: anywhere;
+}
+
+/* Power button (my meal ON / OFF) */
+.db-power {
+  width: 54px; height: 54px; border-radius: 50%; border: 0; cursor: pointer; display: grid; place-items: center;
+  background: var(--nm-bg); box-shadow: var(--nm-raised-sm); color: var(--nm-muted);
+  transition: box-shadow 0.18s, color 0.18s, transform 0.1s; -webkit-tap-highlight-color: transparent;
+}
+.db-power:active { transform: scale(0.95); }
+.db-power:disabled { opacity: 0.6; cursor: wait; }
+.db-power.on { color: #16a34a; box-shadow: var(--nm-inset-sm), 0 0 0 3px rgba(22, 163, 74, 0.25); }
+.db-power.off { color: #dc2626; box-shadow: var(--nm-raised-sm), 0 0 0 3px rgba(220, 38, 38, 0.18); }
+.db-power.on svg { filter: drop-shadow(0 0 6px rgba(22, 163, 74, 0.55)); }
+.db-power-label { font: 800 11px/1.2 var(--font-ui); color: var(--nm-muted); }
+.db-power.on + .db-power-label { color: #16a34a; }
+.db-power.off + .db-power-label { color: #dc2626; }
+
+/* Meals-off note under My balance */
+.db-off-note { display: flex; align-items: center; gap: 12px; margin-top: 14px; padding: 12px 14px; border-radius: 18px; background: var(--nm-bg); box-shadow: var(--nm-inset-sm); }
+.db-off-icon { font-size: 20px; }
+.db-off-text { flex: 1; font: 700 12.5px/1.4 var(--font-ui); color: var(--nm-bad); }
+.db-off-btn { min-height: 38px; padding: 0 14px; font-size: 12.5px; }
+
+/* Gauge: clean SVG half-circle (no clipped disc behind it) */
+.db-gauge .db-gauge-dial { position: relative; width: 240px; max-width: 100%; height: auto; overflow: visible; aspect-ratio: 240 / 136; }
+.db-gauge .db-gauge-dial::before { content: none !important; display: none !important; }
+.db-gauge-svg { display: block; width: 100%; height: auto; overflow: visible; }
+.db-gauge-svg path { fill: none; stroke-linecap: round; }
+.db-gauge-svg .g-groove-dark { stroke: var(--nm-lo); stroke-width: 26; transform: translate(2px, 2px); opacity: 0.55; }
+.db-gauge-svg .g-groove-light { stroke: var(--nm-hi); stroke-width: 26; transform: translate(-2px, -2px); }
+.db-gauge-svg .g-track { stroke: var(--nm-bg); stroke-width: 24; }
+.db-gauge-svg .g-arc { stroke: var(--nm-good); stroke-width: 16; transition: stroke-dasharray 0.8s var(--ease), stroke 0.3s; filter: drop-shadow(0 2px 4px rgba(15, 159, 110, 0.35)); }
+.db-gauge.is-low .g-arc { stroke: var(--nm-accent); filter: drop-shadow(0 2px 4px rgba(243, 156, 18, 0.35)); }
+.db-gauge.is-empty .g-arc { stroke: var(--nm-bad); filter: drop-shadow(0 2px 4px rgba(224, 69, 58, 0.35)); }
+.db-gauge .db-gauge-face {
+  position: absolute; left: 50%; bottom: 4px; top: auto; transform: translateX(-50%);
+  width: auto; height: auto; padding: 0; border-radius: 0; background: none; box-shadow: none;
+  display: flex; flex-direction: column; align-items: center; gap: 5px; white-space: nowrap;
+}
+.db-gauge .db-gauge-value { font-size: 30px; }
+.db-gauge .db-gauge-scale { width: 240px; max-width: 100%; padding: 0 14px; margin-top: 4px; }
+.db-gauge.is-empty .db-gauge-pct { color: var(--nm-bad); font-weight: 800; }
+
+/* ---------------------------------------------------------------- 5. Members' 7-day cards */
+.member-schedule-card { overflow: visible !important; }
+.member-card-top { display: flex !important; flex-wrap: wrap; justify-content: space-between; gap: 10px; }
+.default-prefs-wrap { display: flex !important; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px !important; }
+.schedule-timeline-strip {
+  display: grid !important; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)) !important; gap: 10px !important;
+  overflow: visible !important; padding: 6px 2px 4px !important; scroll-snap-type: none !important;
+}
+.timeline-day-card { min-width: 0 !important; width: auto !important; flex: none !important; padding: 8px 4px !important; }
+.timeline-day-card .dash-guest-box { font-size: 10px !important; padding: 2px 4px !important; }
+.member-power {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 12px; border-radius: 999px; border: 0; cursor: pointer;
+  font: 800 11.5px/1 var(--font-ui); background: var(--nm-bg); box-shadow: var(--nm-raised-xs);
+}
+.member-power.on { color: #16a34a; }
+.member-power.off { color: #fff; background: linear-gradient(135deg, #f87171, #dc2626); box-shadow: 2px 2px 6px var(--nm-lo); }
+.member-power:active { box-shadow: var(--nm-inset-sm); }
+.member-power:disabled { cursor: default; opacity: 0.75; }
+
+/* ---------------------------------------------------------------- 6. Profile: default meal switches */
+#profilePage.pf-page .pf-defaults { display: grid !important; grid-template-columns: 1fr; gap: 12px; }
+#profilePage.pf-page .defaults-toggles { display: grid !important; grid-template-columns: 1fr 1fr; gap: 12px !important; width: 100%; }
+#profilePage.pf-page .def-btn {
+  width: 100% !important; justify-content: flex-start; gap: 10px; padding: 0 12px !important; min-height: 50px !important;
+  border-radius: 18px !important; color: var(--nm-text) !important;
+}
+#profilePage.pf-page .def-btn::after { content: none !important; display: none !important; }
+#profilePage.pf-page .def-ico { width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; box-shadow: var(--nm-inset-sm); font-size: 15px; }
+#profilePage.pf-page .def-name { flex: 1; text-align: left; font: 800 13.5px/1 var(--font-ui); }
+#profilePage.pf-page .def-switch {
+  position: relative; width: 50px; height: 26px; border-radius: 999px; flex: 0 0 auto;
+  background: var(--nm-bg); box-shadow: var(--nm-inset-sm);
+}
+#profilePage.pf-page .def-switch::before {
+  content: "OFF"; position: absolute; right: 7px; top: 50%; transform: translateY(-50%); font: 900 8.5px/1 var(--font-ui); color: var(--nm-muted); letter-spacing: 0.04em;
+}
+#profilePage.pf-page .def-switch::after {
+  content: ""; position: absolute; top: 4px; left: 4px; width: 18px; height: 18px; border-radius: 50%;
+  background: var(--nm-bg); box-shadow: var(--nm-raised-xs); transition: transform 0.2s var(--ease);
+}
+#profilePage.pf-page .def-btn.active .def-switch { background: var(--nm-accent-grad); box-shadow: inset 1px 1px 3px rgba(150, 80, 0, 0.35); }
+#profilePage.pf-page .def-btn.active .def-switch::before { content: "ON"; left: 8px; right: auto; color: #fff; }
+#profilePage.pf-page .def-btn.active .def-switch::after { transform: translateX(24px); background: #fff; }
+
+/* ---------------------------------------------------------------- 7. Tracker: session picker */
+.rep-nav { display: grid; grid-template-columns: 44px 1fr 44px; gap: 10px; align-items: center; margin-bottom: 14px; }
+.rep-arrow {
+  height: 44px; border-radius: 14px; border: 0; cursor: pointer; font: 800 22px/1 var(--font-ui); color: var(--nm-text);
+  background: var(--nm-bg); box-shadow: var(--nm-raised-xs);
+}
+.rep-arrow:active { box-shadow: var(--nm-inset-sm); }
+.rep-arrow:disabled { opacity: 0.35; cursor: default; }
+.rep-select { height: 44px; width: 100%; text-align: center; font: 800 13.5px/1 var(--font-ui) !important; }
+.rep-totals { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+.rep-total { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 6px; border-radius: 16px; background: var(--nm-bg); box-shadow: var(--nm-inset-sm); }
+.rep-total span { font: 800 13px/1.1 "Hind Siliguri", var(--font-ui); }
+.rep-total b { font: 900 26px/1.1 var(--font-ui); color: var(--nm-text); }
+.rep-total small { font: 600 10.5px/1.2 var(--font-ui); color: var(--nm-muted); }
+.rep-night span { color: #4f63d2; }
+.rep-day span { color: #d9822b; }
+.rep-guest span { color: var(--nm-muted); }
+
+/* ---------------------------------------------------------------- 8. Summary toolbar */
+.sum-head { margin: 0 0 16px; }
+.sum-title { margin: 0 0 12px !important; font: 800 24px/1.1 var(--font-ui) !important; color: var(--nm-text); }
+.sum-actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.sum-act {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 70px; padding: 8px 4px;
+  border: 1px solid var(--nm-line); border-radius: 18px; cursor: pointer; background: var(--nm-bg); box-shadow: var(--nm-raised-sm);
+  color: var(--nm-text); font: 800 11.5px/1.15 var(--font-ui); text-align: center;
+}
+.sum-act:active { box-shadow: var(--nm-inset-sm); }
+.sum-act:disabled { opacity: 0.6; }
+.sum-act-icon { width: 32px; height: 32px; border-radius: 11px; display: grid; place-items: center; font-size: 15px; box-shadow: var(--nm-inset-sm); }
+@media (max-width: 420px) { .sum-actions { grid-template-columns: repeat(2, 1fr); } }
+
+/* ---------------------------------------------------------------- 9. Quick entry: one clean amount field */
+.qe-sheet .sheet-title { background: none !important; box-shadow: none !important; padding: 0 !important; }
+.qe-sheet .big-input-wrapper { display: flex !important; align-items: center; justify-content: center; gap: 6px; padding: 10px 16px !important; }
+:root .qe-sheet input.big-amount-input,
+:root[data-theme="light"] .qe-sheet input.big-amount-input,
+:root[data-theme="dark"] .qe-sheet input.big-amount-input {
+  background: transparent !important; box-shadow: none !important; border: 0 !important; outline: none;
+  width: 100% !important; max-width: 100%; text-align: center; padding: 0 !important;
+}
+.qe-sheet .currency-symbol { background: none !important; box-shadow: none !important; }
+
+/* ---------------------------------------------------------------- 10. Ledger list */
+#selectedMemberHistoryList { padding: 6px 8px 10px !important; margin: 0 -4px; }
+#selectedMemberHistoryList .history-item-premium {
+  width: 100%; box-sizing: border-box; margin: 0 0 10px !important; padding: 12px 14px !important;
+  display: flex !important; justify-content: space-between; align-items: center; gap: 10px;
+}
+#selectedMemberHistoryList .hist-left { min-width: 0; }
+#selectedMemberHistoryList .hist-details .meta { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#selectedMemberHistoryList .hist-amount { text-align: right; flex: 0 0 auto; }
+#selectedMemberHistoryList .hist-amount .val { font-weight: 900; }
+#selectedMemberHistoryList .hist-amount .label { font-size: 9.5px; letter-spacing: 0.05em; text-transform: uppercase; }
+
+/* ---------------------------------------------------------------- 11. Notifications panel */
+.notif-panel .notif-header { padding: 16px 16px 10px !important; align-items: center !important; }
+.notif-panel .close-modal {
+  width: 38px; height: 38px; border-radius: 50% !important; border: 0 !important; display: grid; place-items: center;
+  background: var(--nm-bg) !important; box-shadow: var(--nm-raised-xs) !important; font-size: 20px; color: var(--nm-text) !important;
+}
+.notif-panel .close-modal:active { box-shadow: var(--nm-inset-sm) !important; }
+.notif-search { padding: 0 16px 10px !important; }
+.notif-filters { padding: 2px 16px 12px !important; gap: 8px !important; }
+.notif-filters .filter-chip { padding: 7px 12px !important; border-radius: 999px !important; font-size: 12px !important; }
+.notif-list { padding: 4px 16px 24px !important; overflow-y: auto; }
+.notif-day {
+  position: sticky; top: 0; z-index: 3; margin: 0 -16px 8px; padding: 12px 18px 8px !important;
+  background: var(--nm-bg) !important; box-shadow: 0 6px 10px -8px var(--nm-lo);
+}
+.notif-item { margin: 0 2px 12px !important; position: relative; z-index: 1; }
+.notif-item .notif-msg { margin-top: 2px; }
+#enablePushNotifBtn { background: var(--nm-bg) !important; border: 0 !important; box-shadow: var(--nm-raised-xs) !important; }
+
+/* ---------------------------------------------------------------- 2/3. Statement */
+.st { background: var(--nm-bg); border-radius: 22px; padding: 18px; box-shadow: var(--nm-raised); color: var(--nm-text); }
+.st-head { padding-bottom: 14px; border-bottom: 1px dashed color-mix(in srgb, var(--nm-muted) 40%, transparent); }
+.st-brand { font: 800 10px/1 var(--font-ui); letter-spacing: 0.12em; text-transform: uppercase; color: var(--nm-accent-ink); margin-bottom: 10px; }
+.st-who { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; }
+.st-name { font: 800 22px/1.15 var(--font-ui); }
+.st-cycle { font: 600 12px/1.4 var(--font-ui); color: var(--nm-muted); margin-top: 4px; }
+.st-balance { text-align: right; display: flex; flex-direction: column; gap: 2px; }
+.st-balance small { font: 800 10px/1 var(--font-ui); letter-spacing: 0.08em; text-transform: uppercase; color: var(--nm-muted); }
+.st-balance span { font: 900 26px/1.1 var(--font-ui); }
+.st-balance em { font: 800 11px/1 var(--font-ui); font-style: normal; }
+.st .pos { color: var(--nm-good) !important; }
+.st .neg { color: var(--nm-bad) !important; }
+
+.st-sum { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; align-items: center; gap: 6px; margin: 16px 0; }
+.st-term { padding: 10px 8px; border-radius: 16px; background: var(--nm-bg); box-shadow: var(--nm-inset-sm); text-align: center; min-width: 0; }
+.st-term small { display: block; font: 700 10.5px/1.2 var(--font-ui); color: var(--nm-muted); }
+.st-term b { display: block; margin-top: 4px; font: 900 15px/1.1 var(--font-ui); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.st-term-result { box-shadow: var(--nm-raised-xs); }
+.st-op { font: 900 18px/1 var(--font-ui); color: var(--nm-muted); }
+
+.st-block { margin-top: 16px; }
+.st-block h4 { margin: 0 0 8px; font: 800 11px/1 var(--font-ui); letter-spacing: 0.1em; text-transform: uppercase; color: var(--nm-muted); }
+.st-meals { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.st-meals > div { padding: 9px 6px; border-radius: 14px; text-align: center; background: var(--nm-bg); box-shadow: var(--nm-raised-xs); }
+.st-meals small { display: block; font: 800 11.5px/1.2 "Hind Siliguri", var(--font-ui); color: var(--nm-muted); }
+.st-meals b { display: block; font: 900 18px/1.2 var(--font-ui); margin-top: 2px; }
+.st-meals-total { background: var(--nm-accent-grad) !important; }
+.st-meals-total small, .st-meals-total b { color: #fff !important; }
+.st-note { margin-top: 8px; font: 600 12px/1.4 var(--font-ui); color: var(--nm-muted); }
+.st-note b { color: var(--nm-text); }
+.st-row { display: flex; justify-content: space-between; gap: 12px; padding: 9px 2px; border-bottom: 1px solid color-mix(in srgb, var(--nm-muted) 18%, transparent); font: 600 13px/1.3 var(--font-ui); }
+.st-row:last-child { border-bottom: 0; }
+.st-row span { color: var(--nm-muted); }
+.st-row b { font-weight: 800; white-space: nowrap; }
+.st-tx { display: flex; flex-direction: column; }
+.st-tx-row { display: grid; grid-template-columns: 62px 1fr auto; gap: 10px; align-items: center; padding: 9px 2px; border-bottom: 1px solid color-mix(in srgb, var(--nm-muted) 18%, transparent); font: 600 13px/1.3 var(--font-ui); }
+.st-tx-row:last-child { border-bottom: 0; }
+.st-tx-date { color: var(--nm-muted); font-weight: 700; }
+.st-tx-what { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-tx-amt { font-weight: 900; white-space: nowrap; }
+.st-empty { padding: 14px; text-align: center; color: var(--nm-muted); font: 600 12.5px var(--font-ui); }
+.st-foot { margin-top: 16px; padding-top: 12px; border-top: 1px dashed color-mix(in srgb, var(--nm-muted) 40%, transparent); text-align: center; font: 600 10.5px/1 var(--font-ui); color: var(--nm-muted); }
+@media (max-width: 420px) {
+  .st-sum { grid-template-columns: 1fr; }
+  .st-op { text-align: center; }
+  .st-meals { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* Flat version used only while saving the image (html2canvas can't draw soft shadows) */
+.st.st-export, .st.st-export * { box-shadow: none !important; text-shadow: none !important; filter: none !important; }
+.st.st-export { background: #ffffff !important; color: #1f2937 !important; border: 1px solid #e5e7eb !important; width: 560px; }
+.st.st-export .st-term, .st.st-export .st-meals > div { background: #f6f7f9 !important; border: 1px solid #e5e7eb !important; }
+.st.st-export .st-term-result { background: #ffffff !important; border: 2px solid #d1d5db !important; }
+.st.st-export .st-meals-total { background: #f39c12 !important; border-color: #f39c12 !important; }
+.st.st-export .st-cycle, .st.st-export .st-row span, .st.st-export .st-tx-date, .st.st-export small, .st.st-export .st-note, .st.st-export .st-foot, .st.st-export h4 { color: #6b7280 !important; }
+.st.st-export .st-meals-total small, .st.st-export .st-meals-total b { color: #ffffff !important; }
+.st.st-export .pos { color: #047857 !important; }
+.st.st-export .neg { color: #dc2626 !important; }

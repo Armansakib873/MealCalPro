@@ -1,0 +1,107 @@
+/* MealCal Pro — Mess balance card (dashboard). Load order matters: see index.html */
+/* --- Premium Mess Balance Card (Dashboard) --- */
+.balance-glass-card { /* Deep Slate Base */
+    border-radius: 24px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.3s ease;
+}
+
+/* Aurora Glow behind glass */
+.balance-glass-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: #fafff6;
+    z-index: 0;
+}
+
+.glass-card-inner { position: relative; z-index: 1; }
+
+.glass-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+.glass-label { font-size: 10px; font-weight: 800; text-transform: uppercase; }
+
+/* Status Pill */
+.status-pill-fintech {
+    font-size: 8px;
+    font-weight: 900;
+    padding: 3px 8px;
+    border-radius: 20px;
+    text-transform: uppercase;
+}
+
+.status-pill-fintech.neg { background: #450a0a; color: #f87171; border: 1px solid #7f1d1d; animation: pulse-red-border 2s infinite; }
+
+.glass-body { display: flex; align-items: baseline; gap: 5px; margin-bottom: 15px; }
+.glass-currency { font-size: 20px; font-weight: 400; }
+.glass-value { font-size: 34px; font-weight: 900; font-family: 'Inter', sans-serif; letter-spacing: -1px; }
+
+/* Safety Bar (Visual Buffer) */
+.safety-bar-container {
+    height: 4px;
+    background: rgb(41 92 24);
+    border-radius: 10px;
+    margin-bottom: 6px;
+    overflow: hidden;
+}
+.safety-bar-fill { height: 100%; width: 0%; transition: width 1s ease, background 0.5s; }
+.safety-text { font-size: 9px; color: var(--ink-500); font-weight: 700; }
+
+
+
+.balance-glass-card {
+    /* Dark Theme Gradient for Contrast */
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+    color: white !important;
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.glass-label {
+    color: var(--ink-400) !important; /* Light Slate text */
+    letter-spacing: 1.5px;
+}
+
+.glass-currency {
+    color: var(--ink-500) !important;
+}
+
+.glass-value {
+    color: #ffffff !important; /* Pure white text pops on dark background */
+    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Update the status pill inside this card */
+.status-pill-fintech.pos {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+
+
+.bottom-nav {
+    background-color: var(--surface) !important; /* Clean White */
+    border-top: 1px solid var(--line);
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.03);
+}
+
+.bottom-nav-link {
+    color: var(--ink-500); /* Inactive Icon Color (Slate 500) */
+}
+
+/* Active State */
+.bottom-nav-link.active {
+    color: var(--primary-color) !important;
+    background-color: transparent; /* Remove the heavy box background */
+}
+
+.bottom-nav-link.active span:first-child {
+    transform: translateY(-5px);
+    color: var(--primary-color);
+    filter: drop-shadow(0 4px 6px rgba(5, 150, 105, 0.2)); /* Green glow on icon */
+}

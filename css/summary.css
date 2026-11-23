@@ -1,0 +1,184 @@
+/* MealCal Pro — Tables & summary page. Load order matters: see index.html */
+/* --- Modern Table Styling --- */
+.summary-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.table-wrapper {
+    overflow-x: auto;
+    background: var(--card-bg);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    -webkit-overflow-scrolling: touch;
+}
+
+.managed-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.managed-table th {
+    background: var(--bg-color);
+    padding: 12px 15px;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+    border-bottom: 2px solid var(--border-color);
+    text-align: center;
+}
+
+.managed-table td {
+    padding: 10px 15px;
+    border-bottom: 1px solid var(--border-color);
+    vertical-align: middle;
+    text-align: center;
+}
+
+/* Sticky First Column (Name) */
+.managed-table th:first-child, 
+.managed-table td:first-child {
+    position: sticky;
+    left: 0;
+    background-color: var(--card-bg);
+    z-index: 10;
+    text-align: left;
+    border-right: 2px solid var(--border-color);
+    min-width: 120px;
+}
+
+.managed-table th:first-child {
+    background: var(--bg-color);
+}
+
+.managed-table tr:hover td {
+    background-color: rgba(79, 70, 229, 0.02);
+}
+
+/* --- Premium Summary Table & Page --- */
+.summary-stats-header {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.summary-card-mini {
+    background: var(--surface);
+    padding: 12px;
+    border-radius: 14px;
+    border: 1px solid var(--line-soft);
+    text-align: center;
+}
+
+.summary-card-mini .label { font-size: 9px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px; }
+.summary-card-mini .val { font-size: 14px; font-weight: 800; color: var(--premium-indigo); }
+
+/* Sticky Table Logic */
+.summary-table-wrapper {
+    overflow-x: auto;
+    background: var(--surface);
+    border-radius: 16px;
+    border: 1px solid var(--line-soft);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.02);
+}
+
+.summary-table-premium {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.summary-table-premium th {
+    background: var(--surface-soft);
+    padding: 12px 15px;
+    font-weight: 800;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    font-size: 9px;
+    border-bottom: 1px solid var(--line-soft);
+    text-align: center;
+}
+
+.summary-table-premium td {
+    padding: 10px 10px;
+    border-bottom: 1px solid var(--line-soft);
+    text-align: center;
+    vertical-align: middle;
+}
+
+/* STICKY NAME COLUMN */
+.summary-table-premium th:first-child, 
+.summary-table-premium td:first-child {
+    position: sticky;
+    left: 0;
+    background: var(--surface);
+    z-index: 10;
+    text-align: left;
+    border-right: 2px solid var(--line-soft);
+    min-width: 50px;
+}
+
+.summary-table-premium th:first-child { background: var(--surface-soft); }
+
+/* Status Toggles in Summary */
+.summary-status-btn {
+    width: 42px;
+    height: 22px;
+    border-radius: 20px;
+    border: 1px solid var(--line);
+    font-size: 9px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.summary-status-btn.on { background: #10b981; color: white; border-color: #10b981; }
+.summary-status-btn.off { background: var(--surface-muted); color: var(--text-muted); }
+
+/* Due Settlement Refined */
+.due-grid-mobile {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.due-section-box {
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 15px;
+    border: 1px solid var(--line-soft);
+}
+
+.due-item-premium {
+    padding: 10px;
+    border-radius: 12px;
+    background: var(--surface-soft);
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.due-item-premium .name { font-weight: 700; font-size: 13px; color: var(--ink-800); }
+.due-item-premium .amt { font-weight: 800; font-family: 'Courier New', monospace; font-size: 14px; }
+
+
+/* Balance Badges */
+.balance-tag {
+    font-family: 'Courier New', monospace;
+    font-weight: 800;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 13px;
+}
+
+.balance-tag.pos { background: #ECFDF5; color: #047857; }
+.balance-tag.neg { background: #FEF2F2; color: #B91C1C; }

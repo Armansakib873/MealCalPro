@@ -1,0 +1,139 @@
+/* MealCal Pro — Theme variables, reset, base typography. Load order matters: see index.html */
+
+
+/* Ensure numeric values use the font */
+/* .stat-value, .pulse-val, .log-amount, .balance-tag {
+    font-family: 'Hind Siliguri', sans-serif !important;
+    font-weight: 700;
+} */
+
+
+        /* =========================================
+           1. THEME VARIABLES
+           ========================================= */
+        :root {
+
+            
+               /* --- BRAND COLORS --- */
+    --primary-color: #059669;       /* Emerald 600 - The main brand color */
+     --secondary-color: #10B981;
+    --primary-dark: #047857;        /* Emerald 700 - Hover states/Text */
+    --primary-soft: #ecfdf5;        /* Emerald 50 - Background tints */
+
+
+         
+              /* --- NEUTRALS (The Pro Look) --- */
+    --bg-color: #f8fafc;            /* Slate 50 - Very subtle cool grey background */
+    --card-bg: #ffffff;             /* Pure White - Critical for "clean" look */
+    --text-primary: #0f172a;        /* Slate 900 - Almost black, softer than #000 */
+    --text-secondary: #64748b;      /* Slate 500 - Perfect for subtitles */
+    --border-color: #e2e8f0;        /* Slate 200 - Subtle borders */
+
+
+              /* --- SEMANTIC COLORS --- */
+    --success-color: #10b981;       /* Green for positive money */
+    --danger-color: #f43f5e;        /* Rose 500 - Softer, modern red for expense/debt */
+    --warning-color: #f59e0b;       /* Amber - For alerts */
+            
+            --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+
+
+    --premium-indigo: #33a5be;
+    --premium-slate: #f8fafc;
+    --soft-emerald: #ecfdf5;
+    --soft-rose: #fff1f2;
+    --glass: rgba(255, 255, 255, 0.8);
+
+     /* --- TYPOGRAPHY VARIABLES --- */
+    --font-primary: 'Inter', 'Noto Sans Bengali', -apple-system, sans-serif;
+    --font-heading: 'Poppins', 'Noto Sans Bengali', sans-serif;
+    --font-mono: 'Inter', monospace; /* Using Inter with tabular-nums feature */
+
+      /* --- SPECIFIC UI ELEMENTS --- */
+    --nav-bg: #ffffff;              /* White bottom nav for clean look */
+    --nav-active-bg: #f0fdf4;       /* Soft green pill for active nav items */
+    --shadow-soft: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+
+            
+            /* Dimensions */
+            --header-height: 60px;
+            --bottom-nav-height: 70px;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #111827;
+            --card-bg: #1F2937;
+            --text-primary: #F9FAFB;
+            --text-secondary: #9CA3AF;
+            --border-color: #374151;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            /* font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; */
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            line-height: 1.6;
+            /* Padding top to ensure content isn't hidden behind fixed header */
+            padding-top: var(--header-height); 
+        }
+
+        body {
+    font-family: var(--font-primary);
+    /* Improves font rendering on modern screens */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+
+
+/* 2. Hide for Chrome, Safari, and all Webkit browsers */
+*::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+
+/* Add this to your CSS */
+
+
+
+
+
+/* 1. Brand and Headings get the premium "Poppins" look */
+.app-logo, .auth-app-name, h1, h2, h3, .card-title, .modal-title {
+    font-family: var(--font-heading);
+    letter-spacing: -0.02em; /* Tighter tracking for modern look */
+}
+
+/* 2. Numeric values need to be clear and distinct */
+/* We force English font for numbers for alignment, but keep Bengali if text is mixed */
+.stat-value, 
+.pulse-val, 
+.log-amount, 
+.balance-tag, 
+.clock-time,
+.amt-whole,
+.amt-decimal {
+    font-family: var(--font-mono) !important;
+    font-feature-settings: "tnum"; /* Tabular numbers (prevents jumping when numbers change) */
+    letter-spacing: -0.03em;
+}
+
+/* 3. Bengali Specific Elements (Menu items, dates) */
+.pulse-header-title,
+.slot-date,
+.slot-label,
+.slot-menu,
+.dash-welcome-row p {
+    font-family: 'Noto Sans Bengali', var(--font-primary);
+}
+
+/* 3. Fix the Login Wrapper to prevent the bottom/side bars */
+.auth-page-wrapper {
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+}

@@ -1,0 +1,74 @@
+/* MealCal Pro — Cycle closing checklist. Load order matters: see index.html */
+/* CYCLE CLOSING CHECKLIST STYLES */
+.checklist-container {
+    background: var(--surface-soft);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.checklist-header {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--ink-500);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 5px;
+}
+
+.check-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px dashed var(--line);
+    font-size: 13px;
+}
+
+.check-item:last-child { border-bottom: none; }
+
+.check-label { font-weight: 600; color: var(--ink-700); }
+.check-status { font-weight: 800; font-size: 11px; padding: 2px 8px; border-radius: 12px; }
+
+.status-pass { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+.status-fail { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+
+.balance-fix-hint {
+    font-size: 11px;
+    background: #eff6ff;
+    color: #1e40af;
+    padding: 10px;
+    border-radius: 8px;
+    margin-top: 10px;
+    border: 1px solid #dbeafe;
+    display: none; /* Hidden by default */
+}
+
+@keyframes pulse-red-border {
+    0% { border-color: #7f1d1d; }
+    50% { border-color: #ef4444; }
+    100% { border-color: #7f1d1d; }
+}
+
+/* Responsive adjustment for Dashboard Grid */
+@media (max-width: 768px) {
+        .balance-glass-card { grid-column: span 1; }
+}
+/* Total Meals Card Styling (Blue) */
+#statTotalMealsDisplay {
+    color: #2563eb !important; /* Royal Blue */
+}
+
+
+
+
+/* Dashboard Balance Indicator Colors */
+#statMessBalance.pos {
+    color: #10b981 !important; /* Emerald Green */
+}
+
+#statMessBalance.neg {
+    color: #ef4444 !important; /* Rose Red */
+}

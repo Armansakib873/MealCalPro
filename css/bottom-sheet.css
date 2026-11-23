@@ -1,0 +1,222 @@
+/* MealCal Pro — Mobile FAB & bottom sheet (expense/deposit entry). Load order matters: see index.html */
+/* =========================================
+   MOBILE FAB & BOTTOM SHEET STYLES
+   ========================================= */
+
+/* 1. Floating Action Button (FAB) */
+.mobile-fab {
+  display: none;
+    position: fixed;
+    bottom: 120px;
+    right: 20px;
+    width: 56px;
+    height: 56px;
+    background: linear-gradient(135deg, #85eaff, #317779);
+    border-radius: 50%;
+    box-shadow: 0 10px 25px rgb(11 11 20 / 40%);
+    color: white;
+    font-size: 28px;
+    border: none;
+    z-index: 2100;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.mobile-fab:active { transform: scale(0.9); }
+
+/* 2. Bottom Sheet Overlay */
+.sheet-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.5); /* Dimmed background */
+    backdrop-filter: blur(3px);
+    z-index: 3000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s;
+}
+.sheet-overlay.active { opacity: 1; visibility: visible; }
+
+/* 3. The Bottom Sheet Container */
+.bottom-sheet {
+    position: fixed;
+    left: 0; right: 0; bottom: -100%;
+    background: var(--surface);
+    border-radius: 24px 24px 0 0;
+    padding: 24px 20px;
+    z-index: 3100;
+    transition: bottom 0.35s cubic-bezier(0.19, 1, 0.22, 1); /* Smooth spring */
+    box-shadow: 0 -10px 40px rgba(0,0,0,0.15);
+    
+    /* KEYBOARD FIX: Allow scrolling internally */
+    max-height: 85vh; 
+    display: flex;
+    flex-direction: column;
+}
+
+.bottom-sheet.active { bottom: 0; }
+
+/* Wrapper for scrollable content inside sheet */
+.sheet-scroll-content {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 20px; /* Space for keyboard push */
+}
+
+/* 4. Header & Tabs */
+.sheet-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 20px;
+    flex-shrink: 0; /* Prevent header shrinking */
+}
+.sheet-title { font-size: 20px; font-weight: 800; color: var(--ink-800); letter-spacing: -0.5px; }
+.sheet-close { 
+    width: 30px; height: 30px; 
+    background: var(--surface-muted); border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; color: var(--ink-500); font-weight: bold;
+    cursor: pointer;
+}
+
+/* Segmented Control */
+.sheet-tabs {
+    background: var(--surface-muted);
+    padding: 5px;
+    border-radius: 16px;
+    display: flex;
+    margin-bottom: 25px;
+    flex-shrink: 0;
+}
+
+.sheet-tab {
+    flex: 1;
+    text-align: center;
+    padding: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    border-radius: 12px;
+    color: var(--ink-400);
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+/* --- THEME: EXPENSE (RED) --- */
+.sheet-theme-expense .sheet-tab.active {
+    background: #fff1f2; /* Pale Red */
+    color: #e11d48;      /* Rose 600 */
+    box-shadow: 0 2px 8px rgba(225, 29, 72, 0.1);
+}
+.sheet-theme-expense .big-amount-input { color: #e11d48; } /* Red Text */
+.sheet-theme-expense .sheet-save-btn {
+    background: linear-gradient(135deg, #e11d48, #be123c); /* Red Gradient */
+    box-shadow: 0 8px 20px rgba(225, 29, 72, 0.25);
+}
+
+/* --- THEME: DEPOSIT (GREEN) --- */
+.sheet-theme-deposit .sheet-tab.active {
+    background: #ecfdf5; /* Pale Green */
+    color: #059669;      /* Emerald 600 */
+    box-shadow: 0 2px 8px rgba(5, 150, 105, 0.1);
+}
+.sheet-theme-deposit .big-amount-input { color: #059669; } /* Green Text */
+.sheet-theme-deposit .sheet-save-btn {
+    background: linear-gradient(135deg, #10b981, #059669); /* Green Gradient */
+    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.25);
+}
+
+/* 5. Big Input */
+.big-input-wrapper {
+    display: flex; justify-content: center; align-items: center; gap: 4px;
+    margin-bottom: 20px;
+}
+.currency-symbol { font-size: 28px; color: #cbd5e1; font-weight: 400; }
+.big-amount-input {
+    border: none; background: transparent;
+    font-size: 48px; font-weight: 800;
+    width: 220px; text-align: center;
+    font-family: 'Inter', sans-serif;
+    outline: none; padding: 0;
+}
+.big-amount-input::placeholder { color: #e2e8f0; }
+
+/* 6. Form Grid & Fields */
+.sheet-grid {
+    display: grid; grid-template-columns: 1fr 1.5fr; gap: 12px;
+    margin-bottom: 12px;
+}
+.sheet-field {
+    background: var(--surface-soft);
+    border: 1px solid transparent;
+    padding: 14px;
+    border-radius: 14px;
+    font-size: 14px;
+    width: 100%;
+    color: var(--ink-800);
+    outline: none;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+.sheet-field:focus {
+    background: var(--surface);
+    border-color: var(--line);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+}
+
+/* 7. Chips & Categories */
+.sheet-section-label {
+    font-size: 10px; font-weight: 800; color: var(--ink-400); 
+    margin: 8px 0 6px 4px; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.sheet-chips {
+    display: flex; gap: 8px; overflow-x: auto; 
+    padding: 2px 2px 10px 2px;
+    scrollbar-width: none;
+}
+.sheet-chip {
+    padding: 8px 14px;
+    border-radius: 20px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    font-size: 11px; font-weight: 700; color: var(--ink-500);
+    white-space: nowrap; cursor: pointer;
+    transition: all 0.2s;
+}
+/* Active Chip Colors */
+.sheet-theme-expense .sheet-chip.selected {
+    background: #fff1f2; color: #e11d48; border-color: #fecaca;
+}
+.sheet-theme-deposit .sheet-chip.selected {
+    background: #ecfdf5; color: #059669; border-color: #a7f3d0;
+}
+
+/* 8. Save Button */
+.sheet-save-btn {
+    width: 100%; padding: 18px;
+    color: white; border: none; border-radius: 18px;
+    font-size: 16px; font-weight: 800;
+    margin-top: 15px; cursor: pointer;
+    position: relative; overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2), inset 0 2px 0 rgba(255, 255, 255, 0.2);
+}
+.sheet-save-btn:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.1);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25), inset 0 2px 0 rgba(255, 255, 255, 0.2);
+}
+.sheet-save-btn:active { 
+    transform: scale(0.96) translateY(2px); 
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* --- MOBILE SPECIFIC VISIBILITY --- */
+@media (max-width: 768px) {
+    .mobile-fab { display: flex; }
+    /* Hide old desktop forms */
+    #addExpenseCard, .wallet-form-container { display: none !important; }
+    .page-content { padding-bottom: 120px; }
+}

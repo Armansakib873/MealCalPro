@@ -1,0 +1,330 @@
+/* MealCal Pro — Mobile responsiveness overrides. Load order matters: see index.html */
+/* --- Mobile View Adjustments (Dashboard) --- */
+@media (max-width: 768px) {
+
+    /* 1. Force the grid to have 2 columns on mobile */
+    .dash-stats-grid {
+        grid-template-columns: 1fr 1fr !important; 
+        gap: 10px;
+    }
+
+    /* 2. Make the Big Balance Card span across both columns (Full Width) */
+    .balance-glass-card, 
+    #messBalanceContainer {
+        grid-column: span 2 !important;
+    }
+
+    /* 3. Optional: Compact styling for the small cards so they fit nicely */
+    .stat-pill-card {
+        padding: 10px !important;
+        min-height: 80px; /* Ensure consistent height */
+    }
+    
+    .stat-pill-card .label {
+        font-size: 8px !important;
+        white-space: nowrap; /* Prevent text wrapping */
+    }
+    
+    .stat-pill-card .val {
+        font-size: 15px !important; /* Adjust number size */
+    }
+}
+
+/* Subtle background tints for the balance card */
+.bg-tint-pos {
+    background: #e3e4933b !important;
+    border: 1px solid rgba(16, 185, 129, 0.2) !important;
+}
+
+.bg-tint-neg {
+    background: rgba(239, 68, 68, 0.08) !important;
+    border: 1px solid rgba(239, 68, 68, 0.2) !important;
+}
+
+
+/* Mobile View Adjustments */
+@media (max-width: 768px) {
+    .managed-table {
+        font-size: 12px;
+    }
+    
+    .managed-table td, .managed-table th {
+        padding: 8px 10px;
+    }
+
+    .summary-status-btn {
+        width: 40px;
+        height: 22px;
+    }
+}
+
+
+
+/* MOBILE VIEW RESPONSIVENESS */
+@media (max-width: 768px) {
+    .dashboard-header-grid {
+        grid-template-columns: 1fr; /* Stack: Plan on top, stats below */
+    }
+    
+    .stats-subgrid {
+        grid-template-columns: 1fr 1fr; /* Stats share width: 2 per row */
+        gap: 10px;
+    }
+
+    .stat-card {
+        padding: 15px;
+        min-height: 100px;
+    }
+    
+    .stat-value {
+        font-size: 18px;
+    }
+
+    .segment-count {
+        width: 60px;
+        font-size: 20px;
+        padding: 8px;
+    }
+}
+/* Mobile Tweak */
+@media (max-width: 480px) {
+    .meal-plan-count-box {
+        font-size: 20px;
+        padding: 4px 15px;
+    }
+}
+.log-content {
+    display: flex;
+    justify-content: space-between;
+    background-color: var(--surface);
+    align-items: center;
+    width: 100%;
+    padding: 10px 15px;
+    border: 1px dashed rgba(149, 149, 149, 0.593);
+    border-radius: 30px;
+}
+
+.log-amount {
+    white-space: nowrap;
+}
+
+/* Floating Real-time Status Indicator */
+.realtime-status {
+    position: fixed;
+    bottom: 20px; /* Distance from bottom on Desktop */
+    right: 20px;
+    background: var(--card-bg);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 2000; /* Above most elements */
+    border: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    pointer-events: none; /* Allows clicking things behind it if necessary */
+    transition: all 0.3s ease;
+}
+
+/* Status Colors */
+.realtime-status.connected {
+    color: #10B981;
+    border-color: #10B981;
+}
+
+.realtime-status.disconnected {
+    color: #EF4444;
+    border-color: #EF4444;
+}
+
+/* Mobile Adjustment: Move it above the Bottom Nav */
+@media (max-width: 768px) {
+    .realtime-status {
+        bottom: calc(var(--bottom-nav-height) + 15px); /* Position it 15px above bottom nav */
+        right: 15px;
+        padding: 4px 10px;
+        font-size: 9px;
+        background: rgba(255, 255, 255, 0.9); /* Slight transparency on mobile */
+        backdrop-filter: blur(4px);
+    }
+}
+
+/* Header Warning State */
+.app-header.balance-warning {
+    background-color: #fffcf6 !important; /* Very light red */
+    border-bottom: 2px solid var(--danger-color);
+    transition: all 0.5s ease;
+}
+
+.app-header.balance-warning .app-logo {
+    color: var(--danger-color);
+}
+
+/* Optional: Add a pulsing animation to the logo when in debt */
+.app-header.balance-warning .app-logo {
+    animation: pulse-red 2s infinite;
+}
+
+@keyframes pulse-red {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+/* Mobile tweak for the warning */
+@media (max-width: 768px) {
+    .app-header.balance-warning {
+        border-bottom-width: 3px;
+    }
+}
+
+
+/* Mobile responsive for due cards */
+@media (max-width: 768px) {
+    #dueSettlementCard > div[style*="grid"] {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* Dynamic Badge Animations */
+#entryStatusBadge {
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    display: inline-block;
+    min-width: 120px;
+    text-align: center;
+}
+
+/* Transition classes */
+.badge-fade-out {
+    opacity: 0;
+    transform: translateY(-10px);
+}
+
+.badge-fade-in {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Specific colors for warnings */
+.status-debt { background: #FEE2E2; color: #B91C1C; border: 1px solid #FECACA; }
+.status-due { background: #FEF3C7; color: #92400E; border: 1px solid #FDE68A; }
+   
+
+/* =========================================
+           7. MOBILE RESPONSIVENESS (CRITICAL)
+           ========================================= */
+        @media (max-width: 768px) {
+            /* 1. LAYOUT & SIDEBAR AS DRAWER */
+            .main-content { margin-left: 0; padding: 15px; padding-bottom: 90px; }
+            .bottom-nav { display: block; }
+            
+            .sidebar {
+                transform: translateX(-100%);
+                width: 280px; height: 100vh; top: 0; left: 0;
+                z-index: 2500; box-shadow: 2px 0 10px rgba(0,0,0,0.2);
+            }
+            .sidebar.mobile-active { transform: translateX(0); }
+
+            /* 2. HEADER TWEAKS */
+            .user-info { display: none; } /* Hide Name */
+            .user-role { display: none; }
+            .header-clock { 
+                display: flex !important; /* Show clock container */
+                align-items: flex-end; 
+            }
+            .clock-time, .clock-date { display: none; } /* Hide time text */
+            
+            #entryStatusBadge { margin: 0; font-size: 9px; padding: 3px 6px; } /* Only show Badge */
+
+}
+
+            /* 3. TOAST NOTIFICATION FIX */
+            #toast-container {
+                top: 70px; /* Below Header */
+                left: 50%; transform: translateX(-50%); /* Center */
+                width: 90%; max-width: 350px;
+                right: auto;
+            }
+            .toast {
+                width: 100%; min-width: auto;
+                font-size: 12px; padding: 8px 12px;
+                box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            }
+
+            /* 4. CONTENT ADJUSTMENTS */
+            .stats-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+            .stat-value { font-size: 18px; }
+            .split-view-container { grid-template-columns: 1fr; } /* Stack deposits */
+            .notif-panel { width: 100%; right: -100%; }
+
+            /* 5. INPUT FIX */
+            .form-input, .form-select { font-size: 16px; } /* Prevents zoom */
+        
+
+
+        /* Enhanced Transaction Log Styles */
+.log-item {
+    padding: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background 0.2s;
+}
+
+.log-item:hover { background-color: rgba(0,0,0,0.02); }
+
+.log-main { display: flex; align-items: center; gap: 15px; }
+
+.log-icon {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+}
+
+.log-icon.deposit { background: #EEF2FF; color: #4F46E5; }
+.log-icon.settlement { background: var(--surface-muted); color: var(--ink-500); }
+.log-icon.charge { background: #FEF2F2; color: #EF4444; }
+
+.log-details { display: flex; flex-direction: column; }
+
+.log-member { 
+    font-weight: 800; 
+    font-size: 15px; 
+    color: var(--text-primary); 
+    display: flex; 
+    align-items: center; 
+    gap: 8px;
+}
+
+.log-type-tag {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.tag-deposit { background: #DBEAFE; color: #1E40AF; }
+.tag-settle { background: var(--surface-muted); color: var(--ink-700); }
+
+.log-meta { font-size: 10px; color: var(--text-secondary); margin-top: 2px; }
+
+.log-amount-area { text-align: right; }
+
+.log-amount { font-family: 'Courier New', monospace; font-weight: 900; font-size: 16px; }
+
+/* Arrow indicator for settlements */
+.transfer-info {
+    font-size: 11px;
+    color: var(--primary-color);
+    background: #F5F3FF;
+    padding: 2px 8px;
+    border-radius: 12px;
+    margin-top: 4px;
+    display: inline-block;
+}

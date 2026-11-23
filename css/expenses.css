@@ -1,0 +1,249 @@
+/* MealCal Pro — Expenses page and pending cards. Load order matters: see index.html */
+/* --- Professional expense Enhancements --- */
+
+/* --- Modern Compact Expense Form --- */
+.expense-form-container {
+    background: #bcd4d1b5;
+    padding: 16px;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+    border: 1px solid var(--line-soft);
+}
+
+.exp-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Two columns */
+    gap: 12px;
+}
+
+.exp-full { grid-column: span 2; } /* For description to take full width */
+
+.exp-input-group { display: flex; flex-direction: column; gap: 4px; }
+.exp-input-group label { font-size: 10px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-left: 2px; }
+
+/* Premium Input Styling */
+.exp-field {
+    background: var(--surface-soft);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 8px 12px;
+    font-size: 14px;
+    color: var(--ink-800);
+    width: 100%;
+    transition: all 0.2s;
+}
+
+
+
+
+.exp-field:focus { border-color: var(--premium-indigo); outline: none; background: var(--surface); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
+
+/* Compact Row 3 (Amount + Button) */
+.amount-btn-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+}
+
+.btn-add-exp {
+    height: 38px; /* Match input height */
+    padding: 0 20px;
+    border-radius: 10px;
+    background: #207385;
+    color: white;
+    font-weight: 700;
+    font-size: 13px;
+    border: none;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: transform 0.2s;
+}
+
+.btn-add-exp:active { transform: scale(0.95); }
+
+/* --- Enhanced Expense List --- */
+.expense-card-modern {
+    background: var(--surface);
+    padding: 12px;
+    border-radius: 30px;
+    border: 1px dashed #b7b7b7;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.exp-info-left { display: flex; gap: 12px; align-items: center; }
+.exp-icon-box {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    background: var(--soft-emerald);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+}
+
+.exp-details .title { font-size: 14px; font-weight: 700; color: var(--ink-700); }
+.exp-details .meta { font-size: 10px; color: var(--text-muted); }
+
+.exp-amount-right { text-align: right; }
+.exp-amount-right .val { font-size: 15px; font-weight: 800; color: var(--ink-800); font-family: 'Courier New', monospace; }
+
+/* Status Capsules */
+.status-pill {
+    font-size: 8px; font-weight: 800; padding: 2px 8px; border-radius: 20px; text-transform: uppercase;
+}
+.status-pill.pending { background: #fef3c7; color: #92400e; }
+.status-pill.approved { background: #d1fae5; color: #065f46; }
+
+@media (max-width: 480px) {
+    .amount-btn-row { flex-direction: row; }
+    .btn-add-exp { padding: 0 12px; font-size: 12px; }
+}
+
+
+/* =========================================
+   PENDING EXPENSE CARD (MOBILE FRIENDLY)
+   ========================================= */
+
+/* The Main Orange Container */
+.pending-box-premium {
+    background-color: #fff7ed;
+    box-shadow: 0 4px 6px -1px rgba(251, 146, 60, 0.1); /* Soft Orange Shadow */
+    animation: slideDown 0.3s ease-out;
+}
+
+.pending-header-title {
+    font-size: 11px;
+    font-weight: 800;
+    color: #9a3412; /* Amber 900 */
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Individual Pending Item Card */
+.pending-card-inner {
+    background: var(--surface);
+    border: 1px solid #fed7aa; /* Amber 200 */
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 10px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+/* Top Row: Icon + Name + Amount */
+.pending-main-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.pending-left-group {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.pending-icon-circle {
+    width: 36px;
+    height: 36px;
+    background: #fff7ed;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    border: 1px solid #ffedd5;
+}
+
+.pending-shopper-name {
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--ink-800);
+    line-height: 1.2;
+}
+
+.pending-desc {
+    font-size: 11px;
+    color: #ea580c; /* Amber 600 */
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 140px; /* Prevents text breaking layout on small phones */
+}
+
+.pending-right-group {
+    text-align: right;
+}
+
+.pending-amt {
+    font-weight: 800;
+    font-size: 15px;
+    color: #c2410c; /* Amber 700 */
+    font-family: 'Courier New', monospace;
+}
+
+.pending-date {
+    font-size: 10px;
+    color: #9ca3af;
+    font-weight: 600;
+}
+
+/* Admin Action Buttons Area */
+.pending-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px dashed #fed7aa;
+}
+
+/* Big Touchable Buttons for Mobile */
+.btn-mobile-action {
+    flex: 1; /* Each button takes 50% width */
+    padding: 8px 0;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: transform 0.1s;
+}
+
+.btn-mobile-action:active {
+    transform: scale(0.96);
+}
+
+.btn-approve {
+    background: #1a6034;
+    color: #ffffff;
+    box-shadow: inset 0 2px 5px rgb(0 0 0 / 50%);
+}
+
+.btn-reject {
+    background: #730909;
+    color: white;
+    box-shadow: inset 0 2px 5px rgb(40 34 34 / 74%);
+}
+
+/* Non-Admin Status Label */
+.pending-status-label {
+    margin-top: 8px;
+    background: #fff7ed;
+    color: #ea580c;
+    font-size: 9px;
+    font-weight: 800;
+    text-align: center;
+    padding: 4px;
+    border-radius: 6px;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}

@@ -1,0 +1,382 @@
+/* MealCal Pro — Cards, grid, forms, buttons, notifications, modals, tables, lists. Load order matters: see index.html */
+        /* =========================================
+           4. CARDS & GRID
+           ========================================= */
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+        }
+        
+        .card-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 15px;
+        }
+        .card-title { font-size: 16px; font-weight: 600; color: var(--text-primary); }
+
+        .stats-grid {
+            display: grid;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            color: white;
+            border-radius: 12px;
+            box-shadow: var(--shadow-lg);
+        }
+        
+        
+        .stat-label {     font-size: 18px;
+    opacity: 0.9;
+    margin-bottom: 5px;
+    color: #fff;
+    font-weight: 700;
+}
+        .stat-value { font-weight: 700; }
+
+        /* =========================================
+           5. FORMS & BUTTONS
+           ========================================= */
+        .form-group { margin-bottom: 15px; }
+        .form-label { display: block; margin-bottom: 6px; font-weight: 500; font-size: 13px; }
+        
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-size: 14px;
+            /* Fix for iOS zooming on input focus */
+            appearance: none; 
+        }
+        .form-textarea { min-height: 80px; resize: vertical; }
+
+        .btn {
+            padding: 12px 20px;
+            border: none; 
+            border-radius: 10px;
+            font-size: 14px; 
+            font-weight: 700;
+            cursor: pointer; 
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            display: inline-flex; 
+            align-items: center; 
+            justify-content: center;
+            gap: 8px;
+            position: relative;
+            overflow: hidden;
+            letter-spacing: 0.3px;
+        }
+        .btn:active {
+            transform: translateY(2px) scale(0.97);
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.05);
+        }
+        .btn-primary { 
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%); 
+            color: white; 
+            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+        .btn-primary:hover { box-shadow: 0 6px 16px rgba(5, 150, 105, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2); }
+        .btn-success { 
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%); 
+            color: white; 
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+        .btn-success:hover { box-shadow: 0 6px 16px rgba(16, 185, 129, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2); }
+        .btn-danger { 
+            background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%); 
+            color: white; 
+            box-shadow: 0 4px 12px rgba(244, 63, 94, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+        .btn-danger:hover { box-shadow: 0 6px 16px rgba(244, 63, 94, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2); }
+        .btn-secondary { 
+            background: linear-gradient(to bottom, var(--surface-soft), var(--surface-muted)); 
+            color: var(--text-primary); 
+            border: 1px solid var(--line);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+        }
+        .btn-secondary:hover { background: var(--surface-muted); box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05); }
+        .btn-sm { 
+            padding: 8px 14px; 
+            font-size: 12px; 
+            border-radius: 8px;
+        }
+
+        /* =========================================
+           6. NOTIFICATIONS & MODALS
+           ========================================= */
+        .notif-btn { background: none; border: none; font-size: 22px; position: relative; padding: 5px; cursor: pointer; }
+        .notif-badge {
+            position: absolute; top: 0; right: 0;
+            background-color: var(--danger-color); color: white;
+            font-size: 9px; width: 14px; height: 14px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        .notif-panel {
+            position: fixed;
+            top: var(--header-height);
+            height: calc(100vh - var(--header-height));
+            background-color: var(--card-bg);
+            box-shadow: -5px 0 15px rgba(0,0,0,0.1);
+            z-index: 1100; /* Above bottom nav */
+            transition: right 0.3s ease;
+            display: flex; flex-direction: column;
+        }
+        .notif-panel.active { right: 0; }
+        
+        .notif-header { padding: 15px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+        .notif-list { flex: 1; overflow-y: auto; padding: 10px; }
+        .notif-item {
+            padding: 10px; border-radius: 8px; background-color: var(--bg-color);
+            margin-bottom: 8px; border-left: 4px solid transparent; cursor: pointer;
+        }
+        .notif-item.type-deposit { border-left-color: var(--success-color); }
+        .notif-item.type-expense { border-left-color: var(--danger-color); }
+        .notif-item.type-meal { border-left-color: var(--warning-color); }
+
+        .notif-filters { display: flex; gap: 5px; padding: 10px; overflow-x: auto; border-bottom: 1px solid var(--border-color); }
+        .filter-chip {
+            padding: 4px 10px; border-radius: 15px; font-size: 11px;
+            border: 1px solid var(--border-color); background: var(--card-bg); white-space: nowrap;
+        }
+        .filter-chip.active { background-color: var(--primary-color); color: white; border-color: var(--primary-color); }
+
+        /* Modal */
+        .modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            z-index: 2000;
+            align-items: center; justify-content: center;
+            padding: 20px;
+        }
+        .modal.active { display: flex; }
+        
+        .modal-content {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 25px;
+            width: 100%; max-width: 450px;
+            max-height: 90vh; overflow-y: auto;
+            position: relative;
+        }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .close-modal { font-size: 24px; padding: 5px; cursor: pointer; color: var(--text-secondary); }
+
+        /* =========================================
+           7. TABLES, LISTS & SPECIAL COMPONENTS
+           ========================================= */
+        .list-item {
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border-color);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .list-item:last-child { border-bottom: none; }
+        .list-item-title { font-weight: 600; font-size: 14px; }
+        .list-item-subtitle { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+        .list-item-amount { font-weight: 700; font-size: 14px; }
+
+        .balance-positive { color: var(--success-color); }
+        .balance-negative { color: var(--danger-color); }
+
+        /* Scheduler Horizontal Scroll */
+        .scheduler-container { margin-top: 15px; }
+        .scheduler-scroll {
+            display: flex; overflow-x: auto; gap: 10px; padding: 5px 2px;
+            -webkit-overflow-scrolling: touch; /* Smooth iOS scroll */
+            scrollbar-width: none;
+        }
+
+
+        /* Style for the mini-date inside buttons */
+.btn-date-micro {
+    font-size: 9px;
+    margin-left: 5px;
+    padding: 2px 5px;
+    border-radius: 4px;
+    background: rgba(0,0,0,0.05);
+    font-weight: 600;
+    opacity: 0.8;
+}
+
+/* Adjust colors when button is active */
+.night-btn.active .btn-date-micro, 
+.day-btn.active .btn-date-micro {
+    background: rgba(255, 255, 255, 0.4); /* Subtle white tint on active green */
+    color: #000000;
+}
+
+#profilePage .scheduler-scroll {
+    display: flex !important;           /* Force cards into a row */
+    flex-direction: row !important;     /* Ensure horizontal direction */
+    overflow-x: auto !important;        /* Enable side scrolling */
+    flex-wrap: nowrap !important;                          /* Space between cards */
+    padding: 5px 2px 15px 2px;          /* Padding (extra bottom for scrollbar) */
+    width: 100%;                        /* Full width of container */
+    -webkit-overflow-scrolling: touch;  /* Smooth scroll on iPhone */
+    scrollbar-width: none;              /* Hide scrollbar on Firefox */
+
+}
+
+/* Hide scrollbar on Chrome/Safari/Edge */
+#profilePage .scheduler-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+/* Ensure the cards have a fixed width so they don't squash */
+#profilePage .scheduler-card {
+    flex: 0 0 auto;        /* Don't grow, don't shrink, stay fixed */
+    width: 150px;      /* Force minimum width */
+    margin-right: 0;       /* Gap handles spacing */
+
+}
+
+/* Optional: Keep Desktop as Grid (If you want PC to be a grid, keep this) */
+@media (min-width: 769px) {
+    #profilePage .scheduler-scroll {
+        display: grid !important;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important;
+        overflow-x: visible !important;
+        flex-wrap: wrap !important;
+    }
+    
+    #profilePage .mascot-wrapper {
+        width: auto; /* Let grid control width on PC */
+    }
+}
+        /* Matrix Table */
+        .matrix-wrapper {
+            overflow: auto; max-height: 70vh;
+            border: 1px solid var(--border-color); border-radius: 8px;
+            position: relative;
+            -webkit-overflow-scrolling: touch;
+        }
+        .matrix-table { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 12px; }
+        .matrix-table th, .matrix-table td {
+            padding: 0;
+            border-bottom: 1px solid var(--border-color);
+            border-right: 1px solid var(--border-color);
+            min-width: 70px; height: 36px;
+            text-align: center;
+        }
+        /* Sticky Headers */
+        .matrix-table thead th { position: sticky; top: 0; background-color: var(--card-bg); z-index: 10; padding: 8px; }
+        .matrix-table tbody td:first-child {
+            position: sticky; left: 0; background-color: var(--bg-color);
+            z-index: 5; border-right: 2px solid var(--border-color); padding: 4px;
+        }
+        .matrix-table thead th:first-child { left: 0; z-index: 20; background-color: var(--card-bg); }
+
+        /* Matrix Cell Split */
+        .cell-split { display: flex; width: 100%; height: 100%; }
+        .cell-val {
+            flex: 1; display: flex; align-items: center; justify-content: center;
+            font-size: 11px; font-weight: 700;
+        }
+        .cell-val.day-col { border-right: 1px solid var(--border-color); }
+        .cell-val.active { background-color: rgba(16, 185, 129, 0.15); color: var(--success-color); }
+        .cell-val.zero { color: #d1d5db; font-weight: 400; }
+
+        /* Split View (Deposits) */
+        .split-view-container { display: grid; gap: 20px; }
+        .history-box { max-height: 400px; overflow-y: auto; background: var(--bg-color); padding: 10px; border-radius: 8px; }
+
+        /* Toast */
+        #toast-container {
+            position: fixed; z-index: 3000;
+            display: flex; flex-direction: column; gap: 10px; pointer-events: none;
+        }
+        .toast {
+            pointer-events: auto; background: var(--card-bg);
+            border-radius: 8px;
+            border-left: 4px solid var(--primary-color); display: flex; align-items: center; gap: 10px; animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+
+        /* Status Badges & Box */
+        .entry-status-badge { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px; text-transform: uppercase; }
+                .status-done { background: #ECFDF5; color: #047857; border: 1px solid #6EE7B7; }
+
+        #entryStatusBadge {
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    will-change: transform, opacity;
+}
+
+/* Red / Rose indicator for Current Debt */
+.status-debt { 
+    background: #FFF1F2 !important; 
+    color: #E11D48 !important; 
+    border: 1px solid #FECACA !important; 
+}
+
+/* Orange / Amber indicator for Previous Dues */
+.status-due { 
+    background: #FFFBEB !important; 
+    color: #D97706 !important; 
+    border: 1px solid #FDE68A !important; 
+}
+
+/* Blue indicator for Target Date */
+.status-pending { 
+    background: #F0F9FF !important; 
+    color: #0369A1 !important; 
+    border: 1px solid #BAE6FD !important; 
+}
+
+        .status-box { 
+            padding: 8px;
+             border-radius: 12px;
+             display: flex; gap: 8px;
+             font-size: 12px;
+             margin: 0;
+         }
+        .status-box.success { background: #ECFDF5; border: 1px solid #b4d1c6c8; color: #065F46; }
+        .status-box.pending { background: #fff7edb1; border: 1px solid #FED7AA; color: #9A3412; }
+        
+        /* Status Toggle Buttons (Summary Page) */
+                .status-btn.on { background: var(--success-color); }
+        .status-btn.off { background: var(--bg-color); }
+
+
+        /* Utils */
+        .hidden { display: none !important; }
+        .loading { text-align: center; padding: 20px; color: var(--text-secondary); font-size: 12px; }
+        
+        /* Profile Defaults */
+        .defaults-container { background: var(--bg-color); padding: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;}
+        .def-btn { padding: 4px 8px; font-size: 10px; border: 1px solid var(--border-color); background: var(--card-bg); border-radius: 4px; cursor: pointer; }
+        .def-btn.active { background: var(--primary-color); color: white; }
+
+
+
+        /* Styling for the main amount */
+.amt-whole {
+    font-weight: 800;
+    font-size: 1.1em;
+}
+
+/* Styling for the decimals (.০০) */
+.amt-decimal {
+    font-weight: 400;
+    color: var(--ink-400); /* Faded Grey */
+    font-size: 0.85em;
+    opacity: 0.7;
+}
+
+/* If the amount is negative, we can style it red automatically */
+.balance-negative .amt-whole {
+    color: #ef4444; /* Red */
+}

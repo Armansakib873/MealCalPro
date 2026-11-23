@@ -1,0 +1,880 @@
+/* MealCal Pro — Dashboard, badges, balance meter, meal plan card, weekly menu. Load order matters: see index.html */
+/* --- Premium Dashboard UI --- */
+.dash-welcome-row {
+    padding: 0 5px;
+    margin-bottom: 20px;
+}
+
+.dash-welcome-row h2 { font-size: 22px; font-weight: 800; margin: 0; }
+.dash-welcome-row p { font-size: 11px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; }
+
+/* Main Action Card: Meal Plan */
+
+.pulse-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 15px; padding-bottom: 10px;
+    border-bottom: 1px solid #f8fafc;
+}
+
+.pulse-header h3 { font-size: 13px; font-weight: 800; color: var(--ink-800); margin: 0; }
+.pulse-badge { font-size: 9px; background: var(--soft-emerald); color: #059669; padding: 3px 8px; border-radius: 10px; font-weight: 800;margin-left: 5px; }
+
+.pulse-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+
+.pulse-item {
+    background: #d2f9efad;
+    padding: 12px;
+    border-radius: 14px;
+    text-align: center;
+    border: 1px solid #979a9e62;
+}
+
+.pulse-icon { font-size: 18px; margin-bottom: 4px; display: block; }
+.pulse-label { font-size: 12px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; }
+.pulse-val { font-size: 18px; font-weight: 900; color: var(--ink-800); margin: 2px 0; }
+.pulse-menu { font-size: 10px; color: var(--premium-indigo); font-weight: 600; font-style: normal; }
+
+/* 2x2 Stats Grid */
+.dash-stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+/* Update this class */
+.stat-pill-card {
+    background: var(--card-bg) !important; /* Default gray stripe */
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: var(--shadow-soft);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* =========================================
+   PREMIUM NOTIFICATION BADGES
+   ========================================= */
+
+/* Ensure parent cards can hold absolute badges */
+
+.premium-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    min-width: 20px;
+    height: 20px;
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); /* Amber Gradient */
+    color: white;
+    font-size: 10px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 800;
+    border-radius: 50%; /* Circle for single digits, pill for double */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #ffffff; /* White ring to separate from card */
+    box-shadow: 0 4px 6px -1px rgba(245, 158, 11, 0.4);
+    z-index: 10;
+    
+    /* Animation Basics */
+    transform: scale(0);
+    opacity: 0;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    padding: 0 5px; /* Adjust for double digits */
+}
+
+/* Active State */
+.premium-badge.active {
+    transform: scale(1);
+    opacity: 1;
+    animation: badge-pulse 3s infinite;
+}
+
+/* Specific styling for counts > 99 */
+.premium-badge.wide {
+    border-radius: 12px;
+    padding: 0 6px;
+}
+
+/* The Subtle "Live" Pulse */
+@keyframes badge-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); }
+    70% { box-shadow: 0 0 0 6px rgba(245, 158, 11, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+}
+
+/* Mobile Tweaks */
+@media (max-width: 768px) {
+    .premium-badge {
+        top: -8px;
+        right: -4px;
+        font-size: 9px;
+        height: 18px;
+        min-width: 18px;
+    }
+}
+
+
+/* =========================================
+   PREMIUM PENDING BADGES (DASHBOARD)
+   ========================================= */
+
+/* Ensure the parent card can position the badge */
+.stat-pill-card {
+    position: relative !important;
+    overflow: visible !important; /* Allow badge to pop out slightly */
+    transition: transform 0.2s ease;
+}
+
+/* The Badge Itself */
+.premium-count-badge {
+    position: absolute;
+    top: -8px;    /* Floats slightly above the top edge */
+    right: -8px;  /* Floats slightly off the right edge */
+    
+    min-width: 24px;
+    height: 24px;
+    
+    /* Premium Amber Gradient */
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    
+    color: white;
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 800;
+    
+    border-radius: 50%; /* Circle */
+    border: 2px solid #ffffff; /* White border to separate from card */
+    
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    /* Glow Shadow */
+    box-shadow: 0 4px 8px rgba(245, 158, 11, 0.4);
+    
+    z-index: 20;
+    
+    /* Animation defaults */
+    transform: scale(0);
+    opacity: 0;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      cursor: pointer;
+    pointer-events: auto; /* Ensures it catches clicks even if parent doesn't */
+}
+
+/* Active State (Visible) */
+.premium-count-badge.active {
+    transform: scale(1);
+    opacity: 1;
+    /* Live Pulse Animation */
+    animation: badge-pulse-ring 2s infinite;
+}
+
+/* Wide style for numbers > 9 */
+.premium-count-badge.wide {
+    border-radius: 12px;
+    padding: 0 6px;
+    width: auto;
+}
+
+@keyframes badge-pulse-ring {
+    0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); }
+    70% { box-shadow: 0 0 0 6px rgba(245, 158, 11, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+}
+
+/* Mobile Tweaks: Adjust position slightly */
+@media (max-width: 768px) {
+    .premium-count-badge {
+        top: -6px;
+        right: -6px;
+        min-width: 20px;
+        height: 20px;
+        font-size: 10px;
+    }
+}
+
+/* =========================================
+   ENHANCED LIQUID BALANCE CARD
+   ========================================= */
+/* =========================================
+   MODERN VERTICAL METER CARD (CSS-FRIENDLY)
+   ========================================= */
+.liquid-card-container {
+    grid-column: span 1;
+    background: linear-gradient(135deg, var(--surface) 0%, var(--surface-soft) 100%);
+    border-radius: 20px;
+    padding: 0;
+    position: relative;
+    overflow: hidden;
+    height: 240px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1), 0 3px 10px rgba(0,0,0,0.06);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    display: flex;
+    flex-direction: column;
+}
+
+/* Decorative background circles */
+.liquid-card-bg {
+    position: absolute;
+    top: -30px;
+    right: -30px;
+    width: 150px;
+    height: 150px;
+    background: radial-gradient(circle, rgba(99, 102, 241, 0.05) 0%, transparent 70%);
+    border-radius: 50%;
+    z-index: 0;
+}
+
+.liquid-card-bg::before {
+    content: '';
+    position: absolute;
+    bottom: -80px;
+    left: -80px;
+    width: 120px;
+    height: 120px;
+    background: radial-gradient(circle, rgba(16, 185, 129, 0.05) 0%, transparent 70%);
+    border-radius: 50%;
+}
+
+/* Vertical Meter Container */
+.liquid-box {
+    position: absolute;
+    left: 20px;
+    bottom: 20px;
+    width: 50px;
+    height: calc(100% - 100px);
+    background: linear-gradient(180deg, var(--surface-muted) 0%, #e2e8f0 100%);
+    border-radius: 25px;
+    overflow: hidden;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.08);
+    z-index: 1;
+}
+
+/* The Fill Bar */
+.liquid-fill-body {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: var(--fill-percent, 50%);
+    background: linear-gradient(180deg, 
+        var(--liquid-color-light, #34d399) 0%, 
+        var(--liquid-color-main, #10b981) 50%,
+        var(--liquid-color-dark, #059669) 100%);
+    border-radius: 10px;
+    transition: height 1.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
+}
+
+/* Animated shine effect on meter */
+.liquid-fill-body::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(180deg, 
+        rgba(255,255,255,0.4) 0%, 
+        transparent 30%,
+        transparent 70%,
+        rgba(0,0,0,0.1) 100%);
+    border-radius: 25px;
+}
+
+/* Pulsing glow effect */
+.liquid-fill-body::after {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80%;
+    height: 20px;
+    background: var(--liquid-color-light, #34d399);
+    border-radius: 50%;
+    filter: blur(8px);
+    opacity: 0.6;
+    animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+    0%, 100% { opacity: 0.6; transform: translateX(-50%) scale(1); }
+    50% { opacity: 0.3; transform: translateX(-50%) scale(1.1); }
+}
+
+/* Meter scale marks */
+.meter-marks {
+    position: absolute;
+    left: 76px;
+    bottom: 20px;
+    height: calc(100% - 100px);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    z-index: 2;
+}
+
+.meter-mark {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.meter-mark-line {
+    width: 8px;
+    height: 1.5px;
+    background: #cbd5e1;
+    border-radius: 2px;
+}
+
+.meter-mark-label {
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--ink-400);
+    font-family: 'Courier New', monospace;
+}
+
+/* Floating particles/dots */
+.bubble {
+    left: 25px;
+    width: 4px;
+    height: 4px;
+}
+
+
+@keyframes float-up {
+    0% { bottom: 0; opacity: 0; }
+    20% { opacity: 1; }
+    80% { opacity: 1; }
+    100% { bottom: 100%; opacity: 0; }
+}
+
+/* Content Area */
+.liquid-content {
+    box-shadow: inset 0 0 30px rgb(0 0 0 / 45%);
+}
+
+
+.liquid-title {
+    border: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.liquid-capacity-pill {
+    border: 1px solid rgba(199, 210, 254, 0.5);
+}
+
+.liquid-value-wrapper {
+    margin-top: auto;
+    text-align: left;
+}
+
+.liquid-currency {
+    color: var(--ink-500);
+}
+
+.liquid-amount {
+    background: linear-gradient(135deg, var(--text-gradient-1, #047857) 0%, var(--text-gradient-2, #059669) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.liquid-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+
+.liquid-percentage {
+    font-size: 11px;
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+    color: var(--ink-500);
+    background: rgba(241, 245, 249, 0.8);
+    padding: 5px 10px;
+    border-radius: 12px;
+}
+
+/* Color States */
+.state-healthy-liquid {
+    --text-gradient-1: #047857;
+    --text-gradient-2: #059669;
+}
+
+.state-critical-liquid {
+    --text-gradient-1: #b91c1c;
+    --text-gradient-2: #dc2626;
+}
+
+.state-empty-liquid {
+    --text-gradient-1: #475569;
+    --text-gradient-2: #64748b;
+}
+
+/* Tablet and Desktop */
+@media (min-width: 640px) {
+    .liquid-card-container {
+        grid-column: span 2;
+        height: 260px;
+    }
+    
+    .liquid-box {
+        width: 60px;
+        left: 24px;
+    }
+    
+    .meter-marks {
+        left: 90px;
+    }
+    
+    .liquid-content {
+        padding: 24px 24px 24px 110px;
+    }
+    
+    .liquid-amount {
+        font-size: 48px;
+    }
+    
+    .liquid-currency {
+        font-size: 24px;
+    }
+}
+
+@media (min-width: 1024px) {
+    .liquid-card-container {
+        height: 280px;
+    }
+    
+    .liquid-amount {
+        font-size: 52px;
+    }
+}
+
+@keyframes foam-move {
+    0%, 100% { transform: translateX(0) scaleX(1); }
+    50% { transform: translateX(2px) scaleX(1.02); }
+}
+
+/* Enhanced bubbles with varying sizes */
+.bubble {
+    position: absolute;
+    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.8), rgba(255,255,255,0.2));
+    border-radius: 50%;
+    bottom: 0;
+    z-index: 4;
+    animation: rise linear infinite;
+    box-shadow: inset 0 0 10px rgba(255,255,255,0.5);
+}
+
+.bubble:nth-child(1) { left: 15%; width: 8px; height: 8px; animation-duration: 4s; animation-delay: 0s; }
+.bubble:nth-child(2) { left: 35%; width: 12px; height: 12px; animation-duration: 5.5s; animation-delay: 1.2s; }
+.bubble:nth-child(3) { left: 55%; width: 6px; height: 6px; animation-duration: 3.8s; animation-delay: 2.1s; }
+.bubble:nth-child(4) { left: 75%; width: 10px; height: 10px; animation-duration: 6s; animation-delay: 0.8s; }
+.bubble:nth-child(5) { left: 25%; width: 7px; height: 7px; animation-duration: 4.5s; animation-delay: 3s; }
+.bubble:nth-child(6) { left: 65%; width: 9px; height: 9px; animation-duration: 5s; animation-delay: 1.8s; }
+.bubble:nth-child(7) { left: 85%; width: 11px; height: 11px; animation-duration: 5.8s; animation-delay: 2.5s; }
+.bubble:nth-child(8) { left: 45%; width: 8px; height: 8px; animation-duration: 4.2s; animation-delay: 0.5s; }
+
+/* Content overlay */
+.liquid-content {
+    position: relative;
+    z-index: 10;
+    text-align: center;
+    width: 100%;
+    padding: 24px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    height: 100%;
+    justify-content: space-between;
+}
+
+.liquid-header {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.liquid-title {
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--ink-600);
+    background: rgba(255,255,255,0.9);
+    padding: 6px 14px;
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.liquid-capacity-pill {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--ink-500);
+    background: rgba(255,255,255,0.7);
+    padding: 4px 10px;
+    border-radius: 12px;
+    backdrop-filter: blur(10px);
+}
+
+.liquid-value-wrapper {
+    margin-bottom: 12px;
+    transition: all 0.5s ease;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+}
+
+.liquid-currency {
+    font-size: 28px;
+    font-weight: 700;
+    vertical-align: top;
+    margin-right: 4px;
+}
+
+.liquid-amount {
+    font-size: 56px;
+    font-weight: 900;
+    letter-spacing: -2px;
+    font-family: 'Courier New', monospace;
+}
+
+.liquid-status-badge {
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    padding: 8px 18px;
+    border-radius: 20px;
+    background: var(--surface);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    letter-spacing: 0.8px;
+    transition: all 0.3s;
+    backdrop-filter: blur(10px);
+}
+
+/* Color States */
+.state-healthy-liquid {
+    --liquid-color-light: #6ee7b7;
+    --liquid-color-main: #34d399;
+    --liquid-color-dark: #10b981;
+}
+
+.state-critical-liquid {
+    --liquid-color-light: #fca5a5;
+    --liquid-color-main: #f87171;
+    --liquid-color-dark: #ef4444;
+}
+
+.state-empty-liquid {
+    --liquid-color-light: #e2e8f0;
+    --liquid-color-main: #cbd5e1;
+    --liquid-color-dark: #94a3b8;
+}
+
+/* Enhanced Wave Animations */
+@keyframes wave-rotate-1 {
+    0% { transform: translate(-5%, 0) rotate(0deg); }
+    50% { transform: translate(-5%, 3%) rotate(180deg); }
+    100% { transform: translate(-5%, 0) rotate(360deg); }
+}
+
+@keyframes wave-rotate-2 {
+    0% { transform: translate(0, 0) rotate(0deg); }
+    50% { transform: translate(0, -2%) rotate(180deg); }
+    100% { transform: translate(0, 0) rotate(360deg); }
+}
+
+@keyframes wave-rotate-3 {
+    0% { transform: translate(-2%, 0) rotate(0deg); }
+    50% { transform: translate(-2%, 2%) rotate(180deg); }
+    100% { transform: translate(-2%, 0) rotate(360deg); }
+}
+
+@keyframes wave-rotate-4 {
+    0% { transform: translate(3%, 0) rotate(0deg); }
+    50% { transform: translate(3%, -1%) rotate(180deg); }
+    100% { transform: translate(3%, 0) rotate(360deg); }
+}
+
+@keyframes rise {
+    0% {
+        bottom: -20px;
+        transform: translateX(0) scale(0.8);
+        opacity: 0;
+    }
+    10% {
+        opacity: 0.8;
+    }
+    50% {
+        transform: translateX(10px) scale(1);
+        opacity: 0.9;
+    }
+    100% {
+        bottom: 110%;
+        transform: translateX(-15px) scale(0.6);
+        opacity: 0;
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .liquid-card-container {
+        grid-column: span 1;
+        height: 220px;
+    }
+    .liquid-amount {
+        font-size: 42px;
+    }
+    .liquid-currency {
+        font-size: 22px;
+    }
+}
+
+
+
+
+
+
+/* Add specific styling based on content if possible, 
+   or let the IDs handle the colors below */
+
+.stat-pill-card .label { font-size: 9px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px; }
+.stat-pill-card .val { font-size: 16px; font-weight: 800; font-family: 'Courier New', monospace; color: var(--ink-800); }
+
+
+ .stat-pill-card{
+     border-left: 3px solid var(--premium-indigo);
+     border: 1px solid #00366b32;
+ }
+/* System Status Pulse */
+.system-status-pulse {
+    background: var(--soft-slate);
+    border-radius: 16px;
+    margin-bottom: 10px;
+}
+
+.status-row { display: flex; align-items: center; gap: 12px; }
+.status-indicator { width: 10px; height: 10px; border-radius: 50%; position: relative; }
+.status-indicator::after {
+    content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    border-radius: 50%; background: inherit; animation: pulse-status 2s infinite;
+}
+
+@keyframes pulse-status { 0% { transform: scale(1); opacity: 0.8; } 100% { transform: scale(2.5); opacity: 0; } }
+
+/* Feed */
+.activity-feed-premium {
+    background: var(--surface);
+    border-radius: 20px;
+    padding: 15px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.02);
+}
+
+.feed-item {
+    padding: 10px 0;
+    border-bottom: 1px solid #f8fafc;
+    display: flex; gap: 12px; align-items: flex-start;
+}
+
+.feed-icon { font-size: 14px; padding-top: 2px; }
+.feed-content .msg { font-size: 12px; font-weight: 600; color: var(--ink-700); line-height: 1.4; }
+.feed-content .time { font-size: 9px; color: var(--text-muted); margin-top: 2px; }
+
+
+
+/* =========================
+   Design Tokens (Professional Palette)
+========================= */
+:root {
+    --brand-primary: #1fa97a;
+    --bg-card: #ffffff;
+    --border-soft: #e5e7eb;
+    --text-dark: #1f2937;
+    --text-muted: #6b7280;
+
+    --night-bg-start: #0f172a;
+    --night-bg-end: #1e293b;
+
+    --day-bg-start: #f8fafc;
+    --day-bg-end: #e0f2fe;
+}
+
+/* --- Modern Meal Plan Card --- */
+.meal-pulse-card {
+    background: var(--bg-card);
+    border-radius: 22px;
+    padding: 0;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+    margin-bottom: 20px;
+    border: 1px solid var(--border-soft);
+    overflow: hidden;
+    box-shadow: inset 0 0 30px rgb(0 0 0 / 45%);
+}
+
+/* Header */
+.pulse-header-modern {
+    padding: 14px 20px;
+    background: #ffff;
+    box-shadow: inset 0 0 30px rgb(164 165 122 / 64%);
+    border: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-soft);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.pulse-header-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-dark);
+    font-family: 'Hind Siliguri', sans-serif;
+    letter-spacing: 0.2px;
+}
+
+/* Grid */
+.pulse-grid-modern {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+}
+
+/* Slots */
+.plan-slot {
+    padding: 22px 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+/* =========================
+   NIGHT SLOT (Calm Dark)
+========================= */
+.slot-night {
+    /*background-image: url(img2.jpg);*/
+    background-size: cover;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.slot-night .slot-label {
+    background: rgb(16 16 16 / 79%);
+    color: #e6f1ff;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.slot-night .slot-date {
+    color: .slot-night .slot-label#3954aaf0;
+}
+
+.slot-night .slot-count {
+    color: #0e608a;
+    text-shadow: 0 4px 18px rgb(0 0 0 / 26%);
+}
+
+/* =========================
+   DAY SLOT (Clean Light)
+========================= */
+.slot-day {
+    /* background-image: url(img1.jpg); */
+    background-size: cover;
+    color: var(--ink-900);
+}
+
+.slot-day .slot-label {
+    background: #e0f2fe;
+    color: #0369a1;
+    border: 1px solid #bae6fd;
+}
+
+.slot-day .slot-date {
+    color: #075985;
+}
+
+.slot-day .slot-count {
+    color: #0284c7;
+    text-shadow: 0 4px 18px rgb(0 0 0 / 26%);
+}
+
+
+/* =========================
+   Typography
+========================= */
+.slot-date {
+    font-family: 'Hind Siliguri', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    line-height: 1.4;
+}
+
+.slot-label {
+    font-family: 'Hind Siliguri', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 999px;
+    margin-bottom: 12px;
+    letter-spacing: 0.3px;
+}
+
+.slot-count {
+    font-family: 'Hind Siliguri', sans-serif;
+    font-size: 34px;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 6px;
+}
+
+.slot-menu {
+    font-family: 'Hind Siliguri', sans-serif;
+    font-size: 11px;
+    color: #ffffff;
+    background: #807d82c2;
+    padding: 2px 5px;
+    border-radius: 8px;
+    opacity: 0.85;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+/* =========================
+   Stat Cards Cleanup
+========================= */
+.stat-card {
+    margin-bottom: 0 !important;
+    padding: 22px;
+    min-height: 120px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* =========================
+   Weekly Menu Input (Premium)
+========================= */
+.weekly-menu-input {
+    border: 1px solid transparent !important;
+    background: transparent !important;
+    transition: all 0.2s ease;
+}
+
+.weekly-menu-input:hover,
+.weekly-menu-input:focus {
+    border: 1px solid var(--border-soft) !important;
+    background: var(--surface-soft) !important;
+}
+
+.weekly-menu-input:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(31, 169, 122, 0.15);
+}

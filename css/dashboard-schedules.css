@@ -1,0 +1,550 @@
+/* MealCal Pro — Members' 7-day schedule module. Load order matters: see index.html */
+/* ============================================================
+   👥 MEMBERS' 7-DAY MEAL SCHEDULE DASHBOARD MODULE — V2 PREMIUM
+   ============================================================ */
+.member-schedules-dashboard {
+    background: linear-gradient(135deg, #f8faff 0%, #f0f4ff 50%, #faf8ff 100%);
+    border: 1px solid rgba(99, 102, 241, 0.08);
+    border-radius: 20px;
+    padding: 24px;
+    margin-top: 28px;
+    box-shadow:
+        0 4px 24px rgba(99, 102, 241, 0.06),
+        0 1px 3px rgba(0, 0, 0, 0.04);
+    position: relative;
+    overflow: hidden;
+}
+
+
+.dash-schedules-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-bottom: 20px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid rgba(99, 102, 241, 0.08);
+}
+
+.dash-schedules-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.dash-schedules-title {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--ink-900);
+    margin: 0;
+    letter-spacing: -0.3px;
+}
+
+.dash-schedules-badge {
+    background: linear-gradient(135deg, #e0f2fe, #dbeafe);
+    color: #1d4ed8;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 4px 12px;
+    border-radius: 20px;
+    border: 1px solid rgba(59, 130, 246, 0.15);
+    letter-spacing: 0.3px;
+}
+
+.dash-schedules-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.dash-search-input {
+    padding: 8px 16px;
+    border-radius: 24px;
+    border: 1.5px solid var(--line);
+    font-size: 12px;
+    font-weight: 500;
+    outline: none;
+    transition: all 0.25s ease;
+    width: 170px;
+    background: var(--surface);
+}
+
+.dash-search-input:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.dash-refresh-btn {
+    border-radius: 24px !important;
+    font-weight: 700 !important;
+    font-size: 11px !important;
+    padding: 7px 14px !important;
+    border: 1.5px solid var(--line) !important;
+    background: var(--surface) !important;
+    transition: all 0.2s ease !important;
+}
+
+.dash-refresh-btn:hover {
+    border-color: #6366f1 !important;
+    background: #eef2ff !important;
+}
+
+.dash-schedules-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+/* ── Individual Member Schedule Card ── */
+.member-schedule-card {
+    background: var(--surface);
+    border: 1px solid rgba(226, 232, 240, 0.7);
+    border-radius: 16px;
+    padding: 18px 20px;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+.member-schedule-card:hover {
+    border-color: rgba(99, 102, 241, 0.15);
+    box-shadow: 0 8px 28px rgba(99, 102, 241, 0.07);
+    transform: translateY(-1px);
+}
+
+.member-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.member-info-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.member-avatar-circle {
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 15px;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    letter-spacing: -0.5px;
+    flex-shrink: 0;
+}
+
+.member-name-role {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.member-card-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--ink-800);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    letter-spacing: -0.2px;
+}
+
+.role-pill {
+    font-size: 9px;
+    font-weight: 800;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 6px;
+    letter-spacing: 0.5px;
+}
+
+.role-pill.admin { background: linear-gradient(135deg, #fef3c7, #fde68a); color: #b45309; border: 1px solid rgba(180, 83, 9, 0.1); }
+.role-pill.manager { background: linear-gradient(135deg, #e0e7ff, #c7d2fe); color: #3730a3; border: 1px solid rgba(55, 48, 163, 0.1); }
+.role-pill.user { background: var(--surface-muted); color: var(--ink-500); border: 1px solid rgba(100, 116, 139, 0.1); }
+
+/* Weekly summary line under name */
+.member-week-summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.week-count-pill {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--ink-700);
+}
+
+.week-count-detail {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--ink-400);
+}
+
+/* ── Default Preference Buttons ── */
+.default-prefs-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.def-pref-btn {
+    padding: 5px 14px;
+    border-radius: 24px;
+    font-size: 11px;
+    font-weight: 700;
+    border: 1.5px solid var(--line);
+    background: var(--surface);
+    color: var(--ink-400);
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+.def-pref-btn:not(.readonly):hover {
+    transform: scale(1.04);
+}
+
+.def-pref-btn:not(.readonly):active {
+    transform: scale(0.96);
+}
+
+.def-pref-btn.active.day {
+    background: linear-gradient(135deg, #fffbeb, #fef3c7);
+    color: #b45309;
+    border-color: #f59e0b;
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.18);
+}
+
+.def-pref-btn.active.night {
+    background: linear-gradient(135deg, #eef2ff, #e0e7ff);
+    color: #4338ca;
+    border-color: #818cf8;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.18);
+}
+
+.def-pref-btn.readonly {
+    cursor: default;
+}
+
+/* ── 7-Day Timeline Strip ── */
+.schedule-timeline-strip {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 4px 2px 8px;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+
+.schedule-timeline-strip::-webkit-scrollbar {
+    display: none;
+}
+
+/* ── Timeline Day Card ── */
+.timeline-day-card {
+    flex: 1 0 72px;
+    min-width: 72px;
+    background: var(--surface-soft);
+    border: 1.5px solid var(--line);
+    border-radius: 14px;
+    padding: 10px 6px 10px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    scroll-snap-align: start;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.timeline-day-card:hover {
+    border-color: var(--line-strong);
+    background: var(--surface-muted);
+}
+
+/* Today's card highlight */
+.timeline-day-card.today-card {
+    border-color: #6366f1;
+    background: linear-gradient(180deg, #eef2ff 0%, #e0e7ff 100%);
+    box-shadow: 0 3px 12px rgba(99, 102, 241, 0.12);
+}
+
+.today-pulse-dot {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 7px;
+    height: 7px;
+    background: #22c55e;
+    border-radius: 50%;
+    animation: todayPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes todayPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.5); }
+    50% { box-shadow: 0 0 0 4px rgba(34, 197, 94, 0); }
+}
+
+.timeline-weekday {
+    font-size: 9px;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: var(--ink-400);
+    letter-spacing: 0.8px;
+}
+
+.today-card .timeline-weekday {
+    color: #4338ca;
+}
+
+.timeline-date-num {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--ink-700);
+    line-height: 1;
+}
+
+.today-card .timeline-date-num {
+    color: #4338ca;
+}
+
+/* ── Micro-Toggle Buttons ── */
+.timeline-toggles-row {
+    display: flex;
+    gap: 5px;
+    justify-content: center;
+    margin-top: 2px;
+}
+
+.micro-toggle {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 800;
+    border: 1.5px solid var(--line);
+    background: var(--surface-soft);
+    color: var(--ink-400);
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.micro-toggle:not(.readonly):hover {
+    transform: scale(1.1);
+}
+
+.micro-toggle:not(.readonly):active {
+    transform: scale(0.92);
+}
+
+/* Day ON */
+.micro-toggle.day.active {
+    background: linear-gradient(135deg, #fbbf24, #ffe50b);
+    color: #ffffff;
+    border-color: #d97706;
+    box-shadow:
+        0 3px 10px rgba(245, 158, 11, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+/* Night ON */
+.micro-toggle.night.active {
+    background: linear-gradient(135deg, #818cf8, #020312);
+    color: #ffffff;
+    border-color: #4f46e5;
+    box-shadow:
+        0 3px 10px rgba(99, 102, 241, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+/* Day OFF */
+.micro-toggle.day.off {
+    background: #fff8f0;
+    border-color: #fed7aa;
+    color: #ffffff42;
+}
+
+/* Night OFF */
+.micro-toggle.night.off {
+    background: #f5f3ff;
+    border-color: #c4b5fd;
+    color: #ffffff42;
+}
+
+.micro-toggle.readonly {
+    cursor: default;
+}
+
+.micro-toggle.updating {
+    opacity: 0.4;
+    pointer-events: none;
+    animation: togglePulse 0.6s ease infinite;
+}
+
+@keyframes togglePulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(0.92); }
+}
+
+/* ═══════════════════════════════════════════
+   📱 RESPONSIVE: TABLET & MOBILE
+   ═══════════════════════════════════════════ */
+
+/* Tablet */
+@media (max-width: 768px) {
+    .member-schedules-dashboard {
+        padding: 18px;
+        border-radius: 16px;
+        margin-top: 20px;
+    }
+    
+    .dash-schedules-title {
+        font-size: 14px;
+    }
+    
+    .member-schedule-card {
+        padding: 14px;
+    }
+    
+    .member-avatar-circle {
+        width: 38px;
+        height: 38px;
+        font-size: 14px;
+        border-radius: 12px;
+    }
+    
+    .timeline-day-card {
+        flex: 0 0 68px;
+        min-width: 100px;
+    }
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+    .member-schedules-dashboard {
+        padding: 14px;
+        border-radius: 14px;
+        margin-top: 16px;
+    }
+
+    .dash-schedules-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        margin-bottom: 14px;
+        padding-bottom: 12px;
+    }
+    
+    .dash-schedules-title-wrap {
+        justify-content: space-between;
+    }
+
+    .dash-schedules-controls {
+        width: 100%;
+        gap: 8px;
+    }
+    
+    .dash-search-input {
+        flex: 1;
+        width: auto;
+        font-size: 13px;
+        padding: 10px 16px;
+    }
+
+    .dash-refresh-btn {
+        padding: 10px 14px !important;
+    }
+    
+    .member-schedule-card {
+        padding: 14px;
+        border-radius: 14px;
+    }
+
+    .member-card-top {
+        flex-direction: row-reverse;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .member-info-left {
+        width: 100%;
+    }
+
+    .default-prefs-wrap {
+        width: 100%;
+        justify-content: flex-start;
+        padding-left: 54px;
+        gap: 8px;
+    }
+    
+    .def-pref-btn {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+    
+    .timeline-day-card {
+        flex: 0 0 100px;
+        min-width: 100px;
+        padding: 8px 4px;
+        border-radius: 12px;
+    }
+    
+    .timeline-date-num {
+        font-size: 15px;
+    }
+    
+    .micro-toggle {
+        width: 30px;
+        height: 30px;
+        font-size: 13px;
+        border-radius: 8px;
+    }
+
+    .member-card-name {
+        font-size: 14px;
+    }
+}
+
+/* Small phones */
+@media (max-width: 380px) {
+    .member-schedules-dashboard {
+        padding: 10px;
+    }
+
+    .default-prefs-wrap {
+        padding-left: 0;
+    }
+    
+    .timeline-day-card {
+        flex: 0 0 60px;
+        min-width: 60px;
+    }
+    
+    .micro-toggle {
+        width: 28px;
+        height: 28px;
+        font-size: 12px;
+    }
+}

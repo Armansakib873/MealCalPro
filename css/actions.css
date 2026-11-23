@@ -1,0 +1,66 @@
+/* MealCal Pro — Safe-action button states & layout stability. Load order matters: see index.html */
+/* =========================================
+   PHASE 3: SAFE ACTION STYLES
+   ========================================= */
+
+/* 1. Loading Spinner */
+
+/* 2. Button Processing State */
+
+/* 3. Success Pulse Animation */
+
+
+/* 4. Shake Error Animation */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+}
+
+/* --- PHASE 4: LAYOUT STABILITY (Prevents Jumping) --- */
+.meal-pulse-card {
+    min-height: 140px; /* Reserve space so content doesn't jump */
+    contain: content;  /* Browser optimization hint */
+}
+
+.liquid-card-container {
+    min-height: 240px; 
+    contain: strict;   /* High performance rendering hint */
+}
+
+.stat-pill-card {
+    min-height: 80px;
+}
+
+/* --- PHASE 3: ROBUST ACTION STYLES --- */
+.action-spinner {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 0.8s linear infinite;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+.btn-processing {
+    opacity: 0.8;
+    cursor: not-allowed !important;
+    position: relative;
+    pointer-events: none;
+}
+
+.action-success {
+    animation: successPulse 0.5s ease-out;
+    background-color: #10b981 !important; /* Force Green */
+    color: white !important;
+    border-color: #10b981 !important;
+}
+
+@keyframes successPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
