@@ -172,6 +172,7 @@ async function loadMembersList() {
                         Edit
                     </button>
                     ${!isAdmin && !isArchived ? `<button class="btn btn-sm btn-danger" style="font-size: 10px; padding: 6px 10px;" onclick="archiveMember('${member.id}', '${escapeJsArg(member.name)}', '${member.user_id || ""}')">Archive</button>` : ""}
+                    ${isArchived ? `<button class="btn btn-sm btn-success" style="font-size: 10px; padding: 6px 10px;" onclick="restoreMember(${member.id}, '${escapeJsArg(member.name)}')">↩ Restore</button>` : ""}
                 </div>
             </div>
             `;
@@ -221,6 +222,41 @@ async function toggleManagerRole(memberId, currentRole) {
 }
 
 // --- Action 2: Archive Member (Safe Deletion) ---
+// --- Action 3: Restore an archived member (undo Archive) ---
+async function restoreMember(memberId, memberName) {
+  if (!isStaff()) {
+    showNotification("Only an admin or manager can restore members.", "error");
+    return;
+  }
+  const ok = await uiConfirm(
+    `Restore ${memberName} to the mess?`,
+    "They come back into the current cycle: they appear in all lists, can log in again, and get schedule cards from the current session using their default meals. Their old history is kept.",
+    { icon: "↩️", confirmText: "Restore member" },
+  );
+  if (!ok) return;
+
+  const btn = event?.target?.closest("button");
+  if (btn) { btn.disabled = true; btn.textContent = "Restoring…"; }
+  try {
+    // The database notifies everyone ("Restored to the mess") and records it in the audit log
+    const { error } = await supabase.from("members").update({ archived_from_cycle_id: null }).eq("id", memberId);
+    if (error) throw error;
+
+    // Create their schedule cards for the coming sessions right away
+    await supabase.rpc("manage_meal_plans", { target_date: getStrictSessionDate() });
+
+    showNotification(`${memberName} is back in the mess`, "success");
+    await loadMembers();
+    await loadMembersList();
+    pageLoaded.dashboard = false;
+    pageLoaded.summary = false;
+    pageLoaded.tracker = false;
+  } catch (err) {
+    showNotification("Could not restore: " + niceError(err), "error");
+    if (btn && document.body.contains(btn)) { btn.disabled = false; btn.textContent = "↩ Restore"; }
+  }
+}
+
 async function archiveMember(memberId, memberName, userId) {
   const okArchive = await uiConfirm(
     `Remove ${memberName} from the mess?`,

@@ -1,5 +1,5 @@
 // Bump this on every release so installed PWAs drop the old cache.
-const CACHE_NAME = 'mealcal-v34'; // v34: SVG cash gauge
+const CACHE_NAME = 'mealcal-v35'; // v35: restore archived members
 
 const CSS_FILES = [
     'base', 'layout', 'navigation', 'bottom-sheet', 'components', 'auth', 'profile',
